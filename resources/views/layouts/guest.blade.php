@@ -1,11 +1,42 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full bg-slate-50 dark:bg-zinc-950">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" 
+      class="h-full bg-slate-50 dark:bg-zinc-950">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
         <title>{{ config('app.name', 'CUP - Sistema de Admisión Universitaria') }}</title>
+
+        <!-- Sync theme BEFORE anything renders -->
+        <script>
+            if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        </script>
+
+        <!-- Register Alpine store BEFORE Alpine initializes -->
+        <script>
+            document.addEventListener('alpine:init', () => {
+                Alpine.store('darkMode', {
+                    on: localStorage.getItem('color-theme') === 'dark' ||
+                        (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches),
+
+                    toggle() {
+                        this.on = !this.on;
+                        if (this.on) {
+                            document.documentElement.classList.add('dark');
+                            localStorage.setItem('color-theme', 'dark');
+                        } else {
+                            document.documentElement.classList.remove('dark');
+                            localStorage.setItem('color-theme', 'light');
+                        }
+                    }
+                });
+            });
+        </script>
 
         <!-- Favicon -->
         <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M12 2L3 6v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V6l-9-4z' fill='%234F46E5' fill-opacity='0.15' stroke='%234F46E5' stroke-width='1.5'/%3E%3Cpath d='M12 5L2 9.5L12 14L22 9.5L12 5z' fill='%234F46E5'/%3E%3Cpath d='M12 14.5c2.6 0 3.8-1.3 3.8-1.3v2.7c0 0-1.2-1.4-3.8-1.4s-3.8 1.4-3.8 1.4v-2.7c0 0 1.2 1.3 3.8 1.3z' fill='%23F59E0B'/%3E%3C/svg%3E">
@@ -15,9 +46,36 @@
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
 
         <!-- Scripts -->
+        <style>
+            [x-cloak] { display: none !important; }
+        </style>
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @fluxAppearance
     </head>
-    <body class="h-full font-sans antialiased text-slate-800 dark:text-zinc-100 bg-slate-50 dark:bg-zinc-950">
+    <body x-data class="h-full font-sans antialiased text-slate-800 dark:text-zinc-100 bg-slate-50 dark:bg-zinc-950">
+        <!-- Floating Dark Mode Toggle Button (Guest / Login Screen) -->
+        <div class="fixed top-4 right-4 z-50">
+            <button @click="$store.darkMode.toggle()" type="button" class="relative inline-flex h-9 w-16 items-center justify-between rounded-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 px-2 cursor-pointer shadow-md focus:outline-none select-none transition-colors duration-200" aria-label="Toggle Dark Mode">
+                <!-- Sliding circle indicator -->
+                <span class="absolute left-1 top-1 h-7 w-7 transform rounded-full bg-slate-100 dark:bg-zinc-800 shadow-sm transition-transform duration-200 ease-in-out border border-zinc-200/50 dark:border-zinc-700"
+                      :class="$store.darkMode.on ? 'translate-x-7' : 'translate-x-0'"></span>
+
+                <!-- Sun Icon (left) -->
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" 
+                     class="z-10 w-4 h-4 transition-colors duration-200"
+                     :class="!$store.darkMode.on ? 'text-amber-500' : 'text-zinc-400 dark:text-zinc-500'">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
+                </svg>
+
+                <!-- Moon Icon (right) -->
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" 
+                     class="z-10 w-4 h-4 transition-colors duration-200"
+                     :class="$store.darkMode.on ? 'text-indigo-600 dark:text-indigo-400' : 'text-zinc-400 dark:text-zinc-500'">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
+                </svg>
+            </button>
+        </div>
+
         <div class="min-h-screen grid lg:grid-cols-12">
             <!-- Left Panel: Graphic & Academic Highlights (visible only on desktop) -->
             <div class="hidden lg:flex lg:col-span-5 relative bg-zinc-900 overflow-hidden flex-col justify-between p-12 text-white">
@@ -95,5 +153,6 @@
                 </div>
             </div>
         </div>
+        @fluxScripts
     </body>
 </html>

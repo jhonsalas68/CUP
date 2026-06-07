@@ -6,14 +6,25 @@
             <flux:subheading>Estadísticas en tiempo real del CUP</flux:subheading>
         </div>
         
-        <!-- Selector de Gestión -->
-        <div class="flex items-center gap-2">
-            <span class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Semestre:</span>
-            <select wire:model.live="selectedGestionId" class="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm font-semibold px-4 py-2 text-zinc-800 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 cursor-pointer">
-                @foreach($gestiones as $g)
-                    <option value="{{ $g->id }}">{{ $g->nombre }} @if($g->activo) (Activo) @endif</option>
-                @endforeach
-            </select>
+        <!-- Selector de Gestión y Acción -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+            <!-- Selector de Gestión -->
+            <div class="flex items-center gap-2">
+                <span class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Semestre:</span>
+                <select wire:model.live="selectedGestionId" class="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm font-semibold px-4 py-2 text-zinc-800 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 cursor-pointer">
+                    @foreach($gestiones as $g)
+                        <option value="{{ $g->id }}">{{ $g->nombre }} @if($g->activo) (Activo) @endif</option>
+                    @endforeach
+                </select>
+            </div>
+            
+            <!-- Botón de Ejecutar Proceso -->
+            <button wire:click="openAdmissionProcess" type="button" class="inline-flex items-center justify-center gap-2 text-sm font-semibold bg-indigo-655 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl transition duration-150 shadow-sm cursor-pointer select-none">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4.5 h-4.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0110 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
+                </svg>
+                <span>Procesar Admisiones</span>
+            </button>
         </div>
     </div>
 
@@ -142,7 +153,11 @@
                 <flux:table.rows>
                     @forelse($gruposRendimiento as $grupo)
                         <flux:table.row :key="$grupo['id']">
-                            <flux:table.cell class="font-semibold text-zinc-900 dark:text-zinc-100">{{ $grupo['nombre'] }}</flux:table.cell>
+                            <flux:table.cell>
+                                <a wire:click="showGroupDetails({{ $grupo['id'] }})" class="font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 hover:underline cursor-pointer select-none">
+                                    {{ $grupo['nombre'] }}
+                                </a>
+                            </flux:table.cell>
                             <flux:table.cell>{{ $grupo['materia'] }}</flux:table.cell>
                             <flux:table.cell>{{ $grupo['docente'] }}</flux:table.cell>
                             <flux:table.cell class="text-center">{{ $grupo['total_alumnos'] }}</flux:table.cell>
@@ -292,4 +307,228 @@
             }
         }
     </script>
+
+    <!-- Modal de Ejecución de Admisión -->
+    @if($showAdmissionModal)
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <!-- Backdrop -->
+            <div class="fixed inset-0 bg-zinc-950/40 dark:bg-zinc-950/60 backdrop-blur-xs transition-opacity" wire:click="$set('showAdmissionModal', false)"></div>
+
+            <!-- Content Container -->
+            <div class="relative bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl w-full max-w-2xl max-h-[85vh] overflow-y-auto shadow-2xl p-6 md:p-8 animate-fade-in z-10">
+                <!-- Accent Bar -->
+                <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-500 to-emerald-500"></div>
+
+                <!-- Modal Header -->
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 class="text-xl font-extrabold text-zinc-900 dark:text-white tracking-tight">Proceso de Admisión e Ingreso por Cupos</h3>
+                        <p class="text-xs text-zinc-400 mt-1">Evaluación de calificaciones académicas y ranking por cupo</p>
+                    </div>
+                    <button wire:click="$set('showAdmissionModal', false)" type="button" class="p-1.5 rounded-lg text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-700 dark:hover:text-zinc-200">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+
+                @if($isProcessing)
+                    <!-- Processing State -->
+                    <div class="flex flex-col items-center justify-center py-12 space-y-4">
+                        <svg class="animate-spin h-10 w-10 text-indigo-650" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                        <p class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Procesando rankings y asignación de cupos...</p>
+                        <p class="text-xs text-zinc-450">Esto puede tardar unos segundos mientras se evalúa a todos los postulantes.</p>
+                    </div>
+                @elseif($admissionError)
+                    <!-- Error State -->
+                    <div class="space-y-6">
+                        <div class="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/50 flex items-start gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 text-rose-600 dark:text-rose-450 shrink-0"><path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm-1.72 6.97a.75.75 0 10-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 101.06 1.06L12 13.06l1.72 1.72a.75.75 0 101.06-1.06L13.06 12l1.72-1.72a.75.75 0 10-1.06-1.06L12 10.94l-1.72-1.72z" clip-rule="evenodd" /></svg>
+                            <div class="space-y-1">
+                                <h4 class="text-sm font-bold text-rose-800 dark:text-rose-455">No se pudo completar el proceso</h4>
+                                <p class="text-xs text-rose-700 dark:text-rose-500 leading-relaxed">{{ $admissionError }}</p>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end gap-3">
+                           <button wire:click="$set('showAdmissionModal', false)" type="button" class="px-5 py-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold text-sm rounded-xl transition duration-150">
+                               Cerrar
+                           </button>
+                        </div>
+                    </div>
+                @elseif($admissionStats)
+                    <!-- Success / Stats State -->
+                    <div class="space-y-6">
+                        <div class="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/50 flex items-start gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 text-emerald-600 dark:text-emerald-450 shrink-0"><path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.748-5.25z" clip-rule="evenodd" /></svg>
+                            <div class="space-y-1">
+                                <h4 class="text-sm font-bold text-emerald-800 dark:text-emerald-400">Proceso completado con éxito</h4>
+                                <p class="text-xs text-emerald-700 dark:text-emerald-500">Se han asignado los cupos y reasignado los postulantes a su segunda opción cuando correspondía.</p>
+                            </div>
+                        </div>
+
+                        <!-- Grid Stats -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            <div class="bg-zinc-50 dark:bg-zinc-950/50 p-4 rounded-xl border border-zinc-150 dark:border-zinc-800">
+                                <span class="text-[10px] text-zinc-400 uppercase tracking-wider block font-semibold">Postulantes</span>
+                                <span class="text-lg font-black text-zinc-800 dark:text-white">{{ $admissionStats['general']['total_postulantes'] }}</span>
+                            </div>
+                            <div class="bg-zinc-50 dark:bg-zinc-950/50 p-4 rounded-xl border border-zinc-150 dark:border-zinc-800">
+                                <span class="text-[10px] text-zinc-400 uppercase tracking-wider block font-semibold">Admitidos</span>
+                                <span class="text-lg font-black text-emerald-600 dark:text-emerald-400">{{ $admissionStats['general']['total_admitidos'] }}</span>
+                                <span class="text-[10px] text-zinc-400 block">{{ $admissionStats['general']['tasa_admision'] }}% de tasa</span>
+                            </div>
+                            <div class="bg-zinc-50 dark:bg-zinc-950/50 p-4 rounded-xl border border-zinc-150 dark:border-zinc-800">
+                                <span class="text-[10px] text-zinc-400 uppercase tracking-wider block font-semibold">Reprobados</span>
+                                <span class="text-lg font-black text-rose-600 dark:text-rose-400">{{ $admissionStats['general']['reprobados'] }}</span>
+                            </div>
+                            <div class="bg-zinc-50 dark:bg-zinc-950/50 p-4 rounded-xl border border-zinc-150 dark:border-zinc-800">
+                                <span class="text-[10px] text-zinc-400 uppercase tracking-wider block font-semibold">No Admitidos</span>
+                                <span class="text-lg font-black text-amber-600 dark:text-amber-400">{{ $admissionStats['general']['no_admitidos'] }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Career Stats -->
+                        <div class="space-y-3">
+                            <h4 class="text-sm font-bold text-zinc-800 dark:text-zinc-200">Resumen de Admisión por Carrera</h4>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-xs">
+                                    <thead>
+                                        <tr class="border-b border-zinc-250 dark:border-zinc-850 text-zinc-400">
+                                            <th class="py-2">Carrera</th>
+                                            <th class="py-2 text-center">Inscritos</th>
+                                            <th class="py-2 text-center">Cupos 1ra/2da</th>
+                                            <th class="py-2 text-center">Admitidos 1ra/2da</th>
+                                            <th class="py-2 text-center">No Admitidos</th>
+                                            <th class="py-2 text-right">Nota Corte</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-zinc-100 dark:divide-zinc-850">
+                                        @foreach($admissionStats['carreras'] as $sigla => $cStats)
+                                            <tr class="text-zinc-700 dark:text-zinc-300">
+                                                <td class="py-2.5 font-bold">{{ $sigla }} <span class="text-[10px] font-normal text-zinc-400 block">{{ $cStats['nombre'] }}</span></td>
+                                                <td class="py-2.5 text-center">{{ $cStats['inscritos_primera_opcion'] }}</td>
+                                                <td class="py-2.5 text-center font-medium">{{ $cStats['cupo_primera_opcion'] }} / {{ $cStats['cupo_segunda_opcion'] }}</td>
+                                                <td class="py-2.5 text-center">
+                                                    <span class="text-emerald-600 font-bold">{{ $cStats['admitidos_primera_opcion'] }}</span> /
+                                                    <span class="text-emerald-500 font-semibold">{{ $cStats['admitidos_segunda_opcion'] }}</span>
+                                                </td>
+                                                <td class="py-2.5 text-center text-amber-600">{{ $cStats['no_admitidos'] }}</td>
+                                                <td class="py-2.5 text-right font-black text-zinc-800 dark:text-white">{{ number_format($cStats['nota_minima_ingreso'], 2) }}</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end gap-3 pt-2">
+                            <button wire:click="$set('showAdmissionModal', false)" type="button" class="px-5 py-2.5 bg-indigo-650 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition duration-155 shadow-sm">
+                                Entendido
+                            </button>
+                        </div>
+                    </div>
+                @else
+                    <!-- Confirmation Step -->
+                    <div class="space-y-6">
+                        <div class="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/50 flex items-start gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 text-amber-600 dark:text-amber-450 shrink-0"><path fill-rule="evenodd" d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z" clip-rule="evenodd" /></svg>
+                            <div class="space-y-1">
+                                <h4 class="text-sm font-bold text-amber-800 dark:text-amber-400">Atención: Acción Irreversible</h4>
+                                <p class="text-xs text-amber-700 dark:text-amber-550 leading-relaxed">
+                                    Al presionar "Ejecutar Proceso", se calcularán las notas finales basadas en las ponderaciones, se ordenará a los postulantes aprobados de mayor a menor y se asignarán las plazas disponibles para cada carrera según los cupos de primera y segunda opción.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <h4 class="text-sm font-bold text-zinc-800 dark:text-zinc-200">Requisitos Previos:</h4>
+                            <ul class="text-xs text-zinc-500 dark:text-zinc-400 space-y-2 list-disc pl-5">
+                                <li>Todas las materias de la carrera seleccionada deben tener exámenes registrados cuya ponderación total sume el 100%.</li>
+                                <li>Todos los exámenes deben tener sus notas completamente registradas. No pueden existir postulantes con notas vacías.</li>
+                                <li>Debe haberse configurado los cupos límite para todas las carreras.</li>
+                            </ul>
+                        </div>
+
+                        <div class="flex justify-end gap-3 pt-2">
+                            <button wire:click="$set('showAdmissionModal', false)" type="button" class="px-5 py-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold text-sm rounded-xl transition duration-150">
+                                Cancelar
+                            </button>
+                            <button wire:click="runAdmissionProcess" type="button" class="px-5 py-2.5 bg-indigo-650 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition duration-150 shadow-sm">
+                                Ejecutar Proceso
+                            </button>
+                        </div>
+                    </div>
+                @endif
+            </div>
+        </div>
+    @endif
+
+    <!-- Modal de Detalle de Alumnos de Grupo -->
+    @if($showGroupDetailsModal && $selectedGroupInfo)
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <!-- Backdrop -->
+            <div class="fixed inset-0 bg-zinc-950/40 dark:bg-zinc-950/60 backdrop-blur-xs transition-opacity" wire:click="closeGroupDetails"></div>
+
+            <!-- Content Container -->
+            <div class="relative bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl w-full max-w-3xl max-h-[85vh] overflow-y-auto shadow-2xl p-6 md:p-8 animate-fade-in z-10">
+                <!-- Accent Bar -->
+                <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-500 to-violet-500"></div>
+
+                <!-- Modal Header -->
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 class="text-xl font-extrabold text-zinc-900 dark:text-white tracking-tight">Estudiantes del Grupo: {{ $selectedGroupInfo['nombre'] }}</h3>
+                        <p class="text-xs text-zinc-400 mt-1">{{ $selectedGroupInfo['materia'] }} &bull; Docente: {{ $selectedGroupInfo['docente'] }}</p>
+                    </div>
+                    <button wire:click="closeGroupDetails" type="button" class="p-1.5 rounded-lg text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-700 dark:hover:text-zinc-200">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+
+                <!-- Table Students -->
+                <div class="space-y-4">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead>
+                                <tr class="border-b border-zinc-250 dark:border-zinc-800 text-zinc-400">
+                                    <th class="py-2">Nombre Postulante</th>
+                                    <th class="py-2">Documento (CI)</th>
+                                    <th class="py-2">Correo Electrónico</th>
+                                    <th class="py-2 text-right">Nota Materia</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-zinc-100 dark:divide-zinc-850">
+                                @forelse($groupAlumnos as $alumno)
+                                    <tr class="text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20">
+                                        <td class="py-2.5 font-semibold">{{ $alumno['nombre'] }}</td>
+                                        <td class="py-2.5 text-zinc-500">{{ $alumno['ci'] }}</td>
+                                        <td class="py-2.5 text-zinc-500">{{ $alumno['email'] }}</td>
+                                        <td class="py-2.5 text-right font-bold">
+                                            <span class="{{ $alumno['nota_materia'] >= 60.00 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400' }}">
+                                                {{ number_format($alumno['nota_materia'], 2) }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="4" class="text-center text-zinc-400 py-10">
+                                            No existen alumnos asignados a este grupo académico.
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-6 border-t border-zinc-150 dark:border-zinc-850 mt-6">
+                    <button wire:click="closeGroupDetails" type="button" class="px-5 py-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold text-sm rounded-xl transition duration-150">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
 </div>

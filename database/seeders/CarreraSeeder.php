@@ -18,12 +18,16 @@ class CarreraSeeder extends Seeder
                 'sigla' => 'SIS',
             ],
             [
-                'nombre' => 'Ingeniería Civil',
-                'sigla' => 'CIV',
+                'nombre' => 'Ingeniería Informática',
+                'sigla' => 'INF',
             ],
             [
-                'nombre' => 'Medicina',
-                'sigla' => 'MED',
+                'nombre' => 'Ingeniería en Redes y Telecomunicaciones',
+                'sigla' => 'RED',
+            ],
+            [
+                'nombre' => 'Ingeniería Robótica',
+                'sigla' => 'ROB',
             ],
         ];
 

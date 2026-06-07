@@ -123,16 +123,16 @@ class GroupAndExamServicesTest extends TestCase
 
         // 6. Assertions
         $this->assertTrue($result['success']);
-        $this->assertEquals(6, $result['stats']['grupos_creados']); // 3 grupos para SIS-110, 3 para MAT-101
+        $this->assertEquals(4, $result['stats']['grupos_creados']); // 2 grupos para SIS-110, 2 para MAT-101 (con divisor 80)
         $this->assertEquals(260, $result['stats']['alumnos_asignados']); // 130 * 2 materias = 260 asignaciones de alumnos
 
-        // Verify equative distribution: 130 students in 3 groups -> sizes must be 44, 43, 43
+        // Verify equative distribution: 130 students in 2 groups -> sizes must be 65, 65
         $groupsSIS = Grupo::where('materia_id', $materia1->id)->get();
-        $this->assertCount(3, $groupsSIS);
+        $this->assertCount(2, $groupsSIS);
         
         $sizes = $groupsSIS->map(fn($g) => $g->postulantes()->count())->toArray();
         sort($sizes);
-        $this->assertEquals([43, 43, 44], $sizes, "The student distribution should be equative: 43, 43, 44");
+        $this->assertEquals([65, 65], $sizes, "The student distribution should be equative: 65, 65");
 
         // Verify that horarios (schedules) do not cross for the career subjects
         // Subject 1 (SIS-110) gets slot_1. Subject 2 (MAT-101) gets slot_2.
@@ -168,6 +168,95 @@ class GroupAndExamServicesTest extends TestCase
                 }
             }
         }
+    }
+
+    /**
+     * Test that a teacher cannot have more than 4 active groups in the same gestion.
+     */
+    public function test_teacher_maximum_groups_limit(): void
+    {
+        $gestion = Gestion::create([
+            'nombre' => 'I-2026',
+            'fecha_inicio' => '2026-02-01',
+            'fecha_fin' => '2026-06-30',
+            'activo' => true,
+        ]);
+
+        $carrera = Carrera::create([
+            'nombre' => 'SIS',
+            'sigla' => 'SIS',
+        ]);
+
+        // Create 5 materias
+        $materias = [];
+        for ($i = 1; $i <= 5; $i++) {
+            $materias[] = Materia::create([
+                'nombre' => "Materia {$i}",
+                'sigla' => "SIS-{$i}00",
+                'carrera_id' => $carrera->id,
+            ]);
+        }
+
+        // Create 1 Postulant so group generation has someone to assign
+        $userPost = User::create(['name' => 'P1', 'email' => 'p1@example.com', 'password' => 'password']);
+        Postulante::create([
+            'user_id' => $userPost->id,
+            'ci' => '999991',
+            'telefono' => '711111',
+            'fecha_nacimiento' => '2005-01-01',
+            'carrera_primera_opcion_id' => $carrera->id,
+            'gestion_id' => $gestion->id,
+            'estado_admision' => 'pendiente',
+        ]);
+
+        // Create 1 Docente
+        $userDoc = User::create(['name' => 'D1', 'email' => 'd1@example.com', 'password' => 'password']);
+        $docente = Docente::create([
+            'user_id' => $userDoc->id,
+            'ci' => '888888',
+            'especialidad' => 'Programación',
+            // Give availability for all slots used by the 5 materias
+            'disponibilidad_horaria' => ['slot_1', 'slot_2', 'slot_3', 'slot_4', 'slot_5', 'slot_6', 'slot_7', 'slot_8'],
+            'formacion_academica' => 'Lic',
+        ]);
+        
+        // Qualify teacher for all 5 materias
+        foreach ($materias as $m) {
+            $docente->materias()->attach($m->id);
+        }
+
+        // Now run group generation.
+        // It will generate 5 groups (one for each subject).
+        // The teacher should be assigned to the first 4 groups.
+        // The 5th group should have NO teacher assigned since the teacher's load reaches 4.
+        $result = $this->groupService->generate($gestion->id);
+
+        $this->assertTrue($result['success']);
+        $this->assertEquals(5, $result['stats']['grupos_creados']);
+
+        // Check each group's teacher assignment
+        $assignedCount = 0;
+        foreach ($materias as $index => $m) {
+            // Groups are named after sigla e.g. "SIS-100 - G1"
+            $groupName = "{$m->sigla} - G1";
+            $grupo = Grupo::where('nombre', $groupName)->first();
+            $this->assertNotNull($grupo);
+            
+            $docCount = $grupo->docentes()->count();
+            if ($index < 4) {
+                $this->assertEquals(1, $docCount, "Materia {$m->sigla} should have a teacher assigned");
+                $this->assertEquals($docente->id, $grupo->docentes()->first()->id);
+                $assignedCount++;
+            } else {
+                $this->assertEquals(0, $docCount, "The 5th group should NOT have a teacher assigned (reached maximum of 4)");
+            }
+        }
+
+        $this->assertEquals(4, $assignedCount);
+
+        // Verify a warning is present in the report for the 5th group
+        $this->assertCount(1, $result['warnings']);
+        $this->assertStringContainsString("No se encontró docente disponible", $result['warnings'][0]);
     }
 
     /**
@@ -329,7 +418,7 @@ class GroupAndExamServicesTest extends TestCase
 
         $postulante->refresh();
         $this->assertEquals(71.00, $postulante->nota_final);
-        $this->assertEquals('admitido_primera_opcion', $postulante->estado_admision); // All exams graded, score >= 51 -> admitted!
+        $this->assertEquals('admitido_primera_opcion', $postulante->estado_admision); // All exams graded, score >= 60 -> admitted!
     }
 
     /**

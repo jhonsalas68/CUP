@@ -25,6 +25,10 @@ class DashboardPortal extends Component
     public $ci = '';
     public $telefono = '';
     public $fecha_nacimiento = '';
+    public $sexo = '';
+    public $direccion = '';
+    public $colegio_procedencia = '';
+    public $ciudad = '';
     public $carrera_primera_opcion_id = '';
     public $carrera_segunda_opcion_id = '';
     public $carrerasDisponibles = [];
@@ -51,6 +55,10 @@ class DashboardPortal extends Component
                 $this->ci = $postulante->ci;
                 $this->telefono = $postulante->telefono;
                 $this->fecha_nacimiento = $postulante->fecha_nacimiento?->format('Y-m-d');
+                $this->sexo = $postulante->sexo;
+                $this->direccion = $postulante->direccion;
+                $this->colegio_procedencia = $postulante->colegio_procedencia;
+                $this->ciudad = $postulante->ciudad;
                 $this->carrera_primera_opcion_id = $postulante->carrera_primera_opcion_id;
                 $this->carrera_segunda_opcion_id = $postulante->carrera_segunda_opcion_id;
             }
@@ -75,6 +83,10 @@ class DashboardPortal extends Component
             'ci' => 'required|string|max:20',
             'telefono' => 'required|string|max:20',
             'fecha_nacimiento' => 'required|date',
+            'sexo' => 'required|string|in:M,F',
+            'direccion' => 'required|string|max:255',
+            'colegio_procedencia' => 'required|string|max:255',
+            'ciudad' => 'required|string|max:100',
             'carrera_primera_opcion_id' => 'required|exists:carreras,id',
             'carrera_segunda_opcion_id' => 'nullable|exists:carreras,id|different:carrera_primera_opcion_id',
         ], [
@@ -105,6 +117,10 @@ class DashboardPortal extends Component
                     'ci' => $this->ci,
                     'telefono' => $this->telefono,
                     'fecha_nacimiento' => $this->fecha_nacimiento,
+                    'sexo' => $this->sexo,
+                    'direccion' => $this->direccion,
+                    'colegio_procedencia' => $this->colegio_procedencia,
+                    'ciudad' => $this->ciudad,
                     'carrera_primera_opcion_id' => $this->carrera_primera_opcion_id,
                     'carrera_segunda_opcion_id' => $this->carrera_segunda_opcion_id ?: null,
                     'gestion_id' => $activeGestion->id,
@@ -143,7 +159,7 @@ class DashboardPortal extends Component
     {
         if (!$this->selectedGrupoId) return;
 
-        $grupo = Grupo::with('materia')->find($this->selectedGrupoId);
+        $grupo = Grupo::with(['materia', 'postulantes'])->find($this->selectedGrupoId);
         if (!$grupo) return;
 
         // Find or create exam for this group, subject, active gestion
@@ -153,13 +169,17 @@ class DashboardPortal extends Component
             ->first();
 
         $this->gradesInput = [];
-        foreach ($grupo->postulantes as $student) {
-            if ($examen) {
-                $nota = Nota::where('postulante_id', $student->id)
-                    ->where('examen_id', $examen->id)
-                    ->first();
-                $this->gradesInput[$student->id] = $nota ? $nota->puntaje : '';
-            } else {
+        if ($examen) {
+            $studentIds = $grupo->postulantes->pluck('id')->toArray();
+            $notas = Nota::whereIn('postulante_id', $studentIds)
+                ->where('examen_id', $examen->id)
+                ->pluck('puntaje', 'postulante_id');
+
+            foreach ($grupo->postulantes as $student) {
+                $this->gradesInput[$student->id] = $notas->get($student->id, '');
+            }
+        } else {
+            foreach ($grupo->postulantes as $student) {
                 $this->gradesInput[$student->id] = '';
             }
         }
@@ -239,14 +259,23 @@ class DashboardPortal extends Component
                 
                 // Construct grades table
                 // For their first career, let's fetch the materias
-                $materias = Carrera::find($postulante->carrera_primera_opcion_id)->materias ?? collect();
+                $carrera = Carrera::with('materias')->find($postulante->carrera_primera_opcion_id);
+                $materias = $carrera ? $carrera->materias : collect();
                 
+                $materiaIds = $materias->pluck('id')->toArray();
+                $examenes = Examen::whereIn('materia_id', $materiaIds)
+                    ->where('gestion_id', $postulante->gestion_id)
+                    ->get()
+                    ->groupBy('materia_id');
+
+                $examIds = $examenes->flatten()->pluck('id')->toArray();
+                $notas = Nota::where('postulante_id', $postulante->id)
+                    ->whereIn('examen_id', $examIds)
+                    ->get()
+                    ->keyBy('examen_id');
+
                 foreach ($materias as $materia) {
-                    // Fetch registered exams for this materia and postulant's gestion
-                    $examMap = Examen::where('materia_id', $materia->id)
-                        ->where('gestion_id', $postulante->gestion_id)
-                        ->get()
-                        ->keyBy('nombre');
+                    $materiaExamenes = $examenes->get($materia->id, collect())->keyBy('nombre');
 
                     $row = [
                         'materia' => $materia->nombre,
@@ -261,10 +290,9 @@ class DashboardPortal extends Component
                     $isComplete = true;
 
                     foreach (['Primer Parcial' => 'primer_parcial', 'Segundo Parcial' => 'segundo_parcial', 'Examen Final' => 'examen_final'] as $examName => $key) {
-                        if (isset($examMap[$examName])) {
-                            $notaObj = Nota::where('postulante_id', $postulante->id)
-                                ->where('examen_id', $examMap[$examName]->id)
-                                ->first();
+                        if (isset($materiaExamenes[$examName])) {
+                            $exam = $materiaExamenes[$examName];
+                            $notaObj = $notas->get($exam->id);
                             if ($notaObj) {
                                 $row[$key] = $notaObj->puntaje;
                                 $weight = ($examName === 'Examen Final') ? 0.40 : 0.30;

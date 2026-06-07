@@ -27,7 +27,7 @@ class Examenes extends Component
     public $fecha = '';
 
     protected $rules = [
-        'nombre'      => 'required|string|max:255',
+        'nombre'      => 'required|in:Primer Parcial,Segundo Parcial,Examen Final',
         'materia_id'  => 'required|exists:materias,id',
         'gestion_id'  => 'required|exists:gestiones,id',
         'ponderacion' => 'required|numeric|min:1|max:100',
@@ -36,6 +36,7 @@ class Examenes extends Component
 
     protected $messages = [
         'nombre.required'      => 'El nombre del examen es obligatorio.',
+        'nombre.in'            => 'El nombre debe ser Primer Parcial, Segundo Parcial o Examen Final.',
         'materia_id.required'  => 'La materia es obligatoria.',
         'gestion_id.required'  => 'La gestión es obligatoria.',
         'ponderacion.required' => 'La ponderación es obligatoria.',
@@ -59,6 +60,17 @@ class Examenes extends Component
     public function updatingSearch()       { $this->resetPage(); }
     public function updatingFilterGestion(){ $this->resetPage(); }
     public function updatingFilterMateria(){ $this->resetPage(); }
+
+    public function updatedNombre($value)
+    {
+        if ($value === 'Primer Parcial') {
+            $this->ponderacion = 30;
+        } elseif ($value === 'Segundo Parcial') {
+            $this->ponderacion = 30;
+        } elseif ($value === 'Examen Final') {
+            $this->ponderacion = 40;
+        }
+    }
 
     public function openCreate()
     {
@@ -87,25 +99,62 @@ class Examenes extends Component
     {
         $this->validate();
 
+        // Duplicate check
+        $queryDuplicate = Examen::where('materia_id', $this->materia_id)
+            ->where('gestion_id', $this->gestion_id)
+            ->where('nombre', $this->nombre);
+        
         if ($this->isEditing) {
-            Examen::findOrFail($this->examenId)->update([
-                'nombre'      => $this->nombre,
-                'materia_id'  => $this->materia_id,
-                'gestion_id'  => $this->gestion_id,
-                'ponderacion' => $this->ponderacion,
-                'fecha'       => $this->fecha,
-            ]);
-            session()->flash('message', 'Examen actualizado correctamente.');
-        } else {
-            Examen::create([
-                'nombre'      => $this->nombre,
-                'materia_id'  => $this->materia_id,
-                'gestion_id'  => $this->gestion_id,
-                'ponderacion' => $this->ponderacion,
-                'fecha'       => $this->fecha,
-            ]);
-            session()->flash('message', 'Examen creado correctamente.');
+            $queryDuplicate->where('id', '!=', $this->examenId);
         }
+
+        if ($queryDuplicate->exists()) {
+            $this->addError('nombre', "Ya existe un examen con el nombre '{$this->nombre}' para esta materia en la gestión indicada.");
+            return;
+        }
+
+        // Sum check
+        $querySum = Examen::where('materia_id', $this->materia_id)
+            ->where('gestion_id', $this->gestion_id);
+        
+        if ($this->isEditing) {
+            $querySum->where('id', '!=', $this->examenId);
+        }
+
+        $sumaActual = $querySum->sum('ponderacion');
+        if (($sumaActual + $this->ponderacion) > 100.00) {
+            $this->addError('ponderacion', "La ponderación total no puede superar el 100.00%. Actualmente suma {$sumaActual}%, por lo que el máximo permitido para este examen es " . (100.00 - $sumaActual) . "%.");
+            return;
+        }
+
+        \Illuminate\Support\Facades\DB::transaction(function () {
+            if ($this->isEditing) {
+                Examen::findOrFail($this->examenId)->update([
+                    'nombre'      => $this->nombre,
+                    'materia_id'  => $this->materia_id,
+                    'gestion_id'  => $this->gestion_id,
+                    'ponderacion' => $this->ponderacion,
+                    'fecha'       => $this->fecha,
+                ]);
+                session()->flash('message', 'Examen actualizado correctamente.');
+            } else {
+                Examen::create([
+                    'nombre'      => $this->nombre,
+                    'materia_id'  => $this->materia_id,
+                    'gestion_id'  => $this->gestion_id,
+                    'ponderacion' => $this->ponderacion,
+                    'fecha'       => $this->fecha,
+                ]);
+                session()->flash('message', 'Examen creado correctamente.');
+            }
+
+            // Recalculate scores for all applicants in this gestion
+            $postulantes = \App\Models\Postulante::where('gestion_id', $this->gestion_id)->get();
+            $examService = new \App\Services\ExamService();
+            foreach ($postulantes as $postulante) {
+                $examService->recalculatePostulanteScore($postulante->id, $this->gestion_id);
+            }
+        });
 
         $this->showModal = false;
         $this->reset(['examenId', 'nombre', 'materia_id', 'ponderacion', 'fecha']);
@@ -113,8 +162,20 @@ class Examenes extends Component
 
     public function delete($id)
     {
-        Examen::findOrFail($id)->delete();
-        session()->flash('message', 'Examen eliminado correctamente.');
+        \Illuminate\Support\Facades\DB::transaction(function () use ($id) {
+            $examen = Examen::findOrFail($id);
+            $gestionId = $examen->gestion_id;
+            $examen->delete();
+
+            // Recalculate scores for all applicants in this gestion
+            $postulantes = \App\Models\Postulante::where('gestion_id', $gestionId)->get();
+            $examService = new \App\Services\ExamService();
+            foreach ($postulantes as $postulante) {
+                $examService->recalculatePostulanteScore($postulante->id, $gestionId);
+            }
+        });
+
+        session()->flash('message', 'Examen y notas recalculated / eliminado correctamente.');
     }
 
     public function render()

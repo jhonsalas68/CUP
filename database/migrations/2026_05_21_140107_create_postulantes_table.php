@@ -28,6 +28,9 @@ return new class extends Migration
                 'reprobado'
             ])->default('pendiente');
             $table->decimal('nota_final', 5, 2)->nullable();
+            $table->boolean('ci_vigente')->default(false);
+            $table->boolean('titulo_bachiller')->default(false);
+            $table->boolean('libreta_legalizada')->default(false);
             $table->timestamps();
             $table->softDeletes();
 

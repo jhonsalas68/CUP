@@ -16,16 +16,26 @@ class Postulante extends Model
         'ci',
         'telefono',
         'fecha_nacimiento',
+        'sexo',
+        'direccion',
+        'colegio_procedencia',
+        'ciudad',
         'carrera_primera_opcion_id',
         'carrera_segunda_opcion_id',
         'gestion_id',
         'estado_admision',
         'nota_final',
+        'ci_vigente',
+        'titulo_bachiller',
+        'libreta_legalizada',
     ];
 
     protected $casts = [
         'fecha_nacimiento' => 'date',
         'nota_final' => 'float',
+        'ci_vigente' => 'boolean',
+        'titulo_bachiller' => 'boolean',
+        'libreta_legalizada' => 'boolean',
     ];
 
     public function scopeAdmitidos($query)
@@ -35,7 +45,7 @@ class Postulante extends Model
 
     public function scopeAprobados($query)
     {
-        return $query->where('nota_final', '>=', 51.00);
+        return $query->where('nota_final', '>=', 60.00);
     }
 
     public function scopePendientes($query)

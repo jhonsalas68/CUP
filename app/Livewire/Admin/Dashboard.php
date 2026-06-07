@@ -34,6 +34,17 @@ class Dashboard extends Component
     
     public $gruposRendimiento = [];
 
+    // admission execution properties
+    public $showAdmissionModal = false;
+    public $isProcessing = false;
+    public $admissionError = null;
+    public $admissionStats = null;
+
+    // group detail properties
+    public $showGroupDetailsModal = false;
+    public $selectedGroupInfo = null;
+    public $groupAlumnos = [];
+
     public function mount()
     {
         if (!auth()->user()->hasAnyRole(['Administrador', 'Coordinador'])) {
@@ -93,10 +104,23 @@ class Dashboard extends Component
             }
         }
 
-        // 3. Rendimiento por grupo
+        // 3. Rendimiento por grupo (Optimizado para evitar consultas N+1 en bucle)
         $grupos = Grupo::where('gestion_id', $this->selectedGestionId)
-            ->with(['materia', 'docentes', 'postulantes'])
+            ->with(['materia', 'docentes.user', 'postulantes'])
             ->get();
+
+        // Obtener todos los exámenes de la gestión en una sola consulta
+        $materiaIds = $grupos->pluck('materia_id')->unique();
+        $examenes = Examen::whereIn('materia_id', $materiaIds)
+            ->where('gestion_id', $this->selectedGestionId)
+            ->get()
+            ->groupBy('materia_id');
+
+        // Obtener todas las notas de los exámenes de la gestión en una sola consulta
+        $examIds = $examenes->flatten()->pluck('id')->unique();
+        $notas = Nota::whereIn('examen_id', $examIds)
+            ->get()
+            ->groupBy('postulante_id');
             
         $this->gruposRendimiento = [];
         foreach ($grupos as $grupo) {
@@ -107,18 +131,17 @@ class Dashboard extends Component
             $promedioSuma = 0;
             $alumnosConNota = 0;
             
-            $examenes = Examen::where('materia_id', $grupo->materia_id)
-                ->where('gestion_id', $this->selectedGestionId)
-                ->get();
+            $grupoExamenes = $examenes->get($grupo->materia_id, collect());
                 
             foreach ($postulantes as $p) {
                 $notaFinal = 0.00;
                 $hasNotes = false;
                 
-                foreach ($examenes as $exam) {
-                    $n = Nota::where('postulante_id', $p->id)
-                        ->where('examen_id', $exam->id)
-                        ->first();
+                // Obtener las notas del postulante en memoria
+                $postulanteNotas = $notas->get($p->id, collect())->keyBy('examen_id');
+                
+                foreach ($grupoExamenes as $exam) {
+                    $n = $postulanteNotas->get($exam->id);
                     if ($n) {
                         $notaFinal += $n->puntaje * ($exam->ponderacion / 100);
                         $hasNotes = true;
@@ -150,19 +173,116 @@ class Dashboard extends Component
             ];
         }
 
-        // 4. Estadísticas Históricas
+        // 4. Estadísticas Históricas (Optimizado para evitar consultas N+1 en bucle)
         $gestiones = Gestion::orderBy('fecha_inicio', 'asc')->get();
+        
+        $postulantesCounts = Postulante::select('gestion_id', \DB::raw('count(*) as total'))
+            ->groupBy('gestion_id')
+            ->pluck('total', 'gestion_id');
+
+        $admitidosCounts = Postulante::select('gestion_id', \DB::raw('count(*) as total'))
+            ->whereIn('estado_admision', ['admitido_primera_opcion', 'admitido_segunda_opcion'])
+            ->groupBy('gestion_id')
+            ->pluck('total', 'gestion_id');
+
         $this->historicoLabels = [];
         $this->historicoPostulantes = [];
         $this->historicoAdmitidos = [];
         
         foreach ($gestiones as $g) {
             $this->historicoLabels[] = $g->nombre;
-            $this->historicoPostulantes[] = Postulante::where('gestion_id', $g->id)->count();
-            $this->historicoAdmitidos[] = Postulante::where('gestion_id', $g->id)
-                ->whereIn('estado_admision', ['admitido_primera_opcion', 'admitido_segunda_opcion'])
-                ->count();
+            $this->historicoPostulantes[] = $postulantesCounts->get($g->id, 0);
+            $this->historicoAdmitidos[] = $admitidosCounts->get($g->id, 0);
         }
+    }
+
+    public function openAdmissionProcess()
+    {
+        $this->reset(['admissionError', 'admissionStats', 'isProcessing']);
+        $this->showAdmissionModal = true;
+    }
+
+    public function runAdmissionProcess(\App\Services\AdmissionSelectionService $service)
+    {
+        $this->isProcessing = true;
+        $this->admissionError = null;
+        $this->admissionStats = null;
+
+        try {
+            $res = $service->processAdmissions($this->selectedGestionId);
+            
+            if ($res['success']) {
+                // Load fresh stats for summary
+                $this->admissionStats = $service->getStats($this->selectedGestionId);
+                
+                // Reload parent dashboard numbers
+                $this->loadStats();
+                
+                // Dispatch event to refresh charts
+                $this->dispatch('stats-updated');
+            } else {
+                $this->admissionError = "El proceso no pudo completarse correctamente.";
+            }
+        } catch (\App\Exceptions\AdmissionSelectionException $e) {
+            $this->admissionError = $e->getMessage();
+        } catch (\Exception $e) {
+            $this->admissionError = "Ocurrió un error inesperado al procesar las admisiones: " . $e->getMessage();
+        } finally {
+            $this->isProcessing = false;
+        }
+    }
+
+    public function showGroupDetails($groupId)
+    {
+        $this->reset(['selectedGroupInfo', 'groupAlumnos']);
+        
+        $grupo = \App\Models\Grupo::with(['materia', 'docentes.user', 'postulantes.user'])
+            ->findOrFail($groupId);
+            
+        $docenteNombre = $grupo->docentes->first() ? $grupo->docentes->first()->user->name : 'No asignado';
+        
+        $this->selectedGroupInfo = [
+            'id' => $grupo->id,
+            'nombre' => $grupo->nombre,
+            'materia' => $grupo->materia->nombre,
+            'docente' => $docenteNombre,
+        ];
+
+        // Optimized 3-query calculation of student grades in that group's subject
+        $exams = \App\Models\Examen::where('materia_id', $grupo->materia_id)
+            ->where('gestion_id', $this->selectedGestionId)
+            ->get();
+
+        $notas = \App\Models\Nota::whereIn('examen_id', $exams->pluck('id'))
+            ->whereIn('postulante_id', $grupo->postulantes->pluck('id'))
+            ->get()
+            ->groupBy('postulante_id');
+
+        $this->groupAlumnos = [];
+        foreach ($grupo->postulantes as $p) {
+             $notaFinal = 0.00;
+             $postulanteNotas = $notas->get($p->id, collect())->keyBy('examen_id');
+             foreach ($exams as $exam) {
+                 $n = $postulanteNotas->get($exam->id);
+                 if ($n) {
+                     $notaFinal += $n->puntaje * ($exam->ponderacion / 100);
+                 }
+             }
+             $this->groupAlumnos[] = [
+                 'nombre' => $p->user->name,
+                 'email' => $p->user->email,
+                 'ci' => $p->ci,
+                 'nota_materia' => round($notaFinal, 2),
+             ];
+        }
+
+        $this->showGroupDetailsModal = true;
+    }
+
+    public function closeGroupDetails()
+    {
+        $this->showGroupDetailsModal = false;
+        $this->reset(['selectedGroupInfo', 'groupAlumnos']);
     }
 
     public function render()

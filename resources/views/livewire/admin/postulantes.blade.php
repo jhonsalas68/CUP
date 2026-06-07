@@ -5,6 +5,9 @@
             <flux:heading size="xl" class="font-bold tracking-tight">Postulantes</flux:heading>
             <flux:subheading>Lista de postulantes inscritos al CUP</flux:subheading>
         </div>
+        <flux:button wire:click="openCreate" variant="primary" icon="plus">
+            Nuevo Postulante
+        </flux:button>
     </div>
 
     <!-- Alertas -->
@@ -52,6 +55,7 @@
                 <flux:table.column>Nota Final</flux:table.column>
                 <flux:table.column>Estado</flux:table.column>
                 <flux:table.column class="text-center">Cambiar Estado</flux:table.column>
+                <flux:table.column class="text-right">Acciones</flux:table.column>
             </flux:table.columns>
             <flux:table.rows>
                 @forelse($postulantes as $postulante)
@@ -76,7 +80,7 @@
                         </flux:table.cell>
                         <flux:table.cell>
                             @if($postulante->nota_final !== null)
-                                <span class="font-bold text-sm {{ $postulante->nota_final >= 51 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400' }}">
+                                <span class="font-bold text-sm {{ $postulante->nota_final >= 60 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400' }}">
                                     {{ number_format($postulante->nota_final, 2) }}
                                 </span>
                             @else
@@ -112,6 +116,12 @@
                                 @endforeach
                             </flux:select>
                         </flux:table.cell>
+                        <flux:table.cell class="text-right">
+                            <div class="flex justify-end gap-2">
+                                <flux:button wire:click="openEdit({{ $postulante->id }})" size="sm" variant="ghost" icon="pencil-square" />
+                                <flux:button wire:click="delete({{ $postulante->id }})" wire:confirm="¿Eliminar este postulante?" size="sm" variant="ghost" icon="trash" class="text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30" />
+                            </div>
+                        </flux:table.cell>
                     </flux:table.row>
                 @empty
                     <flux:table.row>
@@ -127,4 +137,120 @@
             {{ $postulantes->links() }}
         </div>
     </div>
+
+    <!-- Modal Crear/Editar -->
+    <flux:modal wire:model="showModal" class="w-full max-w-xl">
+        <div class="space-y-4">
+            <flux:heading size="lg">{{ $isEditing ? 'Editar Postulante' : 'Nuevo Postulante' }}</flux:heading>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <flux:field>
+                    <flux:label>Nombre completo</flux:label>
+                    <flux:input wire:model="name" placeholder="Ej: Ana Gómez" />
+                    <flux:error name="name" />
+                </flux:field>
+
+                <flux:field>
+                    <flux:label>Correo electrónico</flux:label>
+                    <flux:input type="email" wire:model="email" placeholder="Ej: ana@example.com" />
+                    <flux:error name="email" />
+                </flux:field>
+
+                <flux:field>
+                    <flux:label>Cédula de Identidad (CI)</flux:label>
+                    <flux:input wire:model="ci" placeholder="Ej: 1234567" />
+                    <flux:error name="ci" />
+                </flux:field>
+
+                <flux:field>
+                    <flux:label>Teléfono</flux:label>
+                    <flux:input wire:model="telefono" placeholder="Ej: 71234567" />
+                    <flux:error name="telefono" />
+                </flux:field>
+
+                <flux:field>
+                    <flux:label>Fecha de Nacimiento</flux:label>
+                    <flux:input type="date" wire:model="fecha_nacimiento" />
+                    <flux:error name="fecha_nacimiento" />
+                </flux:field>
+
+                <flux:field>
+                    <flux:label>Sexo</flux:label>
+                    <flux:select wire:model="sexo">
+                        <option value="">Seleccione...</option>
+                        <option value="M">Masculino</option>
+                        <option value="F">Femenino</option>
+                    </flux:select>
+                    <flux:error name="sexo" />
+                </flux:field>
+
+                <flux:field class="sm:col-span-2">
+                    <flux:label>Dirección</flux:label>
+                    <flux:input wire:model="direccion" placeholder="Ej: Av. Las Américas #123" />
+                    <flux:error name="direccion" />
+                </flux:field>
+
+                <flux:field>
+                    <flux:label>Colegio de Procedencia</flux:label>
+                    <flux:input wire:model="colegio_procedencia" placeholder="Ej: Colegio Nacional" />
+                    <flux:error name="colegio_procedencia" />
+                </flux:field>
+
+                <flux:field>
+                    <flux:label>Ciudad</flux:label>
+                    <flux:input wire:model="ciudad" placeholder="Ej: Santa Cruz" />
+                    <flux:error name="ciudad" />
+                </flux:field>
+
+                <flux:field>
+                    <flux:label>Carrera (1ra Opción)</flux:label>
+                    <flux:select wire:model="carrera_primera_opcion_id">
+                        <option value="">Seleccione una carrera...</option>
+                        @foreach($carreras as $c)
+                            <option value="{{ $c->id }}">{{ $c->sigla }} - {{ $c->nombre }}</option>
+                        @endforeach
+                    </flux:select>
+                    <flux:error name="carrera_primera_opcion_id" />
+                </flux:field>
+
+                <flux:field>
+                    <flux:label>Carrera (2da Opción)</flux:label>
+                    <flux:select wire:model="carrera_segunda_opcion_id">
+                        <option value="">Seleccione carrera (opcional)...</option>
+                        @foreach($carreras as $c)
+                            <option value="{{ $c->id }}">{{ $c->sigla }} - {{ $c->nombre }}</option>
+                        @endforeach
+                    </flux:select>
+                    <flux:error name="carrera_segunda_opcion_id" />
+                </flux:field>
+
+                <flux:field class="sm:col-span-2">
+                    <flux:label>Gestión Académica</flux:label>
+                    <flux:select wire:model="gestion_id">
+                        <option value="">Seleccione gestión...</option>
+                        @foreach($gestiones as $g)
+                            <option value="{{ $g->id }}">{{ $g->nombre }} @if($g->activo)(Activa)@endif</option>
+                        @endforeach
+                    </flux:select>
+                    <flux:error name="gestion_id" />
+                </flux:field>
+            </div>
+
+            <div class="space-y-2 pt-2 border-t border-zinc-100 dark:border-zinc-850">
+                <flux:heading size="sm" class="font-bold">Requisitos de Inscripción Presentados</flux:heading>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <flux:checkbox wire:model="ci_vigente" label="CI Vigente" />
+                    <flux:checkbox wire:model="titulo_bachiller" label="Título Bachiller" />
+                    <flux:checkbox wire:model="libreta_legalizada" label="Libreta Legalizada" />
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-4 border-t border-zinc-150 dark:border-zinc-850">
+                <flux:button wire:click="$set('showModal', false)" variant="ghost">Cancelar</flux:button>
+                <flux:button wire:click="save" variant="primary">
+                    {{ $isEditing ? 'Actualizar' : 'Inscribir Postulante' }}
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
 </div>

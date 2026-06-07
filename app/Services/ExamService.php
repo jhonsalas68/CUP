@@ -175,9 +175,8 @@ class ExamService
         $promedioFinal = $sumMaterias / $totalMaterias;
 
         // Determinar estado de admisión
-        // El estado se mantiene en 'pendiente' si no se han completado y calificado todos los exámenes (30/30/40) para todas las materias de su carrera
         if ($allExamsGraded) {
-            $nuevoEstado = $promedioFinal >= 51.00 ? 'admitido_primera_opcion' : 'reprobado';
+            $nuevoEstado = $promedioFinal >= 60.00 ? 'admitido_primera_opcion' : 'reprobado';
         } else {
             $nuevoEstado = 'pendiente';
         }

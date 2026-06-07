@@ -100,7 +100,7 @@ class DatabaseSeeder extends Seeder
         $userPostulante->assignRole('Postulante');
 
         $carreraSistemas = Carrera::where('sigla', 'SIS')->first();
-        $carreraCivil = Carrera::where('sigla', 'CIV')->first();
+        $carreraInformatica = Carrera::where('sigla', 'INF')->first();
 
         Postulante::firstOrCreate(
             ['user_id' => $userPostulante->id],
@@ -109,10 +109,13 @@ class DatabaseSeeder extends Seeder
                 'telefono' => '60011223',
                 'fecha_nacimiento' => '2005-08-15',
                 'carrera_primera_opcion_id' => $carreraSistemas->id,
-                'carrera_segunda_opcion_id' => $carreraCivil->id,
+                'carrera_segunda_opcion_id' => $carreraInformatica->id,
                 'gestion_id' => $gestion->id,
                 'estado_admision' => 'pendiente',
                 'nota_final' => null,
+                'ci_vigente' => true,
+                'titulo_bachiller' => true,
+                'libreta_legalizada' => true,
             ]
         );
     }

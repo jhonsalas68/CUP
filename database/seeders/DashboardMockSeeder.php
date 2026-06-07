@@ -69,21 +69,22 @@ class DashboardMockSeeder extends Seeder
 
         // 3. Crear Carreras
         $sis = Carrera::create(['nombre' => 'Ingeniería de Sistemas', 'sigla' => 'SIS']);
-        $civ = Carrera::create(['nombre' => 'Ingeniería Civil', 'sigla' => 'CIV']);
-        $med = Carrera::create(['nombre' => 'Medicina', 'sigla' => 'MED']);
+        $inf = Carrera::create(['nombre' => 'Ingeniería Informática', 'sigla' => 'INF']);
+        $red = Carrera::create(['nombre' => 'Ingeniería en Redes y Telecomunicaciones', 'sigla' => 'RED']);
+        $rob = Carrera::create(['nombre' => 'Ingeniería Robótica', 'sigla' => 'ROB']);
 
-        $carreras = [$sis, $civ, $med];
+        $carreras = [$sis, $inf, $red, $rob];
 
         // 4. Configurar Cupos por gestión
         $cuposData = [
             'I-2025' => [
-                'SIS' => [30, 15], 'CIV' => [20, 10], 'MED' => [15, 5]
+                'SIS' => [30, 15], 'INF' => [20, 10], 'RED' => [15, 5], 'ROB' => [12, 6]
             ],
             'II-2025' => [
-                'SIS' => [35, 15], 'CIV' => [25, 10], 'MED' => [18, 5]
+                'SIS' => [35, 15], 'INF' => [25, 10], 'RED' => [18, 5], 'ROB' => [15, 7]
             ],
             'I-2026' => [
-                'SIS' => [40, 20], 'CIV' => [30, 15], 'MED' => [20, 8]
+                'SIS' => [40, 20], 'INF' => [30, 15], 'RED' => [20, 8], 'ROB' => [18, 8]
             ]
         ];
 
@@ -101,18 +102,31 @@ class DashboardMockSeeder extends Seeder
 
         // 5. Crear Materias por carrera
         $mSistemas = [
-            ['nombre' => 'Introducción a la Programación', 'sigla' => 'SIS-110'],
-            ['nombre' => 'Álgebra Lineal', 'sigla' => 'MAT-101'],
+            ['nombre' => 'Matemáticas (Sistemas)', 'sigla' => 'MAT-SIS'],
+            ['nombre' => 'Física (Sistemas)', 'sigla' => 'FIS-SIS'],
+            ['nombre' => 'Inglés (Sistemas)', 'sigla' => 'ING-SIS'],
+            ['nombre' => 'Computación (Sistemas)', 'sigla' => 'COM-SIS'],
         ];
 
-        $mCivil = [
-            ['nombre' => 'Física General', 'sigla' => 'FIS-100'],
-            ['nombre' => 'Cálculo I', 'sigla' => 'MAT-102'],
+        $mInformatica = [
+            ['nombre' => 'Matemáticas (Informática)', 'sigla' => 'MAT-INF'],
+            ['nombre' => 'Física (Informática)', 'sigla' => 'FIS-INF'],
+            ['nombre' => 'Inglés (Informática)', 'sigla' => 'ING-INF'],
+            ['nombre' => 'Computación (Informática)', 'sigla' => 'COM-INF'],
         ];
 
-        $mMedicina = [
-            ['nombre' => 'Anatomía Humana', 'sigla' => 'MED-101'],
-            ['nombre' => 'Histología', 'sigla' => 'MED-102'],
+        $mRedes = [
+            ['nombre' => 'Matemáticas (Redes)', 'sigla' => 'MAT-RED'],
+            ['nombre' => 'Física (Redes)', 'sigla' => 'FIS-RED'],
+            ['nombre' => 'Inglés (Redes)', 'sigla' => 'ING-RED'],
+            ['nombre' => 'Computación (Redes)', 'sigla' => 'COM-RED'],
+        ];
+
+        $mRobotica = [
+            ['nombre' => 'Matemáticas (Robótica)', 'sigla' => 'MAT-ROB'],
+            ['nombre' => 'Física (Robótica)', 'sigla' => 'FIS-ROB'],
+            ['nombre' => 'Inglés (Robótica)', 'sigla' => 'ING-ROB'],
+            ['nombre' => 'Computación (Robótica)', 'sigla' => 'COM-ROB'],
         ];
 
         $materiasList = [];
@@ -120,20 +134,23 @@ class DashboardMockSeeder extends Seeder
         foreach ($mSistemas as $m) {
             $materiasList[] = Materia::create(array_merge($m, ['carrera_id' => $sis->id]));
         }
-        foreach ($mCivil as $m) {
-            $materiasList[] = Materia::create(array_merge($m, ['carrera_id' => $civ->id]));
+        foreach ($mInformatica as $m) {
+            $materiasList[] = Materia::create(array_merge($m, ['carrera_id' => $inf->id]));
         }
-        foreach ($mMedicina as $m) {
-            $materiasList[] = Materia::create(array_merge($m, ['carrera_id' => $med->id]));
+        foreach ($mRedes as $m) {
+            $materiasList[] = Materia::create(array_merge($m, ['carrera_id' => $red->id]));
+        }
+        foreach ($mRobotica as $m) {
+            $materiasList[] = Materia::create(array_merge($m, ['carrera_id' => $rob->id]));
         }
 
         // 6. Crear Docentes y asociar disponibilidad
         $docentesData = [
-            ['name' => 'Carlos Mendoza', 'email' => 'carlos@cup.edu.bo', 'esp' => 'Programación y Algoritmos', 'materias' => ['SIS-110', 'MAT-101']],
-            ['name' => 'María Delgadillo', 'email' => 'maria@cup.edu.bo', 'esp' => 'Matemáticas y Cálculo', 'materias' => ['MAT-101', 'MAT-102']],
-            ['name' => 'Jorge Vaca', 'email' => 'jorge@cup.edu.bo', 'esp' => 'Física y Mecánica', 'materias' => ['FIS-100']],
-            ['name' => 'Dra. Elena Prado', 'email' => 'elena@cup.edu.bo', 'esp' => 'Anatomía y Patología', 'materias' => ['MED-101', 'MED-102']],
-            ['name' => 'Dr. René Justiniano', 'email' => 'rene@cup.edu.bo', 'esp' => 'Histología y Citología', 'materias' => ['MED-102']],
+            ['name' => 'Carlos Mendoza', 'email' => 'carlos@cup.edu.bo', 'esp' => 'Computación y Algoritmos', 'materias' => ['COM-SIS', 'COM-INF', 'COM-RED', 'COM-ROB']],
+            ['name' => 'María Delgadillo', 'email' => 'maria@cup.edu.bo', 'esp' => 'Matemáticas y Álgebra', 'materias' => ['MAT-SIS', 'MAT-INF', 'MAT-RED', 'MAT-ROB']],
+            ['name' => 'Jorge Vaca', 'email' => 'jorge@cup.edu.bo', 'esp' => 'Física General', 'materias' => ['FIS-SIS', 'FIS-INF', 'FIS-RED', 'FIS-ROB']],
+            ['name' => 'Dra. Elena Prado', 'email' => 'elena@cup.edu.bo', 'esp' => 'Inglés Técnico', 'materias' => ['ING-SIS', 'ING-INF', 'ING-RED', 'ING-ROB']],
+            ['name' => 'Dr. René Justiniano', 'email' => 'rene@cup.edu.bo', 'esp' => 'Computación e Inglés', 'materias' => ['COM-SIS', 'COM-INF', 'ING-SIS', 'ING-INF', 'COM-ROB', 'ING-ROB']],
         ];
 
         $docentesList = [];
@@ -181,21 +198,25 @@ class DashboardMockSeeder extends Seeder
         AdmissionSelectionService $admissionService
     ): void {
         $carrSIS = $carreras[0];
-        $carrCIV = $carreras[1];
-        $carrMED = $carreras[2];
+        $carrINF = $carreras[1];
+        $carrRED = $carreras[2];
+        $carrROB = $carreras[3];
 
-        // Crear postulantes con distribución: SIS 50%, MED 30%, CIV 20%
+        // Crear postulantes con distribución: SIS 40%, RED 20%, INF 20%, ROB 20%
         for ($i = 1; $i <= $numPostulantes; $i++) {
             $rand = rand(1, 100);
-            if ($rand <= 50) {
+            if ($rand <= 40) {
                 $primera = $carrSIS;
-                $segunda = rand(1, 2) == 1 ? $carrCIV : null;
-            } elseif ($rand <= 80) {
-                $primera = $carrMED;
+                $segunda = rand(1, 2) == 1 ? $carrINF : null;
+            } elseif ($rand <= 60) {
+                $primera = $carrRED;
                 $segunda = null;
-            } else {
-                $primera = $carrCIV;
+            } elseif ($rand <= 80) {
+                $primera = $carrINF;
                 $segunda = rand(1, 2) == 1 ? $carrSIS : null;
+            } else {
+                $primera = $carrROB;
+                $segunda = rand(1, 2) == 1 ? $carrINF : null;
             }
 
             $u = User::create([
@@ -214,6 +235,9 @@ class DashboardMockSeeder extends Seeder
                 'carrera_segunda_opcion_id' => $segunda ? $segunda->id : null,
                 'gestion_id' => $g->id,
                 'estado_admision' => 'pendiente',
+                'ci_vigente' => true,
+                'titulo_bachiller' => true,
+                'libreta_legalizada' => true,
             ]);
         }
 

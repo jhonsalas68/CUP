@@ -108,8 +108,14 @@ class Docentes extends Component
 
     public function delete($id)
     {
-        Docente::findOrFail($id)->delete();
-        session()->flash('message', 'Docente eliminado correctamente.');
+        \Illuminate\Support\Facades\DB::transaction(function () use ($id) {
+            $docente = Docente::findOrFail($id);
+            if ($docente->user) {
+                $docente->user->delete();
+            }
+            $docente->delete();
+        });
+        session()->flash('message', 'Docente y su usuario asociado eliminados correctamente.');
     }
 
     public function render()

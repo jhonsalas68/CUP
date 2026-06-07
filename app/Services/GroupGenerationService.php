@@ -16,6 +16,11 @@ use Illuminate\Support\Facades\Log;
 
 class GroupGenerationService
 {
+    // Parámetros de capacidad y divisor para conformación de grupos (examen)
+    public const ALUMNOS_DIVISOR = 80; // Divisor de la fórmula (CEIL(TotalInscritos / 80))
+    public const CUPO_MAXIMO_GRUPO = 70; // Capacidad física máxima por grupo
+    public const MAX_GRUPOS_POR_DOCENTE = 4; // Límite máximo de grupos asignados por docente en una gestión
+
     // Pool de slots horarios preestablecidos (8 slots)
     // Cada slot representa 2 sesiones semanales de 1.5 horas cada una.
     public const SLOTS = [
@@ -144,8 +149,8 @@ class GroupGenerationService
                     $slot = self::SLOTS[$slotKey];
 
                     $totalAlumnos = $postulantes->count();
-                    // Límite de 60 alumnos por grupo
-                    $numGrupos = (int) ceil($totalAlumnos / 60);
+                    // Límite de alumnos por grupo según divisor parametrizado
+                    $numGrupos = (int) ceil($totalAlumnos / self::ALUMNOS_DIVISOR);
 
                     // Distribución equitativa de alumnos
                     $chunks = $this->distributeEquatively($postulantes, $numGrupos);
@@ -159,7 +164,7 @@ class GroupGenerationService
                             'nombre' => $grupoNombre,
                             'materia_id' => $materia->id,
                             'gestion_id' => $gestion->id,
-                            'cupo_maximo' => 60,
+                            'cupo_maximo' => self::CUPO_MAXIMO_GRUPO,
                         ]);
 
                         $stats['grupos_creados']++;
@@ -347,6 +352,11 @@ class GroupGenerationService
                 ->where('grupos.gestion_id', $gestionId)
                 ->where('asignaciones_docente.docente_id', $docente->id)
                 ->count();
+
+            // Bloquear la asignación si ya alcanzó el máximo de 4 grupos activos en esta gestión
+            if ($carga >= self::MAX_GRUPOS_POR_DOCENTE) {
+                continue;
+            }
 
             $elegibles[] = [
                 'docente' => $docente,

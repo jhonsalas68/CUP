@@ -13,30 +13,98 @@ class MateriaSeeder extends Seeder
      */
     public function run(): void
     {
-        $carreraSistemas = Carrera::where('sigla', 'SIS')->first();
-        $carreraCivil = Carrera::where('sigla', 'CIV')->first();
-        $carreraMedicina = Carrera::where('sigla', 'MED')->first();
+        $carreraSIS = Carrera::where('sigla', 'SIS')->first();
+        $carreraINF = Carrera::where('sigla', 'INF')->first();
+        $carreraRED = Carrera::where('sigla', 'RED')->first();
+        $carreraROB = Carrera::where('sigla', 'ROB')->first();
 
         $materias = [
+            // Sistemas
             [
-                'nombre' => 'Introducción a la Programación',
-                'sigla' => 'INF-110',
-                'carrera_id' => $carreraSistemas->id,
+                'nombre' => 'Matemáticas (Sistemas)',
+                'sigla' => 'MAT-SIS',
+                'carrera_id' => $carreraSIS->id,
             ],
             [
-                'nombre' => 'Cálculo I (Sistemas)',
-                'sigla' => 'MAT-101-SIS',
-                'carrera_id' => $carreraSistemas->id,
+                'nombre' => 'Física (Sistemas)',
+                'sigla' => 'FIS-SIS',
+                'carrera_id' => $carreraSIS->id,
             ],
             [
-                'nombre' => 'Cálculo I (Civil)',
-                'sigla' => 'MAT-101-CIV',
-                'carrera_id' => $carreraCivil->id,
+                'nombre' => 'Inglés (Sistemas)',
+                'sigla' => 'ING-SIS',
+                'carrera_id' => $carreraSIS->id,
             ],
             [
-                'nombre' => 'Anatomía Humana',
-                'sigla' => 'MED-101',
-                'carrera_id' => $carreraMedicina->id,
+                'nombre' => 'Computación (Sistemas)',
+                'sigla' => 'COM-SIS',
+                'carrera_id' => $carreraSIS->id,
+            ],
+
+            // Informática
+            [
+                'nombre' => 'Matemáticas (Informática)',
+                'sigla' => 'MAT-INF',
+                'carrera_id' => $carreraINF->id,
+            ],
+            [
+                'nombre' => 'Física (Informática)',
+                'sigla' => 'FIS-INF',
+                'carrera_id' => $carreraINF->id,
+            ],
+            [
+                'nombre' => 'Inglés (Informática)',
+                'sigla' => 'ING-INF',
+                'carrera_id' => $carreraINF->id,
+            ],
+            [
+                'nombre' => 'Computación (Informática)',
+                'sigla' => 'COM-INF',
+                'carrera_id' => $carreraINF->id,
+            ],
+
+            // Redes y Telecomunicaciones
+            [
+                'nombre' => 'Matemáticas (Redes)',
+                'sigla' => 'MAT-RED',
+                'carrera_id' => $carreraRED->id,
+            ],
+            [
+                'nombre' => 'Física (Redes)',
+                'sigla' => 'FIS-RED',
+                'carrera_id' => $carreraRED->id,
+            ],
+            [
+                'nombre' => 'Inglés (Redes)',
+                'sigla' => 'ING-RED',
+                'carrera_id' => $carreraRED->id,
+            ],
+            [
+                'nombre' => 'Computación (Redes)',
+                'sigla' => 'COM-RED',
+                'carrera_id' => $carreraRED->id,
+            ],
+
+            // Robótica
+            [
+                'nombre' => 'Matemáticas (Robótica)',
+                'sigla' => 'MAT-ROB',
+                'carrera_id' => $carreraROB->id,
+            ],
+            [
+                'nombre' => 'Física (Robótica)',
+                'sigla' => 'FIS-ROB',
+                'carrera_id' => $carreraROB->id,
+            ],
+            [
+                'nombre' => 'Inglés (Robótica)',
+                'sigla' => 'ING-ROB',
+                'carrera_id' => $carreraROB->id,
+            ],
+            [
+                'nombre' => 'Computación (Robótica)',
+                'sigla' => 'COM-ROB',
+                'carrera_id' => $carreraROB->id,
             ],
         ];
 
