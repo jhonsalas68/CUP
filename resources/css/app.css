@@ -3,3 +3,36 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Theme Accent Colors for Flux UI and Custom Components */
+:root {
+    --color-accent: #4f46e5; /* Indigo 600 */
+    --color-accent-foreground: #ffffff;
+}
+
+.dark {
+    --color-accent: #6366f1; /* Indigo 500 */
+    --color-accent-foreground: #ffffff;
+}
+
+/* Improve unchecked checkbox visibility in dark mode */
+.dark ui-checkbox [data-flux-checkbox-indicator] {
+    border-color: rgba(255, 255, 255, 0.25) !important;
+    background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* checked state styling */
+ui-checkbox[data-checked] [data-flux-checkbox-indicator] {
+    background-color: var(--color-accent) !important;
+    border-color: transparent !important;
+}
+
+ui-checkbox[data-checked] [data-flux-checkbox-indicator] svg:first-child {
+    display: block !important;
+    color: var(--color-accent-foreground) !important;
+}
+
+ui-checkbox[data-checked] [data-flux-checkbox-indicator] svg:last-child {
+    display: none !important;
+}
+

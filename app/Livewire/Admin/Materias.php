@@ -101,12 +101,75 @@ class Materias extends Component
         session()->flash('message', 'Materia eliminada correctamente.');
     }
 
+    public function limpiarFiltros()
+    {
+        $this->reset(['search', 'filterCarrera']);
+        $this->resetPage();
+    }
+
+    public function processVoiceCommand($transcript)
+    {
+        $transcript = mb_strtolower($transcript, 'UTF-8');
+        
+        if (str_contains($transcript, 'limpiar') || str_contains($transcript, 'restablecer') || str_contains($transcript, 'todos') || str_contains($transcript, 'reiniciar') || str_contains($transcript, 'quitar')) {
+            $this->reset(['search', 'filterCarrera']);
+            session()->flash('voice_feedback', 'Filtros restablecidos.');
+            $this->resetPage();
+            return;
+        }
+
+        $feedback = [];
+
+        // Parsear Carrera
+        if (str_contains($transcript, 'sistemas') || str_contains($transcript, 'sistema')) {
+            $c = Carrera::where('sigla', 'SIS')->first();
+            if ($c) {
+                $this->filterCarrera = $c->id;
+                $feedback[] = 'Carrera: Sistemas';
+            }
+        } elseif (str_contains($transcript, 'informática') || str_contains($transcript, 'informatica')) {
+            $c = Carrera::where('sigla', 'INF')->first();
+            if ($c) {
+                $this->filterCarrera = $c->id;
+                $feedback[] = 'Carrera: Informática';
+            }
+        } elseif (str_contains($transcript, 'robótica') || str_contains($transcript, 'robotica')) {
+            $c = Carrera::where('sigla', 'ROB')->first();
+            if ($c) {
+                $this->filterCarrera = $c->id;
+                $feedback[] = 'Carrera: Robótica';
+            }
+        } elseif (str_contains($transcript, 'redes') || str_contains($transcript, 'telecomunicaciones')) {
+            $c = Carrera::where('sigla', 'RED')->first();
+            if ($c) {
+                $this->filterCarrera = $c->id;
+                $feedback[] = 'Carrera: Redes y Telecomunicaciones';
+            }
+        }
+
+        // Búsqueda general
+        if (preg_match('/(?:buscar|busca|nombre|materia)\s+([a-záéíóúñ0-9\s\-]+)/', $transcript, $matches)) {
+            $this->search = trim($matches[1]);
+            $feedback[] = 'Buscar: "' . $this->search . '"';
+        }
+
+        if (empty($feedback)) {
+            $this->search = trim($transcript);
+            $feedback[] = 'Buscar: "' . $this->search . '"';
+        }
+
+        session()->flash('voice_feedback', 'Filtros aplicados: ' . implode(', ', $feedback));
+        $this->resetPage();
+    }
+
     public function render()
     {
         $carreras = Carrera::orderBy('nombre')->get();
+        $gestiones = \App\Models\Gestion::orderBy('fecha_inicio', 'desc')->get();
+        $carrerasList = $carreras;
 
         $materias = Materia::query()
-            ->with('carrera')
+            ->with(['carrera', 'grupos.docentes', 'grupos.postulantes'])
             ->where(function ($q) {
                 $q->where('nombre', 'like', '%' . $this->search . '%')
                   ->orWhere('sigla', 'like', '%' . $this->search . '%');
@@ -115,7 +178,7 @@ class Materias extends Component
             ->orderBy('nombre')
             ->paginate(10);
 
-        return view('livewire.admin.materias', compact('materias', 'carreras'))
+        return view('livewire.admin.materias', compact('materias', 'carreras', 'gestiones', 'carrerasList'))
             ->layout('layouts.admin');
     }
 }

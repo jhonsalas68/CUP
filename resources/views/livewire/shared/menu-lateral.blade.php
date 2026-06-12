@@ -2,29 +2,39 @@
     <!-- Lista de Navegación -->
     <flux:navlist class="space-y-1.5">
         @if(auth()->user()->hasAnyRole(['Administrador', 'Coordinador']))
-            <flux:navlist.item icon="squares-2x2" href="{{ route('admin.dashboard') }}" wire:navigate.hover :current="request()->routeIs('admin.dashboard')">
+            <flux:navlist.item icon="squares-2x2" href="{{ route('admin.dashboard') }}" :current="request()->routeIs('admin.dashboard')">
                 Dashboard
             </flux:navlist.item>
 
-            <flux:navlist.item icon="academic-cap" href="{{ route('admin.carreras') }}" wire:navigate.hover :current="request()->routeIs('admin.carreras')">
+            <flux:navlist.item icon="academic-cap" href="{{ route('admin.carreras') }}" :current="request()->routeIs('admin.carreras')">
                 Carreras
             </flux:navlist.item>
 
-            <flux:navlist.item icon="book-open" href="{{ route('admin.materias') }}" wire:navigate.hover :current="request()->routeIs('admin.materias')">
+            <flux:navlist.item icon="book-open" href="{{ route('admin.materias') }}" :current="request()->routeIs('admin.materias')">
                 Materias
             </flux:navlist.item>
 
-            <flux:navlist.item icon="users" href="{{ route('admin.docentes') }}" wire:navigate.hover :current="request()->routeIs('admin.docentes')">
+            <flux:navlist.item icon="rectangle-stack" href="{{ route('admin.grupos') }}" :current="request()->routeIs('admin.grupos')">
+                Grupos
+            </flux:navlist.item>
+
+            <flux:navlist.item icon="users" href="{{ route('admin.docentes') }}" :current="request()->routeIs('admin.docentes')">
                 Docentes
             </flux:navlist.item>
 
-            <flux:navlist.item icon="identification" href="{{ route('admin.postulantes') }}" wire:navigate.hover :current="request()->routeIs('admin.postulantes')">
+            <flux:navlist.item icon="identification" href="{{ route('admin.postulantes') }}" :current="request()->routeIs('admin.postulantes')">
                 Postulantes
             </flux:navlist.item>
 
-            <flux:navlist.item icon="clipboard-document-check" href="{{ route('admin.examenes') }}" wire:navigate.hover :current="request()->routeIs('admin.examenes')">
+            <flux:navlist.item icon="document-arrow-up" href="{{ route('admin.carga-lotes') }}" :current="request()->routeIs('admin.carga-lotes')">
+                Carga Masiva (CSV)
+            </flux:navlist.item>
+
+            <flux:navlist.item icon="clipboard-document-check" href="{{ route('admin.examenes') }}" :current="request()->routeIs('admin.examenes')">
                 Exámenes
             </flux:navlist.item>
+
+
         @elseif(auth()->user()->hasRole('Docente'))
             <flux:navlist.item icon="squares-2x2" href="#" current>
                 Mi Dashboard

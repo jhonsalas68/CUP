@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Log;
 class GroupGenerationService
 {
     // Parámetros de capacidad y divisor para conformación de grupos (examen)
-    public const ALUMNOS_DIVISOR = 80; // Divisor de la fórmula (CEIL(TotalInscritos / 80))
+    public const ALUMNOS_DIVISOR = 70; // Divisor de la fórmula (CEIL(TotalInscritos / 70))
     public const CUPO_MAXIMO_GRUPO = 70; // Capacidad física máxima por grupo
     public const MAX_GRUPOS_POR_DOCENTE = 4; // Límite máximo de grupos asignados por docente en una gestión
 
@@ -142,12 +142,6 @@ class GroupGenerationService
 
                 // Procesar cada materia asignando slots horarios diferentes
                 foreach ($materias as $index => $materia) {
-                    // Selección de slot horario por rotación
-                    // Cada materia de la carrera tendrá un slot diferente para evitar cruces
-                    $slotIndex = $index % 8;
-                    $slotKey = 'slot_' . ($slotIndex + 1);
-                    $slot = self::SLOTS[$slotKey];
-
                     $totalAlumnos = $postulantes->count();
                     // Límite de alumnos por grupo según divisor parametrizado
                     $numGrupos = (int) ceil($totalAlumnos / self::ALUMNOS_DIVISOR);
@@ -158,6 +152,11 @@ class GroupGenerationService
                     foreach ($chunks as $gIdx => $chunk) {
                         $groupNumber = $gIdx + 1;
                         $grupoNombre = "{$materia->sigla} - G{$groupNumber}";
+
+                        // Selección de slot horario por rotación (materia + grupo) para evitar cruces en el docente
+                        $slotIndex = ($index + $gIdx) % 8;
+                        $slotKey = 'slot_' . ($slotIndex + 1);
+                        $slot = self::SLOTS[$slotKey];
 
                         // Crear el grupo
                         $grupo = Grupo::create([
@@ -339,6 +338,12 @@ class GroupGenerationService
             $disponibilidad = $docente->disponibilidad_horaria ?? [];
             if (!in_array($slotKey, $disponibilidad)) {
                 continue; // No está disponible en este slot
+            }
+
+            // Verificar si cumple los requisitos académicos de la facultad:
+            // Profesional en el área, maestría y diplomado en educación superior
+            if (!$docente->profesional_area || !$docente->tiene_maestria || !$docente->tiene_diplomado) {
+                continue; // No cumple con los requisitos de contratación
             }
 
             // Verificar si ya tiene un cruce de horario en este slot

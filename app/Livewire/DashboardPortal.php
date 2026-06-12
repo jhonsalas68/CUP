@@ -32,6 +32,7 @@ class DashboardPortal extends Component
     public $carrera_primera_opcion_id = '';
     public $carrera_segunda_opcion_id = '';
     public $carrerasDisponibles = [];
+    public $selectedGroups = []; // [materia_id => grupo_id]
 
     // Docente Grading Form
     public $selectedGrupoId = null;
@@ -131,6 +132,85 @@ class DashboardPortal extends Component
 
         $this->successMessage = '¡Tu perfil de postulante ha sido registrado correctamente!';
         $this->dispatch('profile-registered');
+    }
+
+    /**
+     * Enrolls the applicant into selected groups
+     */
+    public function enroll()
+    {
+        $user = auth()->user();
+        $postulante = $user->postulante;
+        
+        if (!$postulante) {
+            $this->errorMessage = 'No tienes perfil de postulante.';
+            return;
+        }
+        
+        if (!$postulante->pago_realizado) {
+            $this->errorMessage = 'Debes pagar tu inscripción para poder inscribirte a las materias.';
+            return;
+        }
+        
+        if (!$postulante->habilitado) {
+            $this->errorMessage = 'Tu perfil debe ser habilitado por el administrador.';
+            return;
+        }
+
+        $activeGestion = Gestion::where('activo', true)->first();
+        if (!$activeGestion) {
+            $this->errorMessage = 'No hay una gestión activa en este momento.';
+            return;
+        }
+
+        // Fetch career materias
+        $carrera = Carrera::with('materias')->find($postulante->carrera_primera_opcion_id);
+        $materias = $carrera ? $carrera->materias : collect();
+        
+        if ($materias->isEmpty()) {
+            $this->errorMessage = 'No hay materias configuradas para tu carrera.';
+            return;
+        }
+
+        // Validate that they selected a group for EVERY materia
+        foreach ($materias as $materia) {
+            if (empty($this->selectedGroups[$materia->id])) {
+                $this->errorMessage = "Por favor selecciona un grupo para la materia: {$materia->nombre}.";
+                return;
+            }
+        }
+
+        // Validate cupos and check each group
+        $groupsToAttach = [];
+        foreach ($materias as $materia) {
+            $grupoId = $this->selectedGroups[$materia->id];
+            $grupo = Grupo::where('materia_id', $materia->id)
+                ->where('gestion_id', $activeGestion->id)
+                ->find($grupoId);
+
+            if (!$grupo) {
+                $this->errorMessage = "El grupo seleccionado para la materia {$materia->nombre} no es válido.";
+                return;
+            }
+
+            // Check cupo
+            $currentCount = $grupo->postulantes()->count();
+            if ($currentCount >= $grupo->cupo_maximo) {
+                $this->errorMessage = "El grupo {$grupo->nombre} de la materia {$materia->nombre} ya no tiene cupos disponibles.";
+                return;
+            }
+
+            $groupsToAttach[] = $grupo->id;
+        }
+
+        // Enroll student
+        DB::transaction(function () use ($postulante, $groupsToAttach) {
+            // Attach groups
+            $postulante->grupos()->sync($groupsToAttach);
+        });
+
+        $this->successMessage = '¡Inscripción a materias y grupos realizada con éxito!';
+        $this->dispatch('enrolled');
     }
 
     /**
@@ -251,17 +331,40 @@ class DashboardPortal extends Component
         $assignedGroups = [];
         $gradesTable = [];
 
+        $availableGroupsByMateria = [];
+        $isEnrolled = false;
+
         if ($this->role === 'Postulante') {
             $postulante = $user->postulante;
             if ($postulante) {
                 // Fetch assigned groups
                 $assignedGroups = $postulante->grupos()->with(['materia', 'docentes.user', 'horarios'])->get();
+                $isEnrolled = $assignedGroups->isNotEmpty();
                 
                 // Construct grades table
                 // For their first career, let's fetch the materias
                 $carrera = Carrera::with('materias')->find($postulante->carrera_primera_opcion_id);
                 $materias = $carrera ? $carrera->materias : collect();
                 
+                // If not enrolled and both paid and habilitado, get available groups
+                if (!$isEnrolled && $postulante->pago_realizado && $postulante->habilitado) {
+                    $activeGestion = Gestion::where('activo', true)->first();
+                    foreach ($materias as $materia) {
+                        $groups = Grupo::where('materia_id', $materia->id)
+                            ->where('gestion_id', $activeGestion?->id)
+                            ->with(['docentes.user', 'horarios'])
+                            ->get()
+                            ->map(function ($grupo) {
+                                $grupo->current_postulantes_count = $grupo->postulantes()->count();
+                                return $grupo;
+                            });
+                        $availableGroupsByMateria[$materia->id] = [
+                            'materia' => $materia,
+                            'groups' => $groups
+                        ];
+                    }
+                }
+
                 $materiaIds = $materias->pluck('id')->toArray();
                 $examenes = Examen::whereIn('materia_id', $materiaIds)
                     ->where('gestion_id', $postulante->gestion_id)
@@ -331,6 +434,8 @@ class DashboardPortal extends Component
             'assignedGroups' => $assignedGroups,
             'gradesTable' => $gradesTable,
             'selectedGrupo' => $selectedGrupo,
+            'availableGroupsByMateria' => $availableGroupsByMateria,
+            'isEnrolled' => $isEnrolled,
         ])->layout('layouts.admin');
     }
 }

@@ -23,6 +23,7 @@ class Dashboard extends Component
     public $totalReprobados = 0;
     public $totalCuposDisponibles = 0;
     public $totalCuposOcupados = 0;
+    public $totalGrupos = 0;
     
     // charts data
     public $carrerasLabels = [];
@@ -45,6 +46,17 @@ class Dashboard extends Component
     public $selectedGroupInfo = null;
     public $groupAlumnos = [];
 
+    // custom export properties
+    public $exportTabla = 'postulantes';
+    public $exportGestionId = '';
+    public $exportCarreraId = '';
+    public $exportFormato = 'excel';
+    public $carrerasList = [];
+
+    // detailed admitted candidates properties
+    public $selectedDetailCarreraId;
+    public $admitidosDetalle = [];
+
     public function mount()
     {
         if (!auth()->user()->hasAnyRole(['Administrador', 'Coordinador'])) {
@@ -55,6 +67,9 @@ class Dashboard extends Component
         $active = $this->gestiones->where('activo', true)->first() ?? $this->gestiones->first();
         $this->selectedGestionId = $active ? $active->id : null;
         
+        $this->carrerasList = Carrera::orderBy('nombre')->get();
+        $this->exportGestionId = $this->selectedGestionId;
+
         $this->loadStats();
     }
 
@@ -84,6 +99,7 @@ class Dashboard extends Component
             + Cupo::where('gestion_id', $this->selectedGestionId)->sum('cantidad_segunda_opcion');
             
         $this->totalCuposOcupados = $this->totalAdmitidos;
+        $this->totalGrupos = Grupo::where('gestion_id', $this->selectedGestionId)->count();
 
         // 2. Carreras más demandadas (evita N+1 con un solo query)
         $demanda = Postulante::where('gestion_id', $this->selectedGestionId)
@@ -104,68 +120,63 @@ class Dashboard extends Component
             }
         }
 
-        // 3. Rendimiento por grupo (Optimizado para evitar consultas N+1 en bucle)
-        $grupos = Grupo::where('gestion_id', $this->selectedGestionId)
-            ->with(['materia', 'docentes.user', 'postulantes'])
-            ->get();
+        // 3. Rendimiento por grupo (Altamente optimizado con agregación SQL)
+        $statsRaw = \DB::select("
+            SELECT 
+                g.id as grupo_id,
+                g.nombre as grupo_nombre,
+                m.nombre as materia_nombre,
+                COUNT(pg.postulante_id) as total_alumnos,
+                COALESCE(AVG(student_grades.nota_materia), 0) as promedio_grupo,
+                COALESCE(SUM(CASE WHEN student_grades.nota_materia >= 60.00 THEN 1 ELSE 0 END), 0) as aprobados
+            FROM grupos g
+            JOIN materias m ON g.materia_id = m.id
+            LEFT JOIN postulante_grupo pg ON g.id = pg.grupo_id
+            LEFT JOIN (
+                SELECT 
+                    pg2.grupo_id,
+                    pg2.postulante_id,
+                    COALESCE(SUM(n.puntaje * e.ponderacion / 100), 0) as nota_materia
+                FROM postulante_grupo pg2
+                JOIN grupos g2 ON pg2.grupo_id = g2.id
+                JOIN examenes e ON g2.materia_id = e.materia_id AND g2.gestion_id = e.gestion_id
+                LEFT JOIN notas n ON pg2.postulante_id = n.postulante_id AND e.id = n.examen_id
+                WHERE g2.gestion_id = :gestion_id_1
+                GROUP BY pg2.grupo_id, pg2.postulante_id
+            ) as student_grades ON g.id = student_grades.grupo_id AND pg.postulante_id = student_grades.postulante_id
+            WHERE g.gestion_id = :gestion_id_2
+            GROUP BY g.id, g.nombre, m.nombre
+            ORDER BY g.nombre
+        ", [
+            'gestion_id_1' => $this->selectedGestionId,
+            'gestion_id_2' => $this->selectedGestionId,
+        ]);
 
-        // Obtener todos los exámenes de la gestión en una sola consulta
-        $materiaIds = $grupos->pluck('materia_id')->unique();
-        $examenes = Examen::whereIn('materia_id', $materiaIds)
-            ->where('gestion_id', $this->selectedGestionId)
+        $grupoDocentes = \DB::table('asignaciones_docente')
+            ->join('docentes', 'asignaciones_docente.docente_id', '=', 'docentes.id')
+            ->join('grupos', 'asignaciones_docente.grupo_id', '=', 'grupos.id')
+            ->where('grupos.gestion_id', $this->selectedGestionId)
+            ->select('asignaciones_docente.grupo_id', 'docentes.nombre')
             ->get()
-            ->groupBy('materia_id');
+            ->groupBy('grupo_id');
 
-        // Obtener todas las notas de los exámenes de la gestión en una sola consulta
-        $examIds = $examenes->flatten()->pluck('id')->unique();
-        $notas = Nota::whereIn('examen_id', $examIds)
-            ->get()
-            ->groupBy('postulante_id');
-            
         $this->gruposRendimiento = [];
-        foreach ($grupos as $grupo) {
-            $postulantes = $grupo->postulantes;
-            $total = $postulantes->count();
-            
-            $aprobados = 0;
-            $promedioSuma = 0;
-            $alumnosConNota = 0;
-            
-            $grupoExamenes = $examenes->get($grupo->materia_id, collect());
-                
-            foreach ($postulantes as $p) {
-                $notaFinal = 0.00;
-                $hasNotes = false;
-                
-                // Obtener las notas del postulante en memoria
-                $postulanteNotas = $notas->get($p->id, collect())->keyBy('examen_id');
-                
-                foreach ($grupoExamenes as $exam) {
-                    $n = $postulanteNotas->get($exam->id);
-                    if ($n) {
-                        $notaFinal += $n->puntaje * ($exam->ponderacion / 100);
-                        $hasNotes = true;
-                    }
-                }
-                
-                if ($hasNotes) {
-                    $promedioSuma += $notaFinal;
-                    $alumnosConNota++;
-                    if ($notaFinal >= 60.00) {
-                        $aprobados++;
-                    }
-                }
+        foreach ($statsRaw as $row) {
+            $docenteNombre = 'No asignado';
+            if (isset($grupoDocentes[$row->grupo_id])) {
+                $docenteNombre = $grupoDocentes[$row->grupo_id]->pluck('nombre')->first() ?? 'No asignado';
             }
+
+            $total = (int) $row->total_alumnos;
+            $aprobados = (int) $row->aprobados;
             
-            $promedioGrupo = $alumnosConNota > 0 ? round($promedioSuma / $alumnosConNota, 2) : 0.00;
+            $promedioGrupo = round((float) $row->promedio_grupo, 2);
             $porcentajeAprobacion = $total > 0 ? round(($aprobados / $total) * 100, 2) : 0.00;
-            
-            $docenteNombre = $grupo->docentes->first() ? $grupo->docentes->first()->user->name : 'No asignado';
-            
+
             $this->gruposRendimiento[] = [
-                'id' => $grupo->id,
-                'nombre' => $grupo->nombre,
-                'materia' => $grupo->materia->nombre,
+                'id' => $row->grupo_id,
+                'nombre' => $row->grupo_nombre,
+                'materia' => $row->materia_nombre,
                 'docente' => $docenteNombre,
                 'total_alumnos' => $total,
                 'promedio' => $promedioGrupo,
@@ -194,6 +205,11 @@ class Dashboard extends Component
             $this->historicoPostulantes[] = $postulantesCounts->get($g->id, 0);
             $this->historicoAdmitidos[] = $admitidosCounts->get($g->id, 0);
         }
+
+        if (!$this->selectedDetailCarreraId && count($this->carrerasList) > 0) {
+            $this->selectedDetailCarreraId = $this->carrerasList->first()->id;
+        }
+        $this->loadAdmitidosDetalle();
     }
 
     public function openAdmissionProcess()
@@ -239,7 +255,7 @@ class Dashboard extends Component
         $grupo = \App\Models\Grupo::with(['materia', 'docentes.user', 'postulantes.user'])
             ->findOrFail($groupId);
             
-        $docenteNombre = $grupo->docentes->first() ? $grupo->docentes->first()->user->name : 'No asignado';
+        $docenteNombre = $grupo->docentes->first() ? ($grupo->docentes->first()->nombre ?? $grupo->docentes->first()->user->name) : 'No asignado';
         
         $this->selectedGroupInfo = [
             'id' => $grupo->id,
@@ -269,7 +285,7 @@ class Dashboard extends Component
                  }
              }
              $this->groupAlumnos[] = [
-                 'nombre' => $p->user->name,
+                 'nombre' => $p->nombres_apellidos ?? $p->user->name,
                  'email' => $p->user->email,
                  'ci' => $p->ci,
                  'nota_materia' => round($notaFinal, 2),
@@ -283,6 +299,43 @@ class Dashboard extends Component
     {
         $this->showGroupDetailsModal = false;
         $this->reset(['selectedGroupInfo', 'groupAlumnos']);
+    }
+
+    public function loadAdmitidosDetalle()
+    {
+        if (!$this->selectedGestionId || !$this->selectedDetailCarreraId) {
+            $this->admitidosDetalle = [];
+            return;
+        }
+
+        $this->admitidosDetalle = Postulante::where('gestion_id', $this->selectedGestionId)
+            ->where(function ($query) {
+                $query->where(function ($q) {
+                    $q->where('carrera_primera_opcion_id', $this->selectedDetailCarreraId)
+                      ->where('estado_admision', 'admitido_primera_opcion');
+                })->orWhere(function ($q) {
+                    $q->where('carrera_segunda_opcion_id', $this->selectedDetailCarreraId)
+                      ->where('estado_admision', 'admitido_segunda_opcion');
+                });
+            })
+            ->orderByDesc('nota_final')
+            ->orderBy('id')
+            ->get()
+            ->map(function ($p, $index) {
+                return [
+                    'ranking' => $index + 1,
+                    'nombre' => $p->nombres_apellidos,
+                    'ci' => $p->ci,
+                    'nota_final' => $p->nota_final,
+                    'opcion' => $p->estado_admision === 'admitido_primera_opcion' ? 1 : 2,
+                ];
+            })
+            ->toArray();
+    }
+
+    public function updatedSelectedDetailCarreraId()
+    {
+        $this->loadAdmitidosDetalle();
     }
 
     public function render()

@@ -8,7 +8,7 @@
     <title>{{ $title ?? 'CUP - Sistema Universitario' }}</title>
 
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M12 2L3 6v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V6l-9-4z' fill='%234F46E5' fill-opacity='0.15' stroke='%234F46E5' stroke-width='1.5'/%3E%3Cpath d='M12 5L2 9.5L12 14L22 9.5L12 5z' fill='%234F46E5'/%3E%3Cpath d='M12 14.5c2.6 0 3.8-1.3 3.8-1.3v2.7c0 0-1.2-1.4-3.8-1.4s-3.8 1.4-3.8 1.4v-2.7c0 0 1.2 1.3 3.8 1.3z' fill='%23F59E0B'/%3E%3C/svg%3E">
+    <link rel="icon" type="image/png" href="{{ asset('images/uagrm-escudo.png') }}">
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -54,16 +54,18 @@
 <body x-data class="h-full antialiased font-sans text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-950">
     <div class="min-h-full lg:grid lg:grid-cols-[auto_1fr] lg:grid-rows-[auto_1fr] bg-zinc-50 dark:bg-zinc-950">
         <!-- Sidebar para desktop -->
-        <flux:sidebar sticky collapsible class="bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 w-64">
+        <flux:sidebar sticky collapsible stashable class="bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800">
             <!-- Brand / Logo -->
-            <div class="flex items-center gap-3 px-2 py-4 border-b border-zinc-100 dark:border-zinc-800 mb-6">
-                <div class="h-9 w-9 rounded-xl bg-indigo-600 dark:bg-indigo-500 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-indigo-500/20">
-                    U
+            <div class="flex items-center justify-between px-2 py-4 border-b border-zinc-100 dark:border-zinc-800 mb-6">
+                <div class="flex items-center gap-3">
+                    <img src="{{ asset('images/uagrm-escudo.png') }}" class="h-9 w-9 object-contain" alt="UAGRM Escudo">
+                    <div class="flex flex-col">
+                        <span class="font-bold text-sm tracking-tight leading-none text-zinc-900 dark:text-zinc-100">CUP - ADMISIÓN</span>
+                        <span class="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider mt-0.5">Gestión Académica</span>
+                    </div>
                 </div>
-                <div class="flex flex-col">
-                    <span class="font-bold text-sm tracking-tight leading-none text-zinc-900 dark:text-zinc-100">CUP - ADMISIÓN</span>
-                    <span class="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider mt-0.5">Gestión Académica</span>
-                </div>
+                <!-- Toggle button only visible on mobile inside stashed sidebar -->
+                <flux:sidebar.toggle class="lg:hidden text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 p-1 rounded-lg" icon="x-mark" />
             </div>
 
             <!-- Menú Lateral Dinámico -->
@@ -74,9 +76,7 @@
         <flux:header class="lg:hidden bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 px-4 py-3 flex items-center justify-between">
             <flux:sidebar.toggle class="text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 p-2 rounded-lg" icon="bars-3" />
             <div class="flex items-center gap-2">
-                <div class="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-black text-sm">
-                    U
-                </div>
+                <img src="{{ asset('images/uagrm-escudo.png') }}" class="h-8 w-8 object-contain" alt="UAGRM Escudo">
                 <span class="font-bold text-xs tracking-tight text-zinc-900 dark:text-zinc-100">CUP</span>
             </div>
             <div class="flex items-center gap-3">
@@ -118,7 +118,8 @@
         <flux:main class="p-6 lg:p-10 bg-zinc-50 dark:bg-zinc-950">
             <!-- Breadcrumbs / Top Navbar -->
             <div class="hidden lg:flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-5 mb-8">
-                <div>
+                <div class="flex items-center gap-3">
+                    <flux:sidebar.toggle class="text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 p-1.5 rounded-lg" icon="bars-3" />
                     <flux:breadcrumbs>
                         <flux:breadcrumbs.item href="{{ route('dashboard') }}" icon="home">Inicio</flux:breadcrumbs.item>
                         <flux:breadcrumbs.item>Dashboard Administrativo</flux:breadcrumbs.item>
@@ -200,6 +201,64 @@
 
     <!-- Toast Component -->
     <flux:toast />
+    
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('voiceSearchWidget', (wire) => ({
+                isListening: false,
+                currentTranscript: '',
+                supported: 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window,
+                startSpeech() {
+                    if (!this.supported) {
+                        alert('Su navegador no soporta el reconocimiento de voz. Por favor use Google Chrome, Edge o Safari.');
+                        return;
+                    }
+                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    const recognition = new SpeechRecognition();
+                    recognition.lang = 'es-BO';
+                    recognition.interimResults = true;
+                    recognition.maxAlternatives = 1;
+                    
+                    this.currentTranscript = 'Escuchando...';
+                    let finalSpeechResult = '';
+                    
+                    recognition.onstart = () => {
+                        this.isListening = true;
+                    };
+                    
+                    recognition.onresult = (event) => {
+                        let transcript = '';
+                        for (let i = 0; i < event.results.length; i++) {
+                            transcript += event.results[i][0].transcript;
+                        }
+                        this.currentTranscript = transcript;
+                        finalSpeechResult = transcript;
+                    };
+                    
+                    recognition.onerror = (event) => {
+                        console.error('Error de voz:', event.error);
+                        this.currentTranscript = 'Error de voz: ' + event.error;
+                        this.isListening = false;
+                    };
+                    
+                    recognition.onend = () => {
+                        this.isListening = false;
+                        if (finalSpeechResult.trim()) {
+                            this.currentTranscript = `Procesando: "${finalSpeechResult}"`;
+                            wire.processVoiceCommand(finalSpeechResult);
+                        }
+                        setTimeout(() => {
+                            if (!this.isListening) {
+                                this.currentTranscript = '';
+                            }
+                        }, 3000);
+                    };
+                    
+                    recognition.start();
+                }
+            }));
+        });
+    </script>
     @fluxScripts
 </body>
 </html>

@@ -11,17 +11,33 @@ class Docente extends Model
 
     protected $table = 'docentes';
 
+    protected static function booted()
+    {
+        static::saving(function ($docente) {
+            if (empty($docente->nombre) && $docente->user_id) {
+                $docente->nombre = $docente->user?->name;
+            }
+        });
+    }
+
     protected $fillable = [
         'user_id',
+        'nombre',
         'ci',
         'telefono',
         'especialidad',
         'disponibilidad_horaria',
         'formacion_academica',
+        'profesional_area',
+        'tiene_maestria',
+        'tiene_diplomado',
     ];
 
     protected $casts = [
         'disponibilidad_horaria' => 'array',
+        'profesional_area' => 'boolean',
+        'tiene_maestria' => 'boolean',
+        'tiene_diplomado' => 'boolean',
     ];
 
     public function user()

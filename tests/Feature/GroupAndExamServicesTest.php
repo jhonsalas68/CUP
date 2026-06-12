@@ -134,24 +134,38 @@ class GroupAndExamServicesTest extends TestCase
         sort($sizes);
         $this->assertEquals([65, 65], $sizes, "The student distribution should be equative: 65, 65");
 
-        // Verify that horarios (schedules) do not cross for the career subjects
-        // Subject 1 (SIS-110) gets slot_1. Subject 2 (MAT-101) gets slot_2.
-        // Group schedules for SIS-110:
-        $horariosSIS = Horario::whereIn('grupo_id', $groupsSIS->pluck('id'))->get();
-        foreach ($horariosSIS as $horario) {
-            $this->assertEquals('07:30:00', $horario->hora_inicio);
-            $this->assertEquals('09:00:00', $horario->hora_fin);
-            $this->assertTrue(in_array($horario->dia_semana, ['lunes', 'miercoles']));
-        }
+        // Verify that horarios (schedules) are assigned correctly according to rotated slot logic
+        // SIS-110 - G1 -> slot_1, SIS-110 - G2 -> slot_2
+        $g1SIS = Grupo::where('nombre', 'SIS-110 - G1')->first();
+        $g2SIS = Grupo::where('nombre', 'SIS-110 - G2')->first();
+        $this->assertNotNull($g1SIS);
+        $this->assertNotNull($g2SIS);
 
-        // Group schedules for MAT-101:
-        $groupsMAT = Grupo::where('materia_id', $materia2->id)->get();
-        $horariosMAT = Horario::whereIn('grupo_id', $groupsMAT->pluck('id'))->get();
-        foreach ($horariosMAT as $horario) {
-            $this->assertEquals('09:15:00', $horario->hora_inicio);
-            $this->assertEquals('10:45:00', $horario->hora_fin);
-            $this->assertTrue(in_array($horario->dia_semana, ['lunes', 'miercoles']));
-        }
+        $horarioG1SIS = $g1SIS->horarios()->first();
+        $this->assertEquals('07:30:00', $horarioG1SIS->hora_inicio);
+        $this->assertEquals('09:00:00', $horarioG1SIS->hora_fin);
+        $this->assertTrue(in_array($horarioG1SIS->dia_semana, ['lunes', 'miercoles']));
+
+        $horarioG2SIS = $g2SIS->horarios()->first();
+        $this->assertEquals('09:15:00', $horarioG2SIS->hora_inicio);
+        $this->assertEquals('10:45:00', $horarioG2SIS->hora_fin);
+        $this->assertTrue(in_array($horarioG2SIS->dia_semana, ['lunes', 'miercoles']));
+
+        // MAT-101 - G1 -> slot_2, MAT-101 - G2 -> slot_3
+        $g1MAT = Grupo::where('nombre', 'MAT-101 - G1')->first();
+        $g2MAT = Grupo::where('nombre', 'MAT-101 - G2')->first();
+        $this->assertNotNull($g1MAT);
+        $this->assertNotNull($g2MAT);
+
+        $horarioG1MAT = $g1MAT->horarios()->first();
+        $this->assertEquals('09:15:00', $horarioG1MAT->hora_inicio);
+        $this->assertEquals('10:45:00', $horarioG1MAT->hora_fin);
+        $this->assertTrue(in_array($horarioG1MAT->dia_semana, ['lunes', 'miercoles']));
+
+        $horarioG2MAT = $g2MAT->horarios()->first();
+        $this->assertEquals('11:00:00', $horarioG2MAT->hora_inicio);
+        $this->assertEquals('12:30:00', $horarioG2MAT->hora_fin);
+        $this->assertTrue(in_array($horarioG2MAT->dia_semana, ['lunes', 'miercoles']));
 
         // Verify that teachers were assigned without conflicts
         // Since docente1 and docente2 are both available, verify they don't have overlapping schedule assignments
@@ -255,6 +269,71 @@ class GroupAndExamServicesTest extends TestCase
         $this->assertEquals(4, $assignedCount);
 
         // Verify a warning is present in the report for the 5th group
+        $this->assertCount(1, $result['warnings']);
+        $this->assertStringContainsString("No se encontró docente disponible", $result['warnings'][0]);
+    }
+
+    /**
+     * Test that an unqualified teacher (e.g. lacks master's degree) is not assigned to a group.
+     */
+    public function test_teacher_qualification_requirement(): void
+    {
+        $gestion = Gestion::create([
+            'nombre' => 'I-2026',
+            'fecha_inicio' => '2026-02-01',
+            'fecha_fin' => '2026-06-30',
+            'activo' => true,
+        ]);
+
+        $carrera = Carrera::create([
+            'nombre' => 'SIS',
+            'sigla' => 'SIS',
+        ]);
+
+        $materia = Materia::create([
+            'nombre' => 'Materia 1',
+            'sigla' => 'SIS-100',
+            'carrera_id' => $carrera->id,
+        ]);
+
+        // Create 1 Postulant
+        $userPost = User::create(['name' => 'P1', 'email' => 'p1@example.com', 'password' => 'password']);
+        Postulante::create([
+            'user_id' => $userPost->id,
+            'ci' => '999991',
+            'telefono' => '711111',
+            'fecha_nacimiento' => '2005-01-01',
+            'carrera_primera_opcion_id' => $carrera->id,
+            'gestion_id' => $gestion->id,
+            'estado_admision' => 'pendiente',
+        ]);
+
+        // Create 1 Unqualified Docente (lacks master's degree)
+        $userDoc = User::create(['name' => 'D1', 'email' => 'd1@example.com', 'password' => 'password']);
+        $docente = Docente::create([
+            'user_id' => $userDoc->id,
+            'ci' => '888888',
+            'especialidad' => 'Programación',
+            'disponibilidad_horaria' => ['slot_1'],
+            'formacion_academica' => 'Lic',
+            'profesional_area' => true,
+            'tiene_maestria' => false, // UNQUALIFIED
+            'tiene_diplomado' => true,
+        ]);
+        
+        $docente->materias()->attach($materia->id);
+
+        // Run group generation
+        $result = $this->groupService->generate($gestion->id);
+
+        $this->assertTrue($result['success']);
+        
+        // The group should have NO teacher assigned because the only eligible teacher lacks master's
+        $grupo = Grupo::where('materia_id', $materia->id)->first();
+        $this->assertNotNull($grupo);
+        $this->assertEquals(0, $grupo->docentes()->count(), "Unqualified teacher should not be assigned to the group");
+
+        // Verify a warning is present in the report
         $this->assertCount(1, $result['warnings']);
         $this->assertStringContainsString("No se encontró docente disponible", $result['warnings'][0]);
     }

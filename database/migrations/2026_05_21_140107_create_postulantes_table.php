@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('postulantes', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->string('nombres_apellidos')->nullable();
             $table->string('ci')->unique();
             $table->string('telefono')->nullable();
             $table->date('fecha_nacimiento')->nullable();

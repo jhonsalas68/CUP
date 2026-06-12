@@ -134,151 +134,399 @@
                     </div>
                 </div>
 
-                <!-- Column 1: Mis Calificaciones y Exámenes (2/3 width) -->
-                <div class="lg:col-span-2 space-y-6">
-                    <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-xs">
-                        <div class="space-y-1 mb-6">
-                            <h3 class="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">Planilla de Exámenes y Notas</h3>
-                            <p class="text-xs text-zinc-400">Revisa tus calificaciones del semestre en curso bajo las ponderaciones académicas oficiales.</p>
+                @if (!$postulante->pago_realizado)
+                    <!-- STRIPE PAYMENT PROMPT -->
+                    <div class="lg:col-span-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-8 rounded-3xl shadow-xl flex flex-col items-center justify-center text-center space-y-6">
+                        <div class="h-16 w-16 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center border border-indigo-100 dark:border-indigo-900/50">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-8 h-8">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+                            </svg>
                         </div>
-
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse">
-                                <thead>
-                                    <tr class="border-b border-zinc-100 dark:border-zinc-800">
-                                        <th class="pb-3 text-xs font-bold text-zinc-400 uppercase tracking-wider">Materia</th>
-                                        <th class="pb-3 text-center text-xs font-bold text-zinc-400 uppercase tracking-wider">P. Parcial (30%)</th>
-                                        <th class="pb-3 text-center text-xs font-bold text-zinc-400 uppercase tracking-wider">S. Parcial (30%)</th>
-                                        <th class="pb-3 text-center text-xs font-bold text-zinc-400 uppercase tracking-wider">Ex. Final (40%)</th>
-                                        <th class="pb-3 class=text-center text-xs font-bold text-zinc-400 uppercase tracking-wider">Nota Final</th>
-                                        <th class="pb-3 text-right text-xs font-bold text-zinc-400 uppercase tracking-wider">Estado</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800/50">
-                                    @forelse($gradesTable as $row)
-                                        <tr class="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/10">
-                                            <td class="py-4">
-                                                <div class="font-semibold text-sm text-zinc-955 dark:text-zinc-100">{{ $row['materia'] }}</div>
-                                                <div class="text-[10px] font-bold text-zinc-400 tracking-wider">{{ $row['sigla'] }}</div>
-                                            </td>
-                                            <td class="py-4 text-center font-semibold text-sm">
-                                                @if (is_null($row['primer_parcial']))
-                                                    <span class="text-zinc-300 dark:text-zinc-700">&mdash;</span>
-                                                @else
-                                                    <span class="{{ $row['primer_parcial'] >= 60 ? 'text-indigo-600 dark:text-indigo-400' : 'text-zinc-500' }}">{{ number_format($row['primer_parcial'], 1) }}</span>
-                                                @endif
-                                            </td>
-                                            <td class="py-4 text-center font-semibold text-sm">
-                                                @if (is_null($row['segundo_parcial']))
-                                                    <span class="text-zinc-300 dark:text-zinc-700">&mdash;</span>
-                                                @else
-                                                    <span class="{{ $row['segundo_parcial'] >= 60 ? 'text-indigo-600 dark:text-indigo-400' : 'text-zinc-500' }}">{{ number_format($row['segundo_parcial'], 1) }}</span>
-                                                @endif
-                                            </td>
-                                            <td class="py-4 text-center font-semibold text-sm">
-                                                @if (is_null($row['examen_final']))
-                                                    <span class="text-zinc-300 dark:text-zinc-700">&mdash;</span>
-                                                @else
-                                                    <span class="{{ $row['examen_final'] >= 60 ? 'text-indigo-600 dark:text-indigo-400' : 'text-zinc-500' }}">{{ number_format($row['examen_final'], 1) }}</span>
-                                                @endif
-                                            </td>
-                                            <td class="py-4 text-center font-bold text-sm">
-                                                <span class="{{ $row['final_grade'] >= 60 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400' }}">
-                                                    {{ number_format($row['final_grade'], 2) }}
-                                                </span>
-                                            </td>
-                                            <td class="py-4 text-right">
-                                                @if($row['status'] === 'Aprobado')
-                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 text-xs font-bold border border-emerald-100 dark:border-emerald-900/30">
-                                                        Aprobado
-                                                    </span>
-                                                @elseif($row['status'] === 'Reprobado')
-                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-rose-50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400 text-xs font-bold border border-rose-100 dark:border-rose-900/30">
-                                                        Reprobado
-                                                    </span>
-                                                @else
-                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-50 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 text-xs font-semibold border border-slate-200 dark:border-zinc-700">
-                                                        Cursando
-                                                    </span>
-                                                @endif
-                                            </td>
-                                        </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="6" class="text-center py-6 text-zinc-400 text-sm">
-                                                No se encontraron materias registradas para tu plan de estudios.
-                                            </td>
-                                        </tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
+                        <div class="max-w-md space-y-2">
+                            <h3 class="text-xl font-bold text-zinc-900 dark:text-white tracking-tight">Pago de Inscripción Requerido</h3>
+                            <p class="text-sm text-zinc-500 dark:text-zinc-400">Tu perfil ha sido registrado, pero para poder elegir tus materias y grupos debes pagar tu matrícula de inscripción de la gestión académica.</p>
                         </div>
-
-                        <!-- Academic Note -->
-                        <div class="mt-6 p-4 bg-zinc-50 dark:bg-zinc-800/40 rounded-xl border border-zinc-100 dark:border-zinc-800 text-[11px] text-zinc-400 dark:text-zinc-500 space-y-1">
-                            <span class="font-bold uppercase tracking-wider block text-zinc-500 dark:text-zinc-400 mb-1">Criterio de Evaluación Académica</span>
-                            <p>&bull; La nota final de cada materia se calcula con la fórmula: <strong>(1er Parcial &times; 30%) + (2do Parcial &times; 30%) + (Examen Final &times; 40%)</strong>.</p>
-                            <p>&bull; Para obtener la admisión al CUP, debes aprobar <strong>todas</strong> las materias de tu carrera con una nota promedio final mínima de <strong>60.00 puntos</strong> por materia.</p>
+                        <div class="w-full max-w-sm bg-zinc-50 dark:bg-zinc-800/40 p-5 rounded-2xl border border-zinc-150 dark:border-zinc-800 text-left space-y-3">
+                            <div class="flex justify-between items-center text-xs font-bold text-zinc-400 uppercase tracking-widest">
+                                <span>Concepto</span>
+                                <span>Monto</span>
+                            </div>
+                            <div class="flex justify-between items-center text-sm font-bold text-zinc-800 dark:text-zinc-200 py-2 border-t border-b border-zinc-150 dark:border-zinc-800">
+                                <span>Derecho de Admisión y Matrícula</span>
+                                <span class="text-indigo-600 dark:text-indigo-400 font-extrabold text-base">500.00 BOB</span>
+                            </div>
+                            <p class="text-[10px] text-zinc-400 dark:text-zinc-500 leading-relaxed">
+                                * El pago se realiza de forma 100% segura. Aceptamos tarjetas de débito/crédito nacionales e internacionales.
+                            </p>
+                        </div>
+                        <div class="pt-2">
+                            <a href="{{ route('stripe.checkout') }}" class="inline-flex items-center gap-2 px-8 py-3 bg-indigo-650 hover:bg-indigo-700 active:scale-95 text-white font-bold rounded-xl transition duration-150 shadow-md shadow-indigo-600/10">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5"><path d="M12 7.5a2.25 2.25 0 100 4.5 2.25 2.25 0 000-4.5z" /><path fill-rule="evenodd" d="M1.5 4.875C1.5 3.839 2.34 3 3.375 3h17.25c1.035 0 1.875.84 1.875 1.875v14.25c0 1.036-.84 1.875-1.875 1.875H3.375A1.875 1.875 0 011.5 19.125V4.875zM21 9.75H3V18a.75.75 0 00.75.75h16.5A.75.75 0 0021 18V9.75zM3 7.5h18V6a.75.75 0 00-.75-.75H3.75A.75.75 0 003 6v1.5z" clip-rule="evenodd" /></svg>
+                                <span>Pagar Inscripción con Stripe</span>
+                            </a>
                         </div>
                     </div>
-                </div>
-
-                <!-- Column 2: Mis Horarios y Grupos (1/3 width) -->
-                <div class="space-y-6">
-                    <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-xs">
-                        <div class="space-y-1 mb-6">
-                            <h3 class="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">Horario y Aulas</h3>
-                            <p class="text-xs text-zinc-400">Consulta tus grupos de clase y aulas asignadas.</p>
+                @elseif (!$isEnrolled && !$postulante->habilitado)
+                    <!-- DOCUMENT VALIDATION PENDING -->
+                    <div class="lg:col-span-3 bg-amber-50/50 dark:bg-amber-950/10 border border-amber-200 dark:border-amber-900/40 p-8 rounded-3xl flex flex-col sm:flex-row items-start gap-5 shadow-xs">
+                        <div class="h-12 w-12 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-400 rounded-xl flex items-center justify-center shrink-0 border border-amber-200/50 dark:border-amber-800/50">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                            </svg>
+                        </div>
+                        <div class="space-y-3">
+                            <h3 class="text-base font-bold text-amber-900 dark:text-amber-400 tracking-tight">Habilitación de Documentos Pendiente</h3>
+                            <p class="text-sm text-amber-800/80 dark:text-amber-300/80 leading-relaxed">
+                                El pago de matrícula se ha realizado correctamente. Sin embargo, tu perfil aún no está habilitado por el Administrador. Debes presentar los requisitos físicos en la ventanilla de Admisiones.
+                            </p>
+                            @if ($postulante->mensaje_documentos)
+                                <div class="p-4 bg-white dark:bg-zinc-900 border border-amber-200/50 dark:border-amber-900/30 rounded-xl space-y-1">
+                                    <span class="text-[10px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-widest block">Observación del Administrador</span>
+                                    <p class="text-xs text-zinc-700 dark:text-zinc-300 font-semibold">{{ $postulante->mensaje_documentos }}</p>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                @elseif (!$isEnrolled)
+                    <!-- SELF-ENROLLMENT SELECTOR -->
+                    <div class="lg:col-span-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-8 rounded-3xl shadow-xl space-y-6">
+                        <div class="space-y-1.5 pb-4 border-b border-zinc-150 dark:border-zinc-800/60">
+                            <h3 class="text-xl font-extrabold text-zinc-900 dark:text-white tracking-tight">Inscripción de Materias</h3>
+                            <p class="text-sm text-zinc-500 dark:text-zinc-400">Selecciona el grupo de tu preferencia para cada materia del plan de estudios.</p>
                         </div>
 
-                        <div class="space-y-4">
-                            @forelse($assignedGroups as $grupo)
-                                <div class="p-4 bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-150 dark:border-zinc-800/80 rounded-xl space-y-3">
-                                    <div class="flex justify-between items-start">
-                                        <div class="space-y-0.5">
-                                            <h4 class="font-bold text-sm text-zinc-800 dark:text-zinc-100">{{ $grupo->materia->nombre }}</h4>
-                                            <span class="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">Grupo: {{ $grupo->nombre }}</span>
+                        <form wire:submit.prevent="enroll" class="space-y-6">
+                            <div class="space-y-6">
+                                @foreach($availableGroupsByMateria as $materiaId => $data)
+                                    <div class="p-5 bg-zinc-50 dark:bg-zinc-800/20 rounded-2xl border border-zinc-150 dark:border-zinc-850/80 space-y-4">
+                                        <div class="flex justify-between items-center">
+                                            <div class="space-y-0.5">
+                                                <h4 class="font-bold text-base text-zinc-800 dark:text-zinc-100 leading-snug">{{ $data['materia']->nombre }}</h4>
+                                                <span class="text-xs text-indigo-650 dark:text-indigo-400 font-bold uppercase tracking-wider">{{ $data['materia']->sigla }}</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            @forelse($data['groups'] as $grupo)
+                                                <label class="relative border rounded-xl p-4 flex items-center justify-between cursor-pointer transition duration-150 hover:bg-zinc-100/50 dark:hover:bg-zinc-800/40 select-none
+                                                    {{ ($selectedGroups[$materiaId] ?? '') == $grupo->id ? 'bg-indigo-50/40 border-indigo-450 dark:bg-indigo-950/20 dark:border-indigo-850 shadow-sm' : 'border-zinc-200 dark:border-zinc-800' }}">
+                                                    
+                                                    <div class="flex items-center gap-3">
+                                                        <input type="radio" wire:model="selectedGroups.{{ $materiaId }}" value="{{ $grupo->id }}" class="text-indigo-600 focus:ring-indigo-500 border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 h-4.5 w-4.5 cursor-pointer">
+                                                        <div class="space-y-1">
+                                                            <span class="font-extrabold text-sm text-zinc-850 dark:text-zinc-150">Grupo: {{ $grupo->nombre }}</span>
+                                                            <div class="text-[11px] text-zinc-500 dark:text-zinc-450 leading-relaxed space-y-0.5">
+                                                                <p>&bull; Docente: <span class="font-semibold text-zinc-700 dark:text-zinc-300">{{ $grupo->docentes->first()?->nombre ?? 'Coordinador Académico' }}</span></p>
+                                                                <p>&bull; Horarios: 
+                                                                    @forelse($grupo->horarios as $h)
+                                                                        <span class="font-semibold text-zinc-700 dark:text-zinc-300">{{ $h->dia_semana }} ({{ substr($h->hora_inicio,0,5) }}-{{ substr($h->hora_fin,0,5) }}) [Aula {{ $h->aula }}]</span>@if(!$loop->last), @endif
+                                                                    @empty
+                                                                        <span class="italic text-zinc-400">Sin horarios</span>
+                                                                    @endforelse
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="text-right shrink-0 ml-4">
+                                                        <span class="text-xs font-bold block
+                                                            @if($grupo->current_postulantes_count >= $grupo->cupo_maximo) text-rose-500
+                                                            @elseif($grupo->cupo_maximo - $grupo->current_postulantes_count <= 5) text-amber-500
+                                                            @else text-emerald-500 @endif">
+                                                            {{ $grupo->cupo_maximo - $grupo->current_postulantes_count }} / {{ $grupo->cupo_maximo }} cupos
+                                                        </span>
+                                                    </div>
+                                                </label>
+                                            @empty
+                                                <div class="col-span-2 text-center py-4 bg-white dark:bg-zinc-900/50 rounded-xl text-xs text-zinc-400 border border-dashed border-zinc-250 dark:border-zinc-800">
+                                                    No hay grupos configurados para esta materia en la gestión activa.
+                                                </div>
+                                            @endforelse
                                         </div>
                                     </div>
+                                @endforeach
+                            </div>
 
-                                    <!-- Docente info -->
-                                    <div class="flex items-center gap-2 border-t border-b border-zinc-100 dark:border-zinc-800/50 py-2.5">
-                                        <div class="h-7 w-7 rounded-lg bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-600 dark:text-zinc-400">
-                                            D
-                                        </div>
-                                        <div class="space-y-0.5 min-w-0">
-                                            <div class="text-xs font-bold text-zinc-700 dark:text-zinc-300 truncate">Docente: {{ $grupo->docentes->first()?->user->name ?? 'No asignado' }}</div>
-                                            <div class="text-[10px] text-zinc-400 truncate">{{ $grupo->docentes->first()?->especialidad ?? 'Coordinador Académico' }}</div>
-                                        </div>
+                            <div class="pt-4 flex justify-end">
+                                <button type="submit" class="px-8 py-3.5 bg-indigo-650 hover:bg-indigo-700 active:scale-95 text-white font-bold rounded-xl text-sm transition duration-155 shadow-md shadow-indigo-600/10 cursor-pointer select-none">
+                                    Confirmar Inscripción a Materias
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                @else
+                    @if (in_array($postulante->estado_admision, ['admitido_primera_opcion', 'admitido_segunda_opcion']) && !$postulante->pago_matricula_realizado)
+                        <!-- STRIPE MATRICULA PAYMENT PROMPT -->
+                        <div class="lg:col-span-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-8 rounded-3xl shadow-xl flex flex-col items-center justify-center text-center space-y-6">
+                            <div class="h-16 w-16 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-450 rounded-2xl flex items-center justify-center border border-emerald-100 dark:border-emerald-900/50">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-8 h-8">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0110 21a3.745 3.745 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.745 3.745 0 013.296-1.043A3.745 3.745 0 0114 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
+                                </svg>
+                            </div>
+                            <div class="max-w-md space-y-2">
+                                <h3 class="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">¡Felicidades! Has sido Admitido</h3>
+                                <p class="text-sm text-zinc-500 dark:text-zinc-400">Has aprobado satisfactoriamente todos tus exámenes y has sido admitido al CUP. Para completar tu inscripción definitiva y habilitar tu registro universitario, debes realizar el pago de tu matrícula de admisión.</p>
+                            </div>
+                            <div class="w-full max-w-sm bg-zinc-50 dark:bg-zinc-800/40 p-5 rounded-2xl border border-zinc-150 dark:border-zinc-800 text-left space-y-3">
+                                <div class="flex justify-between items-center text-xs font-bold text-zinc-400 uppercase tracking-widest">
+                                    <span>Concepto</span>
+                                    <span>Monto</span>
+                                </div>
+                                <div class="flex justify-between items-center text-sm font-bold text-zinc-800 dark:text-zinc-200 py-2 border-t border-b border-zinc-150 dark:border-zinc-800">
+                                    <span>Matrícula Universitaria (Admisión CUP)</span>
+                                    <span class="text-emerald-600 dark:text-emerald-450 font-extrabold text-base">1000.00 BOB</span>
+                                </div>
+                                <p class="text-[10px] text-zinc-400 dark:text-zinc-500 leading-relaxed">
+                                    * El pago se realiza de forma 100% segura mediante Stripe Checkout.
+                                </p>
+                            </div>
+                            <div class="pt-2">
+                                <a href="{{ route('stripe.checkout') }}?type=matricula" class="inline-flex items-center gap-2 px-8 py-3 bg-emerald-650 hover:bg-emerald-700 active:scale-95 text-white font-bold rounded-xl transition duration-150 shadow-md shadow-emerald-600/10">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5"><path d="M12 7.5a2.25 2.25 0 100 4.5 2.25 2.25 0 000-4.5z" /><path fill-rule="evenodd" d="M1.5 4.875C1.5 3.839 2.34 3 3.375 3h17.25c1.035 0 1.875.84 1.875 1.875v14.25c0 1.036-.84 1.875-1.875 1.875H3.375A1.875 1.875 0 011.5 19.125V4.875zM21 9.75H3V18a.75.75 0 00.75.75h16.5A.75.75 0 0021 18V9.75zM3 7.5h18V6a.75.75 0 00-.75-.75H3.75A.75.75 0 003 6v1.5z" clip-rule="evenodd" /></svg>
+                                    <span>Pagar Matrícula con Stripe</span>
+                                </a>
+                            </div>
+                        </div>
+                    @else
+                        @if (in_array($postulante->estado_admision, ['admitido_primera_opcion', 'admitido_segunda_opcion']) && $postulante->pago_matricula_realizado)
+                            <!-- CELEBRATION SUCCESS BANNER -->
+                            <div class="lg:col-span-3 p-5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-3xl border border-emerald-400/30 shadow-md flex items-center gap-4 animate-fade-in mb-6">
+                                <div class="h-12 w-12 bg-white/20 rounded-2xl flex items-center justify-center shrink-0">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 text-white"><path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clip-rule="evenodd" /></svg>
+                                </div>
+                                <div>
+                                    <h4 class="font-extrabold text-base">¡Inscripción Universitaria Completada!</h4>
+                                    <p class="text-xs text-white/90 font-medium">Felicidades. Has sido matriculado con éxito y eres oficialmente estudiante de la universidad.</p>
+                                </div>
+                            </div>
+                        @endif
+
+                        <div class="lg:col-span-3 grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <!-- Column 1: Mis Calificaciones y Exámenes (2/3 width) -->
+                            <div class="lg:col-span-2 space-y-6">
+                                <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-xs">
+                                    <div class="space-y-1 mb-6">
+                                        <h3 class="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">Planilla de Exámenes y Notas</h3>
+                                        <p class="text-xs text-zinc-400">Revisa tus calificaciones del semestre en curso bajo las ponderaciones académicas oficiales.</p>
                                     </div>
 
-                                    <!-- Schedules list -->
-                                    <div class="space-y-1.5">
-                                        <span class="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Horarios</span>
-                                        @forelse($grupo->horarios as $h)
-                                            <div class="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
-                                                <span>{{ $h->dia_semana }}</span>
-                                                <span class="font-semibold">{{ substr($h->hora_inicio, 0, 5) }} - {{ substr($h->hora_fin, 0, 5) }}</span>
-                                                <span class="bg-indigo-50 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-400 px-2 py-0.5 rounded text-[10px] font-bold">Aula {{ $h->aula }}</span>
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr class="border-b border-zinc-100 dark:border-zinc-800">
+                                                    <th class="pb-3 text-xs font-bold text-zinc-400 uppercase tracking-wider">Materia</th>
+                                                    <th class="pb-3 text-center text-xs font-bold text-zinc-400 uppercase tracking-wider">P. Parcial (30%)</th>
+                                                    <th class="pb-3 text-center text-xs font-bold text-zinc-400 uppercase tracking-wider">S. Parcial (30%)</th>
+                                                    <th class="pb-3 text-center text-xs font-bold text-zinc-400 uppercase tracking-wider">Ex. Final (40%)</th>
+                                                    <th class="pb-3 class=text-center text-xs font-bold text-zinc-400 uppercase tracking-wider">Nota Final</th>
+                                                    <th class="pb-3 text-right text-xs font-bold text-zinc-400 uppercase tracking-wider">Estado</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800/50">
+                                                @forelse($gradesTable as $row)
+                                                    <tr class="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/10">
+                                                        <td class="py-4">
+                                                            <div class="font-semibold text-sm text-zinc-955 dark:text-zinc-100">{{ $row['materia'] }}</div>
+                                                            <div class="text-[10px] font-bold text-zinc-400 tracking-wider">{{ $row['sigla'] }}</div>
+                                                        </td>
+                                                        <td class="py-4 text-center font-semibold text-sm">
+                                                            @if (is_null($row['primer_parcial']))
+                                                                <span class="text-zinc-300 dark:text-zinc-700">&mdash;</span>
+                                                            @else
+                                                                <span class="{{ $row['primer_parcial'] >= 60 ? 'text-indigo-600 dark:text-indigo-400' : 'text-zinc-500' }}">{{ number_format($row['primer_parcial'], 1) }}</span>
+                                                            @endif
+                                                        </td>
+                                                        <td class="py-4 text-center font-semibold text-sm">
+                                                            @if (is_null($row['segundo_parcial']))
+                                                                <span class="text-zinc-300 dark:text-zinc-700">&mdash;</span>
+                                                            @else
+                                                                <span class="{{ $row['segundo_parcial'] >= 60 ? 'text-indigo-600 dark:text-indigo-400' : 'text-zinc-500' }}">{{ number_format($row['segundo_parcial'], 1) }}</span>
+                                                            @endif
+                                                        </td>
+                                                        <td class="py-4 text-center font-semibold text-sm">
+                                                            @if (is_null($row['examen_final']))
+                                                                <span class="text-zinc-300 dark:text-zinc-700">&mdash;</span>
+                                                            @else
+                                                                <span class="{{ $row['examen_final'] >= 60 ? 'text-indigo-600 dark:text-indigo-400' : 'text-zinc-500' }}">{{ number_format($row['examen_final'], 1) }}</span>
+                                                            @endif
+                                                        </td>
+                                                        <td class="py-4 text-center font-bold text-sm">
+                                                            <span class="{{ $row['final_grade'] >= 60 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400' }}">
+                                                                {{ number_format($row['final_grade'], 2) }}
+                                                            </span>
+                                                        </td>
+                                                        <td class="py-4 text-right">
+                                                            @if($row['status'] === 'Aprobado')
+                                                                <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 text-xs font-bold border border-emerald-100 dark:border-emerald-900/30">
+                                                                    Aprobado
+                                                                </span>
+                                                            @elseif($row['status'] === 'Reprobado')
+                                                                <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-rose-50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400 text-xs font-bold border border-rose-100 dark:border-rose-900/30">
+                                                                    Reprobado
+                                                                </span>
+                                                            @else
+                                                                <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-50 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 text-xs font-semibold border border-slate-200 dark:border-zinc-700">
+                                                                    Cursando
+                                                                </span>
+                                                            @endif
+                                                        </td>
+                                                    </tr>
+                                                @empty
+                                                    <tr>
+                                                        <td colspan="6" class="text-center py-6 text-zinc-400 text-sm">
+                                                            No se encontraron materias registradas para tu plan de estudios.
+                                                        </td>
+                                                    </tr>
+                                                @endforelse
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <!-- Academic Note -->
+                                    <div class="mt-6 p-4 bg-zinc-50 dark:bg-zinc-800/40 rounded-xl border border-zinc-150 dark:border-zinc-800 text-[11px] text-zinc-400 dark:text-zinc-500 space-y-1">
+                                        <span class="font-bold uppercase tracking-wider block text-zinc-500 dark:text-zinc-400 mb-1">Criterio de Evaluación Académica</span>
+                                        <p>&bull; La nota final de cada materia se calcula con la fórmula: <strong>(1er Parcial &times; 30%) + (2do Parcial &times; 30%) + (Examen Final &times; 40%)</strong>.</p>
+                                        <p>&bull; Para obtener la admisión al CUP, debes aprobar <strong>todas</strong> las materias de tu carrera con una nota promedio final mínima de <strong>60.00 puntos</strong> por materia.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Column 2: Mis Horarios y Grupos (1/3 width) -->
+                            <div class="space-y-6">
+                                <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-xs">
+                                    <div class="space-y-1 mb-6">
+                                        <h3 class="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">Horario y Aulas</h3>
+                                        <p class="text-xs text-zinc-400">Consulta tus grupos de clase y aulas asignadas.</p>
+                                    </div>
+
+                                    <div class="space-y-4">
+                                        @forelse($assignedGroups as $grupo)
+                                            <div class="p-4 bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-150 dark:border-zinc-800/80 rounded-xl space-y-3">
+                                                <div class="flex justify-between items-start">
+                                                    <div class="space-y-0.5">
+                                                        <h4 class="font-bold text-sm text-zinc-800 dark:text-zinc-100">{{ $grupo->materia->nombre }}</h4>
+                                                        <span class="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">Grupo: {{ $grupo->nombre }}</span>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Docente info -->
+                                                <div class="flex items-center gap-2 border-t border-b border-zinc-100 dark:border-zinc-800/50 py-2.5">
+                                                    <div class="h-7 w-7 rounded-lg bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-600 dark:text-zinc-400">
+                                                        D
+                                                    </div>
+                                                    <div class="space-y-0.5 min-w-0">
+                                                        <div class="text-xs font-bold text-zinc-700 dark:text-zinc-300 truncate">Docente: {{ $grupo->docentes->first()?->nombre ?? $grupo->docentes->first()?->user?->name ?? 'No asignado' }}</div>
+                                                        <div class="text-[10px] text-zinc-400 truncate">{{ $grupo->docentes->first()?->especialidad ?? 'Coordinador Académico' }}</div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Schedules list -->
+                                                <div class="space-y-1.5">
+                                                    <span class="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Horarios</span>
+                                                    @forelse($grupo->horarios as $h)
+                                                        <div class="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
+                                                            <span>{{ $h->dia_semana }}</span>
+                                                            <span class="font-semibold">{{ substr($h->hora_inicio, 0, 5) }} - {{ substr($h->hora_fin, 0, 5) }}</span>
+                                                            <span class="bg-indigo-50 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-400 px-2 py-0.5 rounded text-[10px] font-bold">Aula {{ $h->aula }}</span>
+                                                        </div>
+                                                    @empty
+                                                        <span class="text-[10px] text-zinc-400">No hay horarios registrados para este grupo.</span>
+                                                    @endforelse
+                                                </div>
                                             </div>
                                         @empty
-                                            <span class="text-[10px] text-zinc-400">No hay horarios registrados para este grupo.</span>
+                                            <div class="text-center py-8 bg-zinc-50 dark:bg-zinc-800/25 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl">
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 mx-auto text-zinc-400 mb-2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                                                </svg>
+                                                <span class="text-xs text-zinc-400 block font-semibold">Grupos pendientes de asignación.</span>
+                                                <span class="text-[10px] text-zinc-400 block">El proceso automático se ejecutará antes del inicio del semestre.</span>
+                                            </div>
                                         @endforelse
                                     </div>
                                 </div>
-                            @empty
-                                <div class="text-center py-8 bg-zinc-50 dark:bg-zinc-800/25 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 mx-auto text-zinc-400 mb-2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-                                    </svg>
-                                    <span class="text-xs text-zinc-400 block font-semibold">Grupos pendientes de asignación.</span>
-                                    <span class="text-[10px] text-zinc-400 block">El proceso automático se ejecutará antes del inicio del semestre.</span>
+
+                                <!-- Card: Mis Pagos -->
+                                <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-xs space-y-4">
+                                    <div class="space-y-1">
+                                        <h3 class="text-base font-bold text-zinc-900 dark:text-white tracking-tight">Historial de Pagos</h3>
+                                        <p class="text-xs text-zinc-400">Verifica el estado de tus transacciones y matrículas.</p>
+                                    </div>
+
+                                    <div class="space-y-3">
+                                        @if ($postulante->pago_realizado)
+                                            <div class="p-4 bg-emerald-50/40 dark:bg-emerald-950/10 border border-emerald-150 dark:border-emerald-900/30 rounded-xl space-y-3">
+                                                <div class="flex justify-between items-start">
+                                                    <div class="space-y-0.5">
+                                                        <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest block">Matrícula de Inscripción</span>
+                                                        <h4 class="font-bold text-sm text-zinc-850 dark:text-zinc-150">Derecho de Admisión y Matrícula</h4>
+                                                    </div>
+                                                    <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold border border-emerald-100 dark:border-emerald-900/30">
+                                                        Pagado
+                                                    </span>
+                                                </div>
+
+                                                <div class="text-xs text-zinc-500 dark:text-zinc-450 border-t border-dashed border-zinc-200 dark:border-zinc-800 pt-3 space-y-1.5">
+                                                    <div class="flex justify-between">
+                                                        <span>Monto:</span>
+                                                        <span class="font-bold text-zinc-850 dark:text-zinc-200">500.00 BOB</span>
+                                                    </div>
+                                                    <div class="flex justify-between">
+                                                        <span>Pasarela:</span>
+                                                        <span class="font-semibold text-zinc-700 dark:text-zinc-300">Stripe Checkout</span>
+                                                    </div>
+                                                    <div class="flex justify-between">
+                                                        <span>Código Recibo:</span>
+                                                        <span class="font-semibold text-zinc-700 dark:text-zinc-300">CUP-INS-{{ str_pad($postulante->id, 6, '0', STR_PAD_LEFT) }}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endif
+
+                                        @if ($postulante->pago_matricula_realizado)
+                                            <div class="p-4 bg-emerald-50/40 dark:bg-emerald-950/10 border border-emerald-150 dark:border-emerald-900/30 rounded-xl space-y-3">
+                                                <div class="flex justify-between items-start">
+                                                    <div class="space-y-0.5">
+                                                        <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest block">Matrícula Universitaria</span>
+                                                        <h4 class="font-bold text-sm text-zinc-850 dark:text-zinc-150">Admisión Definitiva</h4>
+                                                    </div>
+                                                    <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold border border-emerald-100 dark:border-emerald-900/30">
+                                                        Pagado
+                                                    </span>
+                                                </div>
+
+                                                <div class="text-xs text-zinc-500 dark:text-zinc-450 border-t border-dashed border-zinc-200 dark:border-zinc-800 pt-3 space-y-1.5">
+                                                    <div class="flex justify-between">
+                                                        <span>Monto:</span>
+                                                        <span class="font-bold text-zinc-850 dark:text-zinc-200">1000.00 BOB</span>
+                                                    </div>
+                                                    <div class="flex justify-between">
+                                                        <span>Pasarela:</span>
+                                                        <span class="font-semibold text-zinc-700 dark:text-zinc-300">Stripe Checkout</span>
+                                                    </div>
+                                                    <div class="flex justify-between">
+                                                        <span>Código Recibo:</span>
+                                                        <span class="font-semibold text-zinc-700 dark:text-zinc-300">CUP-MAT-{{ str_pad($postulante->id, 6, '0', STR_PAD_LEFT) }}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endif
+
+                                        @if (!$postulante->pago_realizado && !$postulante->pago_matricula_realizado)
+                                            <div class="p-4 bg-zinc-50 dark:bg-zinc-800/20 border border-zinc-200 dark:border-zinc-800 rounded-xl text-center py-6">
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 mx-auto text-zinc-400 mb-2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                                                </svg>
+                                                <span class="text-xs text-zinc-400 block font-semibold">Sin pagos registrados</span>
+                                                <span class="text-[10px] text-zinc-400 block mt-1">Debes completar el pago de tus matrículas.</span>
+                                            </div>
+                                        @endif
+                                    </div>
                                 </div>
-                            @endforelse
+                            </div>
                         </div>
-                    </div>
-                </div>
-            </div>
+                    @endif
+                @endif
         @endif
     @endif
 
@@ -381,7 +629,7 @@
                                             @foreach($selectedGrupo->postulantes as $student)
                                                 <tr class="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/10">
                                                     <td class="py-3 font-semibold text-sm text-zinc-850 dark:text-zinc-150">
-                                                        {{ $student->user->name }}
+                                                        {{ $student->nombres_apellidos ?? $student->user?->name ?? '—' }}
                                                     </td>
                                                     <td class="py-3 text-center text-xs text-zinc-400">
                                                         {{ $student->ci }}

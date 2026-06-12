@@ -7,7 +7,7 @@
         <title>CUP - Sistema de Admisión Universitaria</title>
 
         <!-- Favicon -->
-        <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M12 2L3 6v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V6l-9-4z' fill='%234F46E5' fill-opacity='0.15' stroke='%234F46E5' stroke-width='1.5'/%3E%3Cpath d='M12 5L2 9.5L12 14L22 9.5L12 5z' fill='%234F46E5'/%3E%3Cpath d='M12 14.5c2.6 0 3.8-1.3 3.8-1.3v2.7c0 0-1.2-1.4-3.8-1.4s-3.8 1.4-3.8 1.4v-2.7c0 0 1.2 1.3 3.8 1.3z' fill='%23F59E0B'/%3E%3C/svg%3E">
+        <link rel="icon" type="image/png" href="{{ asset('images/uagrm-escudo.png') }}">
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">

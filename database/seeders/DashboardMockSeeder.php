@@ -151,24 +151,53 @@ class DashboardMockSeeder extends Seeder
             ['name' => 'Jorge Vaca', 'email' => 'jorge@cup.edu.bo', 'esp' => 'Física General', 'materias' => ['FIS-SIS', 'FIS-INF', 'FIS-RED', 'FIS-ROB']],
             ['name' => 'Dra. Elena Prado', 'email' => 'elena@cup.edu.bo', 'esp' => 'Inglés Técnico', 'materias' => ['ING-SIS', 'ING-INF', 'ING-RED', 'ING-ROB']],
             ['name' => 'Dr. René Justiniano', 'email' => 'rene@cup.edu.bo', 'esp' => 'Computación e Inglés', 'materias' => ['COM-SIS', 'COM-INF', 'ING-SIS', 'ING-INF', 'COM-ROB', 'ING-ROB']],
+            
+            // Computación adicionales
+            ['name' => 'Ing. Ana Colque', 'email' => 'ana.colque@cup.edu.bo', 'esp' => 'Computación y Sistemas', 'materias' => ['COM-SIS', 'COM-INF', 'COM-RED', 'COM-ROB']],
+            ['name' => 'Lic. Roberto Mamani', 'email' => 'roberto.mamani@cup.edu.bo', 'esp' => 'Desarrollo de Software', 'materias' => ['COM-SIS', 'COM-INF', 'COM-RED', 'COM-ROB']],
+            ['name' => 'Ing. Luis Choque', 'email' => 'luis.choque@cup.edu.bo', 'esp' => 'Ingeniería de Sistemas', 'materias' => ['COM-SIS', 'COM-INF', 'COM-RED', 'COM-ROB']],
+            ['name' => 'Ing. Gabriel Flores', 'email' => 'gabriel.flores@cup.edu.bo', 'esp' => 'Sistemas y Redes', 'materias' => ['COM-SIS', 'COM-INF', 'COM-RED', 'COM-ROB']],
+            
+            // Matemáticas adicionales
+            ['name' => 'Lic. Silvia Flores', 'email' => 'silvia.flores@cup.edu.bo', 'esp' => 'Álgebra y Cálculo', 'materias' => ['MAT-SIS', 'MAT-INF', 'MAT-RED', 'MAT-ROB']],
+            ['name' => 'Dr. Hugo Flores', 'email' => 'hugo.flores@cup.edu.bo', 'esp' => 'Matemáticas Puras', 'materias' => ['MAT-SIS', 'MAT-INF', 'MAT-RED', 'MAT-ROB']],
+            ['name' => 'Msc. Ramiro Quispe', 'email' => 'ramiro.quispe@cup.edu.bo', 'esp' => 'Estadística y Probabilidades', 'materias' => ['MAT-SIS', 'MAT-INF', 'MAT-RED', 'MAT-ROB']],
+            ['name' => 'Msc. Carlos Rojas', 'email' => 'carlos.rojas@cup.edu.bo', 'esp' => 'Matemáticas Aplicadas', 'materias' => ['MAT-SIS', 'MAT-INF', 'MAT-RED', 'MAT-ROB']],
+            
+            // Física adicionales
+            ['name' => 'Lic. Patricia Aguilar', 'email' => 'patricia.aguilar@cup.edu.bo', 'esp' => 'Física General y Mecánica', 'materias' => ['FIS-SIS', 'FIS-INF', 'FIS-RED', 'FIS-ROB']],
+            ['name' => 'Ing. Marcos Pinto', 'email' => 'marcos.pinto@cup.edu.bo', 'esp' => 'Física Aplicada', 'materias' => ['FIS-SIS', 'FIS-INF', 'FIS-RED', 'FIS-ROB']],
+            ['name' => 'Dr. Fernando Vargas', 'email' => 'fernando.vargas@cup.edu.bo', 'esp' => 'Mecánica Cuántica y Ondas', 'materias' => ['FIS-SIS', 'FIS-INF', 'FIS-RED', 'FIS-ROB']],
+            ['name' => 'Lic. Jorge Ortiz', 'email' => 'jorge.ortiz@cup.edu.bo', 'esp' => 'Física e Ingeniería', 'materias' => ['FIS-SIS', 'FIS-INF', 'FIS-RED', 'FIS-ROB']],
+            
+            // Inglés adicionales
+            ['name' => 'Msc. Claudia Justiniano', 'email' => 'claudia.justiniano@cup.edu.bo', 'esp' => 'Inglés Técnico', 'materias' => ['ING-SIS', 'ING-INF', 'ING-RED', 'ING-ROB']],
+            ['name' => 'Lic. Gabriela Cortez', 'email' => 'gabriela.cortez@cup.edu.bo', 'esp' => 'Idiomas y Lingüística', 'materias' => ['ING-SIS', 'ING-INF', 'ING-RED', 'ING-ROB']],
+            ['name' => 'Ing. David Orellana', 'email' => 'david.orellana@cup.edu.bo', 'esp' => 'Traducción Técnica', 'materias' => ['ING-SIS', 'ING-INF', 'ING-RED', 'ING-ROB']],
+            ['name' => 'Dr. Oscar Ruiz', 'email' => 'oscar.ruiz@cup.edu.bo', 'esp' => 'Idiomas y Comunicación', 'materias' => ['ING-SIS', 'ING-INF', 'ING-RED', 'ING-ROB']],
         ];
 
+        $passwordHash = Hash::make('password');
         $docentesList = [];
         foreach ($docentesData as $dIdx => $d) {
             $u = User::create([
                 'name' => $d['name'],
                 'email' => $d['email'],
-                'password' => Hash::make('password'),
+                'password' => $passwordHash,
             ]);
             $u->assignRole('Docente');
 
             $doc = Docente::create([
                 'user_id' => $u->id,
+                'nombre' => $d['name'],
                 'ci' => '777888' . $dIdx,
                 'telefono' => '7891234' . $dIdx,
                 'especialidad' => $d['esp'],
                 'disponibilidad_horaria' => ['slot_1', 'slot_2', 'slot_3', 'slot_4', 'slot_5', 'slot_6', 'slot_7', 'slot_8'],
                 'formacion_academica' => 'Maestría en Educación Superior y Licenciatura en la Especialidad.',
+                'profesional_area' => true,
+                'tiene_maestria' => true,
+                'tiene_diplomado' => true,
             ]);
 
             $mIds = Materia::whereIn('sigla', $d['materias'])->pluck('id')->toArray();
@@ -182,11 +211,11 @@ class DashboardMockSeeder extends Seeder
         $admissionService = new AdmissionSelectionService();
 
         // 8. Poblar Gestiones Históricas (I-2025 y II-2025)
-        $this->seedHistoricalGestion($g1, 100, $carreras, $groupService, $examService, $admissionService);
-        $this->seedHistoricalGestion($g2, 120, $carreras, $groupService, $examService, $admissionService);
+        $this->seedHistoricalGestion($g1, 350, $carreras, $groupService, $examService, $admissionService);
+        $this->seedHistoricalGestion($g2, 350, $carreras, $groupService, $examService, $admissionService);
 
         // 9. Poblar Gestión Activa (I-2026) con postulantes y notas
-        $this->seedHistoricalGestion($gActive, 180, $carreras, $groupService, $examService, $admissionService);
+        $this->seedHistoricalGestion($gActive, 900, $carreras, $groupService, $examService, $admissionService);
     }
 
     private function seedHistoricalGestion(
@@ -202,34 +231,44 @@ class DashboardMockSeeder extends Seeder
         $carrRED = $carreras[2];
         $carrROB = $carreras[3];
 
+        $firstNames = ['Juan', 'Pedro', 'María', 'Ana', 'Luis', 'Carlos', 'José', 'Sofía', 'Laura', 'Miguel', 'David', 'Elena', 'Diego', 'Lucía', 'Alejandro', 'Gabriel', 'Daniel', 'Valentina', 'Camila', 'Mateo', 'Lucas', 'Santiago', 'Andrés', 'Fernanda', 'Isabella', 'Martín', 'Javier', 'Carmen', 'Patricia', 'Roberto', 'Paola', 'Gustavo', 'Beatriz', 'Raúl', 'Adriana'];
+        $lastNames = ['Gómez', 'Rodríguez', 'Pérez', 'López', 'González', 'Martínez', 'Sánchez', 'Ramírez', 'Torres', 'Flores', 'Rivera', 'Díaz', 'Cruz', 'Ortiz', 'Gutiérrez', 'Chávez', 'Alvarez', 'Ruiz', 'Vargas', 'Mendoza', 'Rojas', 'Castillo', 'Silva', 'Morales', 'Herrera', 'Medina', 'Castro', 'Muñoz', 'Ramos', 'Guzmán', 'Salas', 'Suárez', 'Pinto', 'Aguilar', 'Romero'];
+
+        $passwordHash = Hash::make('password');
+
         // Crear postulantes con distribución: SIS 40%, RED 20%, INF 20%, ROB 20%
         for ($i = 1; $i <= $numPostulantes; $i++) {
             $rand = rand(1, 100);
             if ($rand <= 40) {
                 $primera = $carrSIS;
-                $segunda = rand(1, 2) == 1 ? $carrINF : null;
             } elseif ($rand <= 60) {
                 $primera = $carrRED;
-                $segunda = null;
             } elseif ($rand <= 80) {
                 $primera = $carrINF;
-                $segunda = rand(1, 2) == 1 ? $carrSIS : null;
             } else {
                 $primera = $carrROB;
-                $segunda = rand(1, 2) == 1 ? $carrINF : null;
             }
+            // Assign a second option different from first; default to Informatica, or Sistema if first is Informatica
+            $segunda = ($primera->id !== $carrINF->id) ? $carrINF : $carrSIS;
+
+
+            $first = $firstNames[($i + $g->id) % count($firstNames)];
+            $last1 = $lastNames[($i * 3) % count($lastNames)];
+            $last2 = $lastNames[($i * 7) % count($lastNames)];
+            $name = "$first $last1 $last2";
 
             $u = User::create([
-                'name' => "Postulante {$g->nombre} #{$i}",
+                'name' => $name,
                 'email' => "postulante_{$g->nombre}_{$i}@cup.edu.bo",
-                'password' => Hash::make('password'),
+                'password' => $passwordHash,
             ]);
             $u->assignRole('Postulante');
 
             Postulante::create([
                 'user_id' => $u->id,
-                'ci' => rand(1000000, 9999999),
-                'telefono' => rand(60000000, 79999999),
+                'nombres_apellidos' => $name,
+                'ci' => 1000000 + ($g->id * 100000) + $i,
+                'telefono' => 60000000 + ($g->id * 100000) + $i,
                 'fecha_nacimiento' => today()->subYears(rand(17, 22))->format('Y-m-d'),
                 'carrera_primera_opcion_id' => $primera->id,
                 'carrera_segunda_opcion_id' => $segunda ? $segunda->id : null,

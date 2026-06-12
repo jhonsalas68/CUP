@@ -38,4 +38,18 @@ class Examen extends Model
     {
         return $this->hasMany(Nota::class, 'examen_id');
     }
+
+    public function getDocentesNamesAttribute()
+    {
+        $groups = $this->materia?->grupos?->where('gestion_id', $this->gestion_id) ?? collect();
+        $docenteNames = $groups->flatMap(fn($g) => $g->docentes)->pluck('nombre')->unique();
+        return $docenteNames->isNotEmpty() ? $docenteNames->implode(', ') : 'No asignado';
+    }
+
+    public function getAlumnosNamesAttribute()
+    {
+        $groups = $this->materia?->grupos?->where('gestion_id', $this->gestion_id) ?? collect();
+        $alumnoNames = $groups->flatMap(fn($g) => $g->postulantes)->pluck('nombres_apellidos')->unique();
+        return $alumnoNames->isNotEmpty() ? $alumnoNames->implode(', ') : 'Ninguno';
+    }
 }

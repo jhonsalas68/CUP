@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             RolesAndPermissionsSeeder::class,
             CarreraSeeder::class,
             MateriaSeeder::class,
+            ComprehensiveDataSeeder::class,  // Población comprehensiva con 1000+ datos
         ]);
 
         // 2. Crear Gestión Activa de Prueba (I-2026)
@@ -83,9 +84,14 @@ class DatabaseSeeder extends Seeder
         Docente::firstOrCreate(
             ['user_id' => $userDocente->id],
             [
+                'nombre' => 'Juan Pérez (Docente)',
                 'ci' => '9876543',
                 'telefono' => '71122334',
                 'especialidad' => 'Informática y Programación',
+                'formacion_academica' => 'Maestría en Educación Superior y Licenciatura en la Especialidad.',
+                'profesional_area' => true,
+                'tiene_maestria' => true,
+                'tiene_diplomado' => true,
             ]
         );
 
@@ -105,6 +111,7 @@ class DatabaseSeeder extends Seeder
         Postulante::firstOrCreate(
             ['user_id' => $userPostulante->id],
             [
+                'nombres_apellidos' => 'Ana Gómez (Postulante)',
                 'ci' => '1234567',
                 'telefono' => '60011223',
                 'fecha_nacimiento' => '2005-08-15',

@@ -11,8 +11,18 @@ class Postulante extends Model
 
     protected $table = 'postulantes';
 
+    protected static function booted()
+    {
+        static::saving(function ($postulante) {
+            if (empty($postulante->nombres_apellidos) && $postulante->user_id) {
+                $postulante->nombres_apellidos = $postulante->user?->name;
+            }
+        });
+    }
+
     protected $fillable = [
         'user_id',
+        'nombres_apellidos',
         'ci',
         'telefono',
         'fecha_nacimiento',
@@ -28,6 +38,10 @@ class Postulante extends Model
         'ci_vigente',
         'titulo_bachiller',
         'libreta_legalizada',
+        'habilitado',
+        'mensaje_documentos',
+        'pago_realizado',
+        'pago_matricula_realizado',
     ];
 
     protected $casts = [
@@ -36,6 +50,9 @@ class Postulante extends Model
         'ci_vigente' => 'boolean',
         'titulo_bachiller' => 'boolean',
         'libreta_legalizada' => 'boolean',
+        'habilitado' => 'boolean',
+        'pago_realizado' => 'boolean',
+        'pago_matricula_realizado' => 'boolean',
     ];
 
     public function scopeAdmitidos($query)

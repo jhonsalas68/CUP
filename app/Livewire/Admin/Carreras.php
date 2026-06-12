@@ -82,8 +82,42 @@ class Carreras extends Component
         session()->flash('message', 'Carrera eliminada correctamente.');
     }
 
+    public function limpiarFiltros()
+    {
+        $this->reset(['search']);
+        $this->resetPage();
+    }
+
+    public function processVoiceCommand($transcript)
+    {
+        $transcript = mb_strtolower($transcript, 'UTF-8');
+        
+        if (str_contains($transcript, 'limpiar') || str_contains($transcript, 'restablecer') || str_contains($transcript, 'todos') || str_contains($transcript, 'reiniciar') || str_contains($transcript, 'quitar')) {
+            $this->reset(['search']);
+            session()->flash('voice_feedback', 'Filtros restablecidos.');
+            $this->resetPage();
+            return;
+        }
+
+        $feedback = [];
+
+        if (preg_match('/(?:buscar|busca|nombre|sigla)\s+([a-záéíóúñ0-9\s\-]+)/', $transcript, $matches)) {
+            $this->search = trim($matches[1]);
+            $feedback[] = 'Buscar: "' . $this->search . '"';
+        } else {
+            $this->search = trim($transcript);
+            $feedback[] = 'Buscar: "' . $this->search . '"';
+        }
+
+        session()->flash('voice_feedback', 'Filtros aplicados: ' . implode(', ', $feedback));
+        $this->resetPage();
+    }
+
     public function render()
     {
+        $gestiones = \App\Models\Gestion::orderBy('fecha_inicio', 'desc')->get();
+        $carrerasList = \App\Models\Carrera::orderBy('nombre')->get();
+
         $carreras = Carrera::query()
             ->where(function ($q) {
                 $q->where('nombre', 'like', '%' . $this->search . '%')
@@ -93,7 +127,7 @@ class Carreras extends Component
             ->orderBy('nombre')
             ->paginate(10);
 
-        return view('livewire.admin.carreras', compact('carreras'))
+        return view('livewire.admin.carreras', compact('carreras', 'gestiones', 'carrerasList'))
             ->layout('layouts.admin');
     }
 }

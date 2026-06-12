@@ -19,17 +19,30 @@
             </div>
             
             <!-- Botón de Ejecutar Proceso -->
-            <button wire:click="openAdmissionProcess" type="button" class="inline-flex items-center justify-center gap-2 text-sm font-semibold bg-indigo-655 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl transition duration-150 shadow-sm cursor-pointer select-none">
+            <button wire:click="openAdmissionProcess" type="button" class="inline-flex items-center justify-center gap-2 text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl transition duration-150 shadow-sm cursor-pointer select-none">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4.5 h-4.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0110 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
                 </svg>
                 <span>Procesar Admisiones</span>
             </button>
+
+            <!-- Exportar Reportes -->
+            <flux:dropdown>
+                <flux:button icon="document-arrow-down" class="cursor-pointer select-none">Exportar</flux:button>
+                <flux:menu class="w-56">
+                    <flux:menu.item href="{{ route('admin.exportar.postulantes', ['gestion_id' => $selectedGestionId]) }}" icon="users">
+                        Exportar Postulantes (CSV)
+                    </flux:menu.item>
+                    <flux:menu.item href="{{ route('admin.exportar.admitidos', ['gestion_id' => $selectedGestionId]) }}" icon="academic-cap">
+                        Exportar Admitidos (CSV)
+                    </flux:menu.item>
+                </flux:menu>
+            </flux:dropdown>
         </div>
     </div>
 
     <!-- KPIs Row -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <!-- Postulantes -->
         <div class="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs flex items-center justify-between">
             <div class="space-y-2">
@@ -105,6 +118,174 @@
             </div>
             <span class="text-xs text-zinc-400 block mt-1">{{ round($percent, 1) }}% de cupos cubiertos</span>
         </div>
+
+        <!-- Grupos Habilitados -->
+        <div class="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs flex items-center justify-between">
+            <div class="space-y-2">
+                <span class="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Grupos Habilitados</span>
+                <h3 class="text-3xl font-extrabold text-indigo-650 dark:text-indigo-400 tracking-tight">{{ $totalGrupos }}</h3>
+                <span class="text-xs text-zinc-400">Grupos activos en la gestión</span>
+            </div>
+            <div class="p-3 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel de Exportación y Reportes Personalizado -->
+    <div x-data="{
+        tabla: 'postulantes',
+        gestionId: '{{ $selectedGestionId }}',
+        carreraId: '',
+        formato: 'excel',
+        columnas: [],
+        columnsMap: {
+            carreras: [
+                { key: 'id', label: 'ID' },
+                { key: 'sigla', label: 'Sigla' },
+                { key: 'nombre', label: 'Nombre' },
+                { key: 'materias_count', label: 'Materias Habilitadas' }
+            ],
+            docentes: [
+                { key: 'id', label: 'ID' },
+                { key: 'nombre', label: 'Nombre Completo' },
+                { key: 'email', label: 'Correo electrónico' },
+                { key: 'ci', label: 'CI' },
+                { key: 'telefono', label: 'Teléfono' },
+                { key: 'especialidad', label: 'Especialidad' },
+                { key: 'formacion_academica', label: 'Formación' },
+                { key: 'profesional_area', label: 'Profesional en Área' },
+                { key: 'tiene_maestria', label: 'Tiene Maestría' },
+                { key: 'tiene_diplomado', label: 'Tiene Diplomado' }
+            ],
+            examenes: [
+                { key: 'id', label: 'ID' },
+                { key: 'nombre', label: 'Examen' },
+                { key: 'materia', label: 'Materia' },
+                { key: 'carrera', label: 'Carrera' },
+                { key: 'gestion', label: 'Gestión' },
+                { key: 'docente', label: 'Docente' },
+                { key: 'alumnos', label: 'Alumnos / Postulantes' },
+                { key: 'ponderacion', label: 'Ponderación' },
+                { key: 'fecha', label: 'Fecha' }
+            ],
+            postulantes: [
+                { key: 'id', label: 'ID' },
+                { key: 'nombre', label: 'Nombre Completo' },
+                { key: 'email', label: 'Correo electrónico' },
+                { key: 'ci', label: 'CI' },
+                { key: 'telefono', label: 'Teléfono' },
+                { key: 'sexo', label: 'Sexo' },
+                { key: 'colegio_procedencia', label: 'Colegio' },
+                { key: 'ciudad', label: 'Ciudad' },
+                { key: 'carrera_primera_opcion', label: '1ra Opción' },
+                { key: 'carrera_segunda_opcion', label: '2da Opción' },
+                { key: 'gestion', label: 'Gestión' },
+                { key: 'nota_final', label: 'Nota Final' },
+                { key: 'estado_admision', label: 'Estado' }
+            ],
+            materias: [
+                { key: 'id', label: 'ID' },
+                { key: 'sigla', label: 'Sigla' },
+                { key: 'nombre', label: 'Nombre' },
+                { key: 'carrera', label: 'Carrera' },
+                { key: 'docente', label: 'Docente' },
+                { key: 'alumnos', label: 'Alumnos / Postulantes' }
+            ]
+        },
+        init() {
+            this.resetColumns();
+            this.$watch('tabla', () => this.resetColumns());
+        },
+        resetColumns() {
+            this.columnas = this.columnsMap[this.tabla].map(c => c.key);
+        },
+        getLink() {
+            let baseUrl = '{{ route('admin.exportar.personalizado') }}';
+            return `${baseUrl}?tabla=${this.tabla}&gestion_id=${this.gestionId}&carrera_id=${this.carreraId}&formato=${this.formato}&columnas=${this.columnas.join(',')}`;
+        }
+    }" class="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs">
+        <div class="flex items-center gap-3 border-b border-zinc-100 dark:border-zinc-800 pb-4 mb-5">
+            <div class="p-2.5 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-650 dark:text-indigo-400 rounded-xl">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12 3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                </svg>
+            </div>
+            <div>
+                <h3 class="text-base font-bold text-zinc-900 dark:text-zinc-100">Generador de Reportes y Exportación</h3>
+                <p class="text-xs text-zinc-400">Selecciona el módulo, aplica los filtros correspondientes y exporta en Excel o PDF.</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+            <!-- 1. Módulo / Tabla -->
+            <div class="space-y-1.5">
+                <label class="text-xs font-semibold text-zinc-500 dark:text-zinc-400">Datos a Exportar</label>
+                <select x-model="tabla" class="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm px-3 py-2 text-zinc-800 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 cursor-pointer">
+                    <option value="postulantes">Postulantes</option>
+                    <option value="docentes">Docentes</option>
+                    <option value="carreras">Carreras</option>
+                    <option value="examenes">Exámenes</option>
+                    <option value="materias">Materias</option>
+                </select>
+            </div>
+
+            <!-- 2. Gestión -->
+            <div class="space-y-1.5">
+                <label class="text-xs font-semibold text-zinc-500 dark:text-zinc-400">Semestre / Gestión</label>
+                <select x-model="gestionId" class="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm px-3 py-2 text-zinc-800 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 cursor-pointer">
+                    <option value="">Todas las gestiones</option>
+                    @foreach($gestiones as $g)
+                        <option value="{{ $g->id }}">{{ $g->nombre }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <!-- 3. Carrera -->
+            <div class="space-y-1.5">
+                <label class="text-xs font-semibold text-zinc-500 dark:text-zinc-400">Filtrar por Carrera</label>
+                <select x-model="carreraId" class="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm px-3 py-2 text-zinc-800 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 cursor-pointer">
+                    <option value="">Todas las carreras</option>
+                    @foreach($carrerasList as $c)
+                        <option value="{{ $c->id }}">{{ $c->sigla }} - {{ $c->nombre }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <!-- 4. Formato -->
+            <div class="space-y-1.5">
+                <label class="text-xs font-semibold text-zinc-500 dark:text-zinc-400">Formato de Salida</label>
+                <select x-model="formato" class="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm px-3 py-2 text-zinc-800 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 cursor-pointer">
+                    <option value="excel">Excel (CSV)</option>
+                    <option value="pdf">Imprimir / PDF</option>
+                </select>
+            </div>
+
+            <!-- 5. Botón Acción -->
+            <div>
+                <a :href="getLink()" target="_blank" class="w-full inline-flex items-center justify-center gap-2 text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 h-[38px] rounded-xl transition duration-150 shadow-sm cursor-pointer select-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                    </svg>
+                    <span>Generar Reporte</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Checkboxes de Columnas / Campos a incluir -->
+        <div class="mt-4 border-t border-zinc-150 dark:border-zinc-800 pt-4">
+            <span class="text-xs font-semibold text-zinc-500 dark:text-zinc-400 block mb-2.5">Campos a incluir en el Reporte:</span>
+            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+                <template x-for="col in columnsMap[tabla]" :key="col.key">
+                    <label class="inline-flex items-center gap-2 text-xs text-zinc-700 dark:text-zinc-300 cursor-pointer select-none">
+                        <input type="checkbox" :value="col.key" x-model="columnas" class="rounded border-zinc-300 dark:border-zinc-700 text-indigo-650 focus:ring-indigo-500 bg-white dark:bg-zinc-900">
+                        <span x-text="col.label"></span>
+                    </label>
+                </template>
+            </div>
+        </div>
     </div>
 
     <!-- Charts Row -->
@@ -129,6 +310,72 @@
             </div>
         </div>
     </div>
+
+    <!-- Sección: Detalle de Admitidos por Carrera -->
+    @if($totalAdmitidos > 0)
+    <div class="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs space-y-4">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+                <flux:heading size="lg" class="font-bold">Listado Detallado de Admitidos</flux:heading>
+                <flux:subheading>Estudiantes que alcanzaron un cupo en la gestión seleccionada, ordenados por nota final</flux:subheading>
+            </div>
+            
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+                <span class="text-sm font-semibold text-zinc-500 dark:text-zinc-400 whitespace-nowrap">Carrera:</span>
+                <select wire:model.live="selectedDetailCarreraId" class="w-full sm:w-auto rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm font-semibold px-4 py-2 text-zinc-800 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+                    @foreach($carrerasList as $c)
+                        <option value="{{ $c->id }}">{{ $c->sigla }} - {{ $c->nombre }}</option>
+                    @endforeach
+                </select>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto w-full border border-zinc-200 dark:border-zinc-800 rounded-2xl">
+            <table class="w-full text-left text-xs">
+                <thead>
+                    <tr class="bg-zinc-50 dark:bg-zinc-950/50 border-b border-zinc-200 dark:border-zinc-800 text-zinc-450 dark:text-zinc-400">
+                        <th class="py-3 px-4 text-center font-bold w-16">Pos.</th>
+                        <th class="py-3 px-4 font-bold">Nombre Completo</th>
+                        <th class="py-3 px-4 font-bold">Documento (CI)</th>
+                        <th class="py-3 px-4 text-center font-bold">Vía de Ingreso</th>
+                        <th class="py-3 px-4 text-right font-bold w-24">Nota Final</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-zinc-150 dark:divide-zinc-850">
+                    @forelse($admitidosDetalle as $adm)
+                        <tr class="text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20 transition duration-150">
+                            <td class="py-3 px-4 text-center font-black text-indigo-650 dark:text-indigo-400">#{{ $adm['ranking'] }}</td>
+                            <td class="py-3 px-4 font-semibold text-zinc-900 dark:text-white">{{ $adm['nombre'] }}</td>
+                            <td class="py-3 px-4 text-zinc-500 dark:text-zinc-400">{{ $adm['ci'] }}</td>
+                            <td class="py-3 px-4 text-center">
+                                @if($adm['opcion'] === 1)
+                                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-250 dark:border-emerald-900/50 shadow-2xs">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                        1ra Opción
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-teal-50 text-teal-700 dark:bg-teal-950/30 dark:text-teal-400 border border-teal-250 dark:border-teal-900/50 shadow-2xs">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-teal-500"></span>
+                                        2da Opción
+                                    </span>
+                                @endif
+                            </td>
+                            <td class="py-3 px-4 text-right font-black text-zinc-900 dark:text-white text-sm">
+                                {{ number_format($adm['nota_final'], 2) }}
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="5" class="text-center text-zinc-400 dark:text-zinc-500 py-10">
+                                No se encontraron estudiantes admitidos para esta carrera en esta gestión.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @endif
 
     <!-- Tabla: Rendimiento por grupo -->
     <div class="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs">
@@ -423,8 +670,91 @@
                             </div>
                         </div>
 
-                        <div class="flex justify-end gap-3 pt-2">
-                            <button wire:click="$set('showAdmissionModal', false)" type="button" class="px-5 py-2.5 bg-indigo-650 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition duration-155 shadow-sm">
+                        <!-- Detailed List of Admitted Students inside modal -->
+                        <div class="mt-6 border-t border-zinc-150 dark:border-zinc-800 pt-6 space-y-4">
+                            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                                <div>
+                                    <h4 class="text-sm font-bold text-zinc-800 dark:text-zinc-200">Detalle de Alumnos Admitidos</h4>
+                                    <p class="text-[10px] text-zinc-450 dark:text-zinc-550">Selecciona una carrera para listar a los postulantes ordenados por nota</p>
+                                </div>
+                                <div class="flex items-center gap-2 w-full sm:w-auto">
+                                    <span class="text-xs font-semibold text-zinc-500 dark:text-zinc-400">Carrera:</span>
+                                    <select wire:model.live="selectedDetailCarreraId" class="w-full sm:w-auto rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-bold px-3 py-1.5 text-zinc-800 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+                                        @foreach($carrerasList as $c)
+                                            <option value="{{ $c->id }}">{{ $c->sigla }} - {{ $c->nombre }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="overflow-x-auto w-full border border-zinc-200 dark:border-zinc-800 rounded-xl max-h-60 overflow-y-auto">
+                                <table class="w-full text-left text-xs">
+                                    <thead class="bg-zinc-50 dark:bg-zinc-950/50 sticky top-0 border-b border-zinc-200 dark:border-zinc-800 text-zinc-450 dark:text-zinc-400">
+                                        <tr>
+                                            <th class="py-2 px-3 text-center font-bold w-12">Pos.</th>
+                                            <th class="py-2 px-3 font-bold">Nombre Completo</th>
+                                            <th class="py-2 px-3 font-bold">CI</th>
+                                            <th class="py-2 px-3 text-center font-bold">Opción</th>
+                                            <th class="py-2 px-3 text-right font-bold w-20">Nota</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-zinc-100 dark:divide-zinc-850">
+                                        @forelse($admitidosDetalle as $adm)
+                                            <tr class="text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20">
+                                                <td class="py-2 px-3 text-center font-bold text-indigo-650 dark:text-indigo-400">#{{ $adm['ranking'] }}</td>
+                                                <td class="py-2 px-3 font-semibold">{{ $adm['nombre'] }}</td>
+                                                <td class="py-2 px-3 text-zinc-500">{{ $adm['ci'] }}</td>
+                                                <td class="py-2 px-3 text-center">
+                                                    @if($adm['opcion'] === 1)
+                                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-250 dark:border-emerald-900/50">
+                                                            1ra Opción
+                                                        </span>
+                                                    @else
+                                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 text-teal-700 dark:bg-teal-950/30 dark:text-teal-400 border border-teal-250 dark:border-teal-900/50">
+                                                            2da Opción
+                                                        </span>
+                                                    @endif
+                                                </td>
+                                                <td class="py-2 px-3 text-right font-bold text-zinc-900 dark:text-white">{{ number_format($adm['nota_final'], 2) }}</td>
+                                            </tr>
+                                        @empty
+                                            <tr>
+                                                <td colspan="5" class="text-center text-zinc-400 py-6">
+                                                    No se encontraron estudiantes admitidos para esta carrera en esta gestión.
+                                                </td>
+                                            </tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap justify-between items-center gap-3 pt-4 border-t border-zinc-150 dark:border-zinc-800">
+                            <!-- Descargas y Reportes -->
+                            <div class="flex flex-wrap gap-2">
+                                <a href="{{ route('admin.reporte-admision.imprimir', ['gestion_id' => $selectedGestionId]) }}" target="_blank" class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl transition duration-150 shadow-sm cursor-pointer select-none">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.821V21m0 0h-5.625c-.621 0-1.125-.504-1.125-1.125V11.25a9 9 0 00-9-9Z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.821h10.56M6.72 13.821c-.482 0-.964-.138-1.356-.415L1.5 10.5m14.28 3.321h5.625c.621 0 1.125-.504 1.125-1.125v-8.25M6.72 13.821a3.001 3.001 0 01-2.203-1.63L2.25 9m16.5 4.821a3.001 3.001 0 002.203-1.63l1.53-3.19M19.5 9V4.5A1.5 1.5 0 0018 3H6a1.5 1.5 0 00-1.5 1.5V9m15 0H1.5" />
+                                    </svg>
+                                    <span>Imprimir Reporte (PDF)</span>
+                                </a>
+                                <a href="{{ route('admin.exportar.admitidos', ['gestion_id' => $selectedGestionId]) }}" class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 font-semibold text-xs rounded-xl transition duration-150 shadow-sm border border-zinc-200 dark:border-zinc-700 cursor-pointer select-none">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                    </svg>
+                                    <span>Admitidos (CSV)</span>
+                                </a>
+                                <a href="{{ route('admin.exportar.no-admitidos', ['gestion_id' => $selectedGestionId]) }}" class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 font-semibold text-xs rounded-xl transition duration-150 shadow-sm border border-zinc-200 dark:border-zinc-700 cursor-pointer select-none">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                    </svg>
+                                    <span>No Admitidos (CSV)</span>
+                                </a>
+                            </div>
+
+                            <!-- Cerrar Modal -->
+                            <button wire:click="$set('showAdmissionModal', false)" type="button" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition duration-155 shadow-sm cursor-pointer select-none">
                                 Entendido
                             </button>
                         </div>
