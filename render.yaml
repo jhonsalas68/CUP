@@ -1,0 +1,38 @@
+services:
+  # Servicio Web para la aplicación Laravel
+  - type: web
+    name: cup-sistema-admisiones
+    env: docker
+    plan: free
+    region: oregon # Región recomendada para el plan free
+    numInstances: 1
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: APP_KEY
+        sync: false # Render solicitará esta clave al crear el servicio (generar con: php artisan key:generate --show)
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cup-db
+          property: connectionString
+      - key: STRIPE_KEY
+        sync: false # Clave pública de Stripe (solicitada al configurar)
+      - key: STRIPE_SECRET
+        sync: false # Clave secreta de Stripe (solicitada al configurar)
+      - key: SESSION_DRIVER
+        value: database # Para asegurar persistencia de sesiones en el balanceador
+      - key: CACHE_STORE
+        value: database
+      - key: QUEUE_CONNECTION
+        value: sync
+
+databases:
+  # Base de datos PostgreSQL Administrada por Render
+  - name: cup-db
+    plan: free
+    region: oregon
+    postgresMajorVersion: 16
