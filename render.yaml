@@ -11,6 +11,8 @@ services:
         value: production
       - key: APP_DEBUG
         value: false
+      - key: APP_URL
+        sync: false # URL pública de Render (ej: https://cup-sistema-admisiones.onrender.com)
       - key: APP_KEY
         sync: false # Render solicitará esta clave al crear el servicio (generar con: php artisan key:generate --show)
       - key: DB_CONNECTION
