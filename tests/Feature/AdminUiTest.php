@@ -482,6 +482,90 @@ class AdminUiTest extends TestCase
             ->assertSee('75.00')
             ->assertSee('2da Opción');
     }
+
+    public function test_admin_dashboard_can_send_email_notifications()
+    {
+        \Illuminate\Support\Facades\Mail::fake();
+
+        $admin = User::factory()->create();
+        $admin->assignRole('Administrador');
+
+        $gestion = Gestion::create([
+            'nombre' => 'I-2026',
+            'fecha_inicio' => '2026-02-01',
+            'fecha_fin' => '2026-06-30',
+            'activo' => true,
+        ]);
+
+        $carrera = \App\Models\Carrera::create([
+            'nombre' => 'SIS',
+            'sigla' => 'SIS',
+        ]);
+
+        // Create evaluated student (admitido_primera_opcion)
+        $userPost = User::create([
+            'name' => 'Postulante Notif',
+            'email' => 'notif@example.com',
+            'password' => bcrypt('password'),
+        ]);
+        $postulante = \App\Models\Postulante::create([
+            'user_id' => $userPost->id,
+            'nombres_apellidos' => 'Postulante Notif',
+            'ci' => '1234567',
+            'telefono' => '700000',
+            'fecha_nacimiento' => '2005-01-01',
+            'carrera_primera_opcion_id' => $carrera->id,
+            'gestion_id' => $gestion->id,
+            'estado_admision' => 'admitido_primera_opcion',
+        ]);
+
+        $this->actingAs($admin);
+
+        Livewire::test(\App\Livewire\Admin\Dashboard::class)
+            ->set('selectedGestionId', $gestion->id)
+            ->call('sendEmailNotifications')
+            ->assertHasNoErrors()
+            ->assertStatus(200);
+
+        // Assert mail was queued
+        \Illuminate\Support\Facades\Mail::assertQueued(\App\Mail\AdmissionResultMail::class, function ($mail) use ($postulante) {
+            return $mail->postulante->id === $postulante->id && $mail->hasTo('notif@example.com');
+        });
+
+        // Assert Bitacora log was created
+        $this->assertDatabaseHas('bitacora', [
+            'action' => 'proceso_admision',
+            'objeto' => 'Notificaciones Gmail',
+            'user_id' => $admin->id,
+        ]);
+    }
+
+    public function test_admin_dashboard_can_send_test_email()
+    {
+        \Illuminate\Support\Facades\Mail::fake();
+
+        $admin = User::factory()->create();
+        $admin->assignRole('Administrador');
+
+        $this->actingAs($admin);
+
+        Livewire::test(\App\Livewire\Admin\Dashboard::class)
+            ->call('sendTestEmail')
+            ->assertHasNoErrors()
+            ->assertStatus(200);
+
+        // Assert test email was sent
+        \Illuminate\Support\Facades\Mail::assertSent(\App\Mail\AdmissionResultMail::class, function ($mail) use ($admin) {
+            return $mail->hasTo($admin->email);
+        });
+
+        // Assert Bitacora log was created
+        $this->assertDatabaseHas('bitacora', [
+            'action' => 'proceso_admision',
+            'objeto' => 'Correo de Prueba',
+            'user_id' => $admin->id,
+        ]);
+    }
 }
 
 

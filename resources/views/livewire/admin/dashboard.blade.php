@@ -38,6 +38,24 @@
                     </flux:menu.item>
                 </flux:menu>
             </flux:dropdown>
+
+            <!-- Botón de Notificar por Gmail -->
+            @if($totalAdmitidos > 0 || $totalReprobados > 0)
+                <button wire:click="sendEmailNotifications" type="button" class="inline-flex items-center justify-center gap-2 text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl transition duration-150 shadow-sm cursor-pointer select-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4.5 h-4.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                    </svg>
+                    <span>Notificar por Gmail</span>
+                </button>
+            @endif
+
+            <!-- Botón de Enviar Correo de Prueba -->
+            <button wire:click="sendTestEmail" type="button" class="inline-flex items-center justify-center gap-2 text-sm font-semibold bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-750 dark:text-zinc-200 px-4 py-2 rounded-xl transition duration-150 shadow-sm border border-zinc-200 dark:border-zinc-700 cursor-pointer select-none">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4.5 h-4.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                </svg>
+                <span>Probar SMTP</span>
+            </button>
         </div>
     </div>
 
@@ -751,6 +769,12 @@
                                     </svg>
                                     <span>No Admitidos (CSV)</span>
                                 </a>
+                                <button type="button" wire:click="sendEmailNotifications" class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-indigo-650 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl transition duration-150 shadow-sm cursor-pointer select-none">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                                    </svg>
+                                    <span>Notificar por Gmail</span>
+                                </button>
                             </div>
 
                             <!-- Cerrar Modal -->

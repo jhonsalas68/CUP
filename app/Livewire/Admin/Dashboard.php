@@ -231,6 +231,19 @@ class Dashboard extends Component
                 // Load fresh stats for summary
                 $this->admissionStats = $service->getStats($this->selectedGestionId);
                 
+                // Log activity
+                $gestionNombre = $this->gestiones->where('id', $this->selectedGestionId)->first()?->nombre ?? $this->selectedGestionId;
+                \App\Models\Bitacora::create([
+                    'user_id' => auth()->id(),
+                    'action' => 'proceso_admision',
+                    'objeto' => 'Proceso Admisión',
+                    'descripcion' => "Se ejecutó el proceso de admisión y asignación de cupos para la gestión '{$gestionNombre}'",
+                    'payload' => [
+                        'stats' => $this->admissionStats['general'] ?? []
+                    ],
+                    'ip_address' => request()->ip(),
+                ]);
+
                 // Reload parent dashboard numbers
                 $this->loadStats();
                 
@@ -336,6 +349,89 @@ class Dashboard extends Component
     public function updatedSelectedDetailCarreraId()
     {
         $this->loadAdmitidosDetalle();
+    }
+
+    public function sendEmailNotifications()
+    {
+        if (!auth()->user()->hasRole('Administrador')) {
+            abort(403);
+        }
+
+        $postulantes = Postulante::with('user')
+            ->where('gestion_id', $this->selectedGestionId)
+            ->whereIn('estado_admision', ['admitido_primera_opcion', 'admitido_segunda_opcion', 'no_admitido', 'reprobado'])
+            ->get();
+
+        if ($postulantes->isEmpty()) {
+            session()->flash('error', 'No hay postulantes con resultados para notificar en esta gestión.');
+            return;
+        }
+
+        $count = 0;
+        foreach ($postulantes as $postulante) {
+            if ($postulante->user && $postulante->user->email) {
+                \Illuminate\Support\Facades\Mail::to($postulante->user->email)
+                    ->queue(new \App\Mail\AdmissionResultMail($postulante));
+                $count++;
+            }
+        }
+
+        // Log this action to Bitacora
+        $gestionNombre = $this->gestiones->where('id', $this->selectedGestionId)->first()?->nombre ?? $this->selectedGestionId;
+        \App\Models\Bitacora::create([
+            'user_id' => auth()->id(),
+            'action' => 'proceso_admision',
+            'objeto' => 'Notificaciones Gmail',
+            'descripcion' => "Se encolaron {$count} notificaciones por correo electrónico (Gmail SMTP) a los postulantes de la gestión '{$gestionNombre}'",
+            'payload' => [
+                'gestion_id' => $this->selectedGestionId,
+                'cantidad_notificados' => $count,
+            ],
+            'ip_address' => request()->ip(),
+        ]);
+
+        session()->flash('message', "¡Proceso de envío masivo iniciado! Se han encolado {$count} correos en segundo plano de forma segura. Para procesar el envío, ejecuta 'php artisan queue:work' en tu terminal.");
+    }
+
+    public function sendTestEmail()
+    {
+        if (!auth()->user()->hasRole('Administrador')) {
+            abort(403);
+        }
+
+        $adminEmail = auth()->user()->email;
+        if (!$adminEmail) {
+            $adminEmail = 'jssalasr126@ficct.uagrm.edu.bo';
+        }
+
+        // Get first postulante to populate template or create a mock
+        $postulante = Postulante::first();
+        if (!$postulante) {
+            $postulante = new Postulante([
+                'nombres_apellidos' => 'Usuario de Prueba',
+                'ci' => '1234567',
+                'estado_admision' => 'admitido_primera_opcion',
+                'nota_final' => 85.00,
+            ]);
+        }
+
+        try {
+            \Illuminate\Support\Facades\Mail::to($adminEmail)
+                ->send(new \App\Mail\AdmissionResultMail($postulante));
+
+            // Log test email
+            \App\Models\Bitacora::create([
+                'user_id' => auth()->id(),
+                'action' => 'proceso_admision',
+                'objeto' => 'Correo de Prueba',
+                'descripcion' => "Se envió un correo de prueba SMTP exitoso a {$adminEmail}",
+                'ip_address' => request()->ip(),
+            ]);
+
+            session()->flash('message', "¡Conexión SMTP de Gmail exitosa! Se envió un correo de prueba correctamente a {$adminEmail}. Verifica tu bandeja de entrada.");
+        } catch (\Exception $e) {
+            session()->flash('error', "Fallo en la conexión SMTP de Gmail. Razón: " . $e->getMessage());
+        }
     }
 
     public function render()

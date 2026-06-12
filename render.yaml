@@ -30,7 +30,23 @@ services:
       - key: CACHE_STORE
         value: database
       - key: QUEUE_CONNECTION
-        value: sync
+        value: database
+      - key: MAIL_MAILER
+        value: smtp
+      - key: MAIL_SCHEME
+        value: smtps
+      - key: MAIL_HOST
+        value: smtp.gmail.com
+      - key: MAIL_PORT
+        value: 465
+      - key: MAIL_USERNAME
+        sync: false # Correo de Gmail (ej: jssalasr126@ficct.uagrm.edu.bo) solicitado al crear
+      - key: MAIL_PASSWORD
+        sync: false # Contraseña de aplicación de Gmail solicitada al crear
+      - key: MAIL_FROM_ADDRESS
+        sync: false # Correo del remitente solicitado al crear
+      - key: MAIL_FROM_NAME
+        value: "CUP - Sistema de Admisiones"
 
 databases:
   # Base de datos PostgreSQL Administrada por Render

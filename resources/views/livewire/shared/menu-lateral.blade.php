@@ -34,6 +34,12 @@
                 Exámenes
             </flux:navlist.item>
 
+            @if(auth()->user()->hasRole('Administrador'))
+                <flux:navlist.item icon="command-line" href="{{ route('admin.bitacora') }}" :current="request()->routeIs('admin.bitacora')">
+                    Bitácora
+                </flux:navlist.item>
+            @endif
+
 
         @elseif(auth()->user()->hasRole('Docente'))
             <flux:navlist.item icon="squares-2x2" href="#" current>

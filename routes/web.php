@@ -45,6 +45,10 @@ Route::get('admin/examenes', \App\Livewire\Admin\Examenes::class)
     ->middleware(['auth', 'verified'])
     ->name('admin.examenes');
 
+Route::get('admin/bitacora', \App\Livewire\Admin\Bitacora::class)
+    ->middleware(['auth', 'verified'])
+    ->name('admin.bitacora');
+
 
 
 Route::view('profile', 'profile')
