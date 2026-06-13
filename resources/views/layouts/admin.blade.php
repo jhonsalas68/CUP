@@ -54,7 +54,7 @@
 <body x-data class="h-full antialiased font-sans text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-950">
     <div class="min-h-full lg:grid lg:grid-cols-[auto_1fr] lg:grid-rows-[auto_1fr] bg-zinc-50 dark:bg-zinc-950">
         <!-- Sidebar para desktop -->
-        <flux:sidebar sticky collapsible stashable class="bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800">
+        <flux:sidebar sticky collapsible="mobile" class="bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800">
             <!-- Brand / Logo -->
             <div class="flex items-center justify-between px-2 py-4 border-b border-zinc-100 dark:border-zinc-800 mb-6">
                 <div class="flex items-center gap-3">
