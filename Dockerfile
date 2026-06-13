@@ -19,6 +19,9 @@ RUN docker-php-ext-install pdo_pgsql pgsql zip bcmath gd opcache
 # Enable Apache rewrite module
 RUN a2enmod rewrite
 
+# Disable conflicting MPM modules and enable prefork (required for mod_php)
+RUN a2dismod mpm_event mpm_worker || true && a2enmod mpm_prefork
+
 # Configure Apache virtual host
 COPY docker/apache/000-default.conf /etc/apache2/sites-available/000-default.conf
 
