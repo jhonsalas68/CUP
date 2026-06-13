@@ -5,6 +5,11 @@ echo "Corrigiendo módulos MPM de Apache..."
 a2dismod mpm_event mpm_worker || true
 a2enmod mpm_prefork || true
 
+# Configurar puerto dinámico para Railway (con fallback a 80)
+export PORT=${PORT:-80}
+sed -i "s/Listen 80/Listen ${PORT}/g" /etc/apache2/ports.conf
+
+
 # 2. Optimizar Laravel (Caché)
 echo "Optimizando la aplicación..."
 php artisan config:cache
