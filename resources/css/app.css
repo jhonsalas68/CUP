@@ -1,8 +1,9 @@
+@import "tailwindcss";
 @import "../../vendor/livewire/flux/dist/flux.css";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@theme {
+    --font-sans: 'Figtree', sans-serif;
+}
 
 /* Theme Accent Colors for Flux UI and Custom Components */
 :root {
