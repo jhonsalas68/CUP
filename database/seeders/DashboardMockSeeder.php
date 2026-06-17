@@ -214,11 +214,11 @@ class DashboardMockSeeder extends Seeder
             $admissionService = new AdmissionSelectionService();
 
             // 8. Poblar Gestiones Históricas (I-2025 y II-2025)
-            $this->seedHistoricalGestion($g1, 30, $carreras, $groupService, $examService, $admissionService);
-            $this->seedHistoricalGestion($g2, 30, $carreras, $groupService, $examService, $admissionService);
+            $this->seedHistoricalGestion($g1, 1000, $carreras, $groupService, $examService, $admissionService);
+            $this->seedHistoricalGestion($g2, 1000, $carreras, $groupService, $examService, $admissionService);
 
             // 9. Poblar Gestión Activa (I-2026) con postulantes y notas
-            $this->seedHistoricalGestion($gActive, 60, $carreras, $groupService, $examService, $admissionService);
+            $this->seedHistoricalGestion($gActive, 1000, $carreras, $groupService, $examService, $admissionService);
         });
     }
 
