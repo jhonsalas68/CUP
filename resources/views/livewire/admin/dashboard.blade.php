@@ -1,3 +1,4 @@
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <div class="space-y-6">
     <!-- Header principal -->
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs">
@@ -567,9 +568,6 @@
     </div>
 
     <!-- Incluir Chart.js via CDN de manera limpia -->
-    @assets
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    @endassets
 
     <!-- Scripts de inicialización y sincronización de gráficos -->
     <script>
@@ -577,6 +575,10 @@
             return {
                 chart: null,
                 initChart() {
+                    if (typeof Chart === 'undefined') {
+                        setTimeout(() => this.initChart(), 100);
+                        return;
+                    }
                     const ctx = this.$refs.canvas.getContext('2d');
                     this.chart = new Chart(ctx, {
                         type: 'bar',
@@ -628,6 +630,10 @@
             return {
                 chart: null,
                 initChart() {
+                    if (typeof Chart === 'undefined') {
+                        setTimeout(() => this.initChart(), 100);
+                        return;
+                    }
                     const ctx = this.$refs.canvas.getContext('2d');
                     this.chart = new Chart(ctx, {
                         type: 'line',
@@ -690,6 +696,10 @@
             return {
                 chart: null,
                 initChart() {
+                    if (typeof Chart === 'undefined') {
+                        setTimeout(() => this.initChart(), 100);
+                        return;
+                    }
                     const ctx = this.$refs.canvas.getContext('2d');
                     this.chart = new Chart(ctx, {
                         type: 'bar',

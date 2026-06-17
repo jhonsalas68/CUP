@@ -7,14 +7,10 @@ use App\Models\Carrera;
 use App\Models\Materia;
 use App\Models\Docente;
 use App\Models\Gestion;
-use App\Models\Grupo;
 use App\Models\Cupo;
 use App\Models\Postulante;
 use App\Models\Examen;
 use App\Models\Nota;
-use App\Services\GroupGenerationService;
-use App\Services\ExamService;
-use App\Services\AdmissionSelectionService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -24,29 +20,29 @@ class DashboardMockSeeder extends Seeder
     public function run(): void
     {
         DB::transaction(function () {
-            // 1. Limpieza de tablas transaccionales y maestras
-            DB::statement('TRUNCATE TABLE notas CASCADE;');
-            DB::statement('TRUNCATE TABLE examenes CASCADE;');
-            DB::statement('TRUNCATE TABLE horarios CASCADE;');
-            DB::statement('TRUNCATE TABLE postulante_grupo CASCADE;');
-            DB::statement('TRUNCATE TABLE asignaciones_docente CASCADE;');
-            DB::statement('TRUNCATE TABLE grupos CASCADE;');
-            DB::statement('TRUNCATE TABLE docente_materia CASCADE;');
+            // 1. Limpieza de tablas con RESTART IDENTITY CASCADE
+            DB::statement('TRUNCATE TABLE notas RESTART IDENTITY CASCADE;');
+            DB::statement('TRUNCATE TABLE examenes RESTART IDENTITY CASCADE;');
+            DB::statement('TRUNCATE TABLE horarios RESTART IDENTITY CASCADE;');
+            DB::statement('TRUNCATE TABLE postulante_grupo RESTART IDENTITY CASCADE;');
+            DB::statement('TRUNCATE TABLE asignaciones_docente RESTART IDENTITY CASCADE;');
+            DB::statement('TRUNCATE TABLE grupos RESTART IDENTITY CASCADE;');
+            DB::statement('TRUNCATE TABLE docente_materia RESTART IDENTITY CASCADE;');
             
             // Eliminar usuarios que no sean admin o coordinador
             User::whereNotIn('email', ['admin@cup.edu.bo', 'coordinador@cup.edu.bo'])->forceDelete();
             
-            DB::statement('TRUNCATE TABLE postulantes CASCADE;');
-            DB::statement('TRUNCATE TABLE docentes CASCADE;');
-            DB::statement('TRUNCATE TABLE cupos CASCADE;');
-            DB::statement('TRUNCATE TABLE materias CASCADE;');
-            DB::statement('TRUNCATE TABLE carreras CASCADE;');
-            DB::statement('TRUNCATE TABLE gestiones CASCADE;');
+            DB::statement('TRUNCATE TABLE postulantes RESTART IDENTITY CASCADE;');
+            DB::statement('TRUNCATE TABLE docentes RESTART IDENTITY CASCADE;');
+            DB::statement('TRUNCATE TABLE cupos RESTART IDENTITY CASCADE;');
+            DB::statement('TRUNCATE TABLE materias RESTART IDENTITY CASCADE;');
+            DB::statement('TRUNCATE TABLE carreras RESTART IDENTITY CASCADE;');
+            DB::statement('TRUNCATE TABLE gestiones RESTART IDENTITY CASCADE;');
 
             // Asegurar que existan los roles
             $this->call(RolesAndPermissionsSeeder::class);
 
-            // 2. Crear Gestiones (2 históricas y 1 activa)
+            // 2. Crear Gestiones
             $g1 = Gestion::create([
                 'nombre' => 'I-2025',
                 'fecha_inicio' => '2025-02-01',
@@ -72,9 +68,6 @@ class DashboardMockSeeder extends Seeder
             $inf = Carrera::create(['nombre' => 'Ingeniería Informática', 'sigla' => 'INF']);
             $red = Carrera::create(['nombre' => 'Ingeniería en Redes y Telecomunicaciones', 'sigla' => 'RED']);
             $rob = Carrera::create(['nombre' => 'Ingeniería Robótica', 'sigla' => 'ROB']);
-
-            echo "DEBUG: Created Carreras with IDs: SIS={$sis->id}, INF={$inf->id}, RED={$red->id}, ROB={$rob->id}\n";
-            echo "DEBUG: Gestiones created: g1={$g1->id}, g2={$g2->id}, gActive={$gActive->id}\n";
 
             $carreras = [$sis, $inf, $red, $rob];
 
@@ -132,22 +125,20 @@ class DashboardMockSeeder extends Seeder
                 ['nombre' => 'Computación (Robótica)', 'sigla' => 'COM-ROB'],
             ];
 
-            $materiasList = [];
-
             foreach ($mSistemas as $m) {
-                $materiasList[] = Materia::create(array_merge($m, ['carrera_id' => $sis->id]));
+                Materia::create(array_merge($m, ['carrera_id' => $sis->id]));
             }
             foreach ($mInformatica as $m) {
-                $materiasList[] = Materia::create(array_merge($m, ['carrera_id' => $inf->id]));
+                Materia::create(array_merge($m, ['carrera_id' => $inf->id]));
             }
             foreach ($mRedes as $m) {
-                $materiasList[] = Materia::create(array_merge($m, ['carrera_id' => $red->id]));
+                Materia::create(array_merge($m, ['carrera_id' => $red->id]));
             }
             foreach ($mRobotica as $m) {
-                $materiasList[] = Materia::create(array_merge($m, ['carrera_id' => $rob->id]));
+                Materia::create(array_merge($m, ['carrera_id' => $rob->id]));
             }
 
-            // 6. Crear Docentes y asociar disponibilidad
+            // 6. Crear Docentes
             $docentesData = [
                 ['name' => 'Carlos Mendoza', 'email' => 'carlos@cup.edu.bo', 'esp' => 'Computación y Algoritmos', 'materias' => ['COM-SIS', 'COM-INF', 'COM-RED', 'COM-ROB']],
                 ['name' => 'María Delgadillo', 'email' => 'maria@cup.edu.bo', 'esp' => 'Matemáticas y Álgebra', 'materias' => ['MAT-SIS', 'MAT-INF', 'MAT-RED', 'MAT-ROB']],
@@ -208,17 +199,35 @@ class DashboardMockSeeder extends Seeder
                 $docentesList[] = $doc;
             }
 
-            // 7. Instanciar Servicios para el llenado masivo y consistente
-            $groupService = new GroupGenerationService();
-            $examService = new ExamService();
-            $admissionService = new AdmissionSelectionService();
+            // Actualizar la secuencia de docentes
+            $maxDocenteId = DB::table('docentes')->max('id');
+            if ($maxDocenteId) {
+                DB::statement("SELECT setval('docentes_id_seq', ?)", [$maxDocenteId]);
+            }
 
-            // 8. Poblar Gestiones Históricas (I-2025 y II-2025)
-            $this->seedHistoricalGestion($g1, 1000, $carreras, $groupService, $examService, $admissionService);
-            $this->seedHistoricalGestion($g2, 1000, $carreras, $groupService, $examService, $admissionService);
+            // 7. Iniciar la inserción masiva de postulantes por gestión
+            $startUserId = DB::table('users')->max('id') + 1;
+            $startPostulanteId = 1;
 
-            // 9. Poblar Gestión Activa (I-2026) con postulantes y notas
-            $this->seedHistoricalGestion($gActive, 1000, $carreras, $groupService, $examService, $admissionService);
+            $nextIds = $this->seedHistoricalGestion($g1, 1000, $carreras, $startUserId, $startPostulanteId);
+            $startUserId = $nextIds['userId'];
+            $startPostulanteId = $nextIds['postulanteId'];
+
+            $nextIds = $this->seedHistoricalGestion($g2, 1000, $carreras, $startUserId, $startPostulanteId);
+            $startUserId = $nextIds['userId'];
+            $startPostulanteId = $nextIds['postulanteId'];
+
+            $this->seedHistoricalGestion($gActive, 1000, $carreras, $startUserId, $startPostulanteId);
+
+            // Actualizar secuencias de users y postulantes al final de todo
+            $maxUserId = DB::table('users')->max('id');
+            if ($maxUserId) {
+                DB::statement("SELECT setval('users_id_seq', ?)", [$maxUserId]);
+            }
+            $maxPostulanteId = DB::table('postulantes')->max('id');
+            if ($maxPostulanteId) {
+                DB::statement("SELECT setval('postulantes_id_seq', ?)", [$maxPostulanteId]);
+            }
         });
     }
 
@@ -226,25 +235,32 @@ class DashboardMockSeeder extends Seeder
         Gestion $g,
         int $numPostulantes,
         array $carreras,
-        GroupGenerationService $groupService,
-        ExamService $examService,
-        AdmissionSelectionService $admissionService
-    ): void {
+        int $startUserId,
+        int $startPostulanteId
+    ): array {
         $carrSIS = $carreras[0];
         $carrINF = $carreras[1];
         $carrRED = $carreras[2];
         $carrROB = $carreras[3];
 
-        echo "DEBUG: seedHistoricalGestion called for {$g->nombre} (ID: {$g->id}). Carreras: SIS={$carrSIS->id}, INF={$carrINF->id}, RED={$carrRED->id}, ROB={$carrROB->id}\n";
-
+        echo "Bulk seeding historical gestion: {$g->nombre} (ID: {$g->id})...\n";
 
         $firstNames = ['Juan', 'Pedro', 'María', 'Ana', 'Luis', 'Carlos', 'José', 'Sofía', 'Laura', 'Miguel', 'David', 'Elena', 'Diego', 'Lucía', 'Alejandro', 'Gabriel', 'Daniel', 'Valentina', 'Camila', 'Mateo', 'Lucas', 'Santiago', 'Andrés', 'Fernanda', 'Isabella', 'Martín', 'Javier', 'Carmen', 'Patricia', 'Roberto', 'Paola', 'Gustavo', 'Beatriz', 'Raúl', 'Adriana'];
         $lastNames = ['Gómez', 'Rodríguez', 'Pérez', 'López', 'González', 'Martínez', 'Sánchez', 'Ramírez', 'Torres', 'Flores', 'Rivera', 'Díaz', 'Cruz', 'Ortiz', 'Gutiérrez', 'Chávez', 'Alvarez', 'Ruiz', 'Vargas', 'Mendoza', 'Rojas', 'Castillo', 'Silva', 'Morales', 'Herrera', 'Medina', 'Castro', 'Muñoz', 'Ramos', 'Guzmán', 'Salas', 'Suárez', 'Pinto', 'Aguilar', 'Romero'];
 
         $passwordHash = Hash::make('password');
+        $postulanteRoleId = DB::table('roles')->where('name', 'Postulante')->value('id') ?? 4;
 
-        // Crear postulantes con distribución: SIS 40%, RED 20%, INF 20%, ROB 20%
+        $usersData = [];
+        $modelHasRolesData = [];
+        $postulantesData = [];
+
+        // Generar postulantes en memoria
+        $postulanteList = []; // Para ranking
         for ($i = 1; $i <= $numPostulantes; $i++) {
+            $userId = $startUserId + $i - 1;
+            $postulanteId = $startPostulanteId + $i - 1;
+
             $rand = rand(1, 100);
             if ($rand <= 40) {
                 $primera = $carrSIS;
@@ -255,60 +271,100 @@ class DashboardMockSeeder extends Seeder
             } else {
                 $primera = $carrROB;
             }
-            // Assign a second option different from first; default to Informatica, or Sistema if first is Informatica
             $segunda = ($primera->id !== $carrINF->id) ? $carrINF : $carrSIS;
-
 
             $first = $firstNames[($i + $g->id) % count($firstNames)];
             $last1 = $lastNames[($i * 3) % count($lastNames)];
             $last2 = $lastNames[($i * 7) % count($lastNames)];
             $name = "$first $last1 $last2";
 
-            $u = User::create([
+            $usersData[] = [
+                'id' => $userId,
                 'name' => $name,
                 'email' => "postulante_{$g->nombre}_{$i}@cup.edu.bo",
                 'password' => $passwordHash,
-            ]);
-            $u->assignRole('Postulante');
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
 
-            Postulante::create([
-                'user_id' => $u->id,
+            $modelHasRolesData[] = [
+                'role_id' => $postulanteRoleId,
+                'model_type' => 'App\Models\User',
+                'model_id' => $userId,
+            ];
+
+            $postulantesData[$postulanteId] = [
+                'id' => $postulanteId,
+                'user_id' => $userId,
                 'nombres_apellidos' => $name,
                 'ci' => 1000000 + ($g->id * 100000) + $i,
                 'telefono' => 60000000 + ($g->id * 100000) + $i,
                 'fecha_nacimiento' => today()->subYears(rand(17, 22))->format('Y-m-d'),
+                'sexo' => rand(1, 100) > 50 ? 'Masculino' : 'Femenino',
+                'direccion' => 'Barrio Lindo Calle ' . rand(1, 20),
+                'colegio_procedencia' => 'Colegio Nacional ' . ($i % 3 === 0 ? 'A' : 'B'),
+                'ciudad' => 'Santa Cruz',
                 'carrera_primera_opcion_id' => $primera->id,
-                'carrera_segunda_opcion_id' => $segunda ? $segunda->id : null,
+                'carrera_segunda_opcion_id' => $segunda->id,
                 'gestion_id' => $g->id,
-                'estado_admision' => 'pendiente',
+                'estado_admision' => 'pendiente', // Se actualizará luego del proceso en memoria
+                'nota_final' => 0.00,             // Se actualizará luego del proceso en memoria
                 'ci_vigente' => true,
                 'titulo_bachiller' => true,
                 'libreta_legalizada' => true,
-            ]);
+                'habilitado' => true,
+                'pago_realizado' => true,
+                'pago_matricula_realizado' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+
+            $postulanteList[] = &$postulantesData[$postulanteId];
         }
 
-        // Generar grupos
-        $groupService->generate($g->id);
+        // Crear exámenes en esta gestión en memoria e insertarlos
+        $startExamenId = DB::table('examenes')->max('id') + 1;
+        if (!$startExamenId) $startExamenId = 1;
 
-        // Crear exámenes para todas las materias de esta gestión
+        $examIndex = 0;
+        $examenesData = [];
+        $examMap = []; // $examMap[$materiaId][$examName] = $examId
+
         $materias = Materia::all();
-        $examMap = []; // $examMap[$materiaId][type] = examModel
         foreach ($materias as $m) {
-            $examMap[$m->id]['Primer Parcial'] = $examService->createExam($m->id, $g->id, 'Primer Parcial', today()->addDays(10)->format('Y-m-d'));
-            $examMap[$m->id]['Segundo Parcial'] = $examService->createExam($m->id, $g->id, 'Segundo Parcial', today()->addDays(20)->format('Y-m-d'));
-            $examMap[$m->id]['Examen Final'] = $examService->createExam($m->id, $g->id, 'Examen Final', today()->addDays(30)->format('Y-m-d'));
+            foreach (['Primer Parcial' => 30.00, 'Segundo Parcial' => 30.00, 'Examen Final' => 40.00] as $nombre => $ponderacion) {
+                $examId = $startExamenId + $examIndex;
+                $examenesData[] = [
+                    'id' => $examId,
+                    'nombre' => $nombre,
+                    'materia_id' => $m->id,
+                    'gestion_id' => $g->id,
+                    'ponderacion' => $ponderacion,
+                    'fecha' => today()->addDays($nombre === 'Primer Parcial' ? 10 : ($nombre === 'Segundo Parcial' ? 20 : 30))->format('Y-m-d'),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+                $examMap[$m->id][$nombre] = $examId;
+                $examIndex++;
+            }
         }
+        DB::table('examenes')->insert($examenesData);
+        DB::statement("SELECT setval('examenes_id_seq', ?)", [DB::table('examenes')->max('id')]);
 
-        // Calificar a los postulantes
-        // Para simular rendimiento real, algunos aprueban y otros reprueban
-        $postulantes = Postulante::where('gestion_id', $g->id)->get();
-        foreach ($postulantes as $p) {
-            $carreraId = $p->carrera_primera_opcion_id;
-            $mats = Materia::where('carrera_id', $carreraId)->get();
+        // Calificar a los postulantes y calcular nota_final en memoria
+        $notasData = [];
+        $aprobadosMap = []; // Agrupados por carrera_primera_opcion_id para rankings
+
+        $materiasByCarrera = Materia::all()->groupBy('carrera_id');
+
+        foreach ($postulanteList as &$p) {
+            $cId = $p['carrera_primera_opcion_id'];
+            $mats = $materiasByCarrera->get($cId) ?? collect();
+
+            $sumMaterias = 0.00;
+            $aprobadoTodas = true;
 
             foreach ($mats as $m) {
-                // Generar notas coherentes: aprobados sacan entre 60 y 100, reprobados entre 20 y 59
-                // Un 75% de probabilidad de aprobar
                 $esAprobado = rand(1, 100) <= 75;
                 if ($esAprobado) {
                     $n1 = rand(60, 100);
@@ -317,20 +373,272 @@ class DashboardMockSeeder extends Seeder
                 } else {
                     $n1 = rand(30, 70);
                     $n2 = rand(30, 70);
-                    $n3 = rand(20, 58); // Nota baja
+                    $n3 = rand(20, 58);
                 }
 
-                $exam1 = $examMap[$m->id]['Primer Parcial'];
-                $exam2 = $examMap[$m->id]['Segundo Parcial'];
-                $exam3 = $examMap[$m->id]['Examen Final'];
+                $notaMateria = ($n1 * 0.3) + ($n2 * 0.3) + ($n3 * 0.4);
+                if ($notaMateria < 60.00) {
+                    $aprobadoTodas = false;
+                }
+                $sumMaterias += $notaMateria;
 
-                Nota::create(['postulante_id' => $p->id, 'examen_id' => $exam1->id, 'puntaje' => $n1]);
-                Nota::create(['postulante_id' => $p->id, 'examen_id' => $exam2->id, 'puntaje' => $n2]);
-                Nota::create(['postulante_id' => $p->id, 'examen_id' => $exam3->id, 'puntaje' => $n3]);
+                $notasData[] = [
+                    'postulante_id' => $p['id'],
+                    'examen_id' => $examMap[$m->id]['Primer Parcial'],
+                    'puntaje' => $n1,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+                $notasData[] = [
+                    'postulante_id' => $p['id'],
+                    'examen_id' => $examMap[$m->id]['Segundo Parcial'],
+                    'puntaje' => $n2,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+                $notasData[] = [
+                    'postulante_id' => $p['id'],
+                    'examen_id' => $examMap[$m->id]['Examen Final'],
+                    'puntaje' => $n3,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }
+
+            $p['nota_final'] = round($sumMaterias / $mats->count(), 2);
+            
+            if ($aprobadoTodas) {
+                $aprobadosMap[$cId][] = &$p;
+            } else {
+                $p['estado_admision'] = 'reprobado';
+            }
+        }
+        unset($p); // romper la referencia
+
+        // Ejecutar proceso de admisión / ranking por cupo en memoria
+        $cupos = Cupo::where('gestion_id', $g->id)->get()->keyBy('carrera_id');
+        $noAdmitidosPrimera = [];
+
+        // Asignación Primera Opción
+        foreach ($carreras as $c) {
+            $cId = $c->id;
+            $candidatos = $aprobadosMap[$cId] ?? [];
+
+            // Ordenar candidatos por nota_final desc
+            usort($candidatos, function ($a, $b) {
+                if ($b['nota_final'] === $a['nota_final']) {
+                    return $a['id'] <=> $b['id'];
+                }
+                return $b['nota_final'] <=> $a['nota_final'];
+            });
+
+            $limit1ra = $cupos->get($cId)?->cantidad_primera_opcion ?? 20;
+            
+            foreach ($candidatos as $idx => &$cand) {
+                if ($idx < $limit1ra) {
+                    $cand['estado_admision'] = 'admitido_primera_opcion';
+                } else {
+                    $noAdmitidosPrimera[] = &$cand;
+                }
+            }
+            unset($cand);
+        }
+
+        // Asignación Segunda Opción
+        $candidatosSegunda = [];
+        foreach ($noAdmitidosPrimera as &$cand) {
+            if ($cand['carrera_segunda_opcion_id']) {
+                $candidatosSegunda[$cand['carrera_segunda_opcion_id']][] = &$cand;
+            } else {
+                $cand['estado_admision'] = 'no_admitido';
+            }
+        }
+        unset($cand);
+
+        foreach ($carreras as $c) {
+            $cId = $c->id;
+            $candidatos = $candidatosSegunda[$cId] ?? [];
+
+            usort($candidatos, function ($a, $b) {
+                if ($b['nota_final'] === $a['nota_final']) {
+                    return $a['id'] <=> $b['id'];
+                }
+                return $b['nota_final'] <=> $a['nota_final'];
+            });
+
+            $limit2da = $cupos->get($cId)?->cantidad_segunda_opcion ?? 10;
+
+            foreach ($candidatos as $idx => &$cand) {
+                if ($idx < $limit2da) {
+                    $cand['estado_admision'] = 'admitido_segunda_opcion';
+                } else {
+                    $cand['estado_admision'] = 'no_admitido';
+                }
+            }
+            unset($cand);
+        }
+
+        // Insertar usuarios, roles y postulantes
+        $usersChunks = array_chunk($usersData, 500);
+        foreach ($usersChunks as $chunk) {
+            DB::table('users')->insert($chunk);
+        }
+
+        $rolesChunks = array_chunk($modelHasRolesData, 500);
+        foreach ($rolesChunks as $chunk) {
+            DB::table('model_has_roles')->insert($chunk);
+        }
+
+        $postulantesChunks = array_chunk(array_values($postulantesData), 500);
+        foreach ($postulantesChunks as $chunk) {
+            DB::table('postulantes')->insert($chunk);
+        }
+
+        // Insertar notas
+        $notasChunks = array_chunk($notasData, 1000);
+        foreach ($notasChunks as $chunk) {
+            DB::table('notas')->insert($chunk);
+        }
+
+        // Generar grupos y horarios en memoria
+        $startGrupoId = DB::table('grupos')->max('id') + 1;
+        if (!$startGrupoId) $startGrupoId = 1;
+
+        $gruposData = [];
+        $postulanteGrupoData = [];
+        $asignacionesDocenteData = [];
+        $horariosData = [];
+
+        $grupoIndex = 0;
+
+        // Fetch docentes map per materia ID
+        $docentesRaw = DB::table('docente_materia')
+            ->select('materia_id', 'docente_id')
+            ->get();
+        $docenteMateriaMap = [];
+        foreach ($docentesRaw as $dr) {
+            $docenteMateriaMap[$dr->materia_id][] = $dr->docente_id;
+        }
+
+        // Dividir los postulantes en grupos y crear horarios
+        foreach ($carreras as $c) {
+            // Obtener todos los postulantes de esta carrera (primera opción)
+            $cPostulantes = array_filter($postulantesData, function ($p) use ($c) {
+                return $p['carrera_primera_opcion_id'] === $c->id;
+            });
+            $cPostulantes = array_values($cPostulantes);
+            $totalInscritos = count($cPostulantes);
+
+            if ($totalInscritos === 0) continue;
+
+            $mats = Materia::where('carrera_id', $c->id)->get();
+
+            foreach ($mats as $mIdx => $materia) {
+                $numGrupos = (int) ceil($totalInscritos / 70);
+                
+                // Distribuir equitativamente
+                $baseSize = (int) floor($totalInscritos / $numGrupos);
+                $remainder = $totalInscritos % $numGrupos;
+                
+                $offset = 0;
+                for ($gIdx = 0; $gIdx < $numGrupos; $gIdx++) {
+                    $take = $baseSize + ($gIdx < $remainder ? 1 : 0);
+                    $grupoPostulantes = array_slice($cPostulantes, $offset, $take);
+                    $offset += $take;
+
+                    $grupoId = $startGrupoId + $grupoIndex;
+                    $grupoNombre = "{$materia->sigla} - G" . ($gIdx + 1);
+
+                    $gruposData[] = [
+                        'id' => $grupoId,
+                        'nombre' => $grupoNombre,
+                        'materia_id' => $materia->id,
+                        'gestion_id' => $g->id,
+                        'cupo_maximo' => 70,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+
+                    // Postulantes asociados
+                    foreach ($grupoPostulantes as $gp) {
+                        $postulanteGrupoData[] = [
+                            'postulante_id' => $gp['id'],
+                            'grupo_id' => $grupoId,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ];
+                    }
+
+                    // Docente calificado
+                    $mDocentes = $docenteMateriaMap[$materia->id] ?? [1];
+                    $docenteElegido = $mDocentes[$gIdx % count($mDocentes)];
+                    
+                    $asignacionesDocenteData[] = [
+                        'docente_id' => $docenteElegido,
+                        'grupo_id' => $grupoId,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+
+                    // Horario
+                    $slotIndex = ($mIdx + $gIdx) % 8;
+                    $slotKey = 'slot_' . ($slotIndex + 1);
+                    $slotsPool = [
+                        'slot_1' => ['dias' => ['lunes', 'miercoles'], 'inicio' => '07:30:00', 'fin' => '09:00:00'],
+                        'slot_2' => ['dias' => ['lunes', 'miercoles'], 'inicio' => '09:15:00', 'fin' => '10:45:00'],
+                        'slot_3' => ['dias' => ['lunes', 'miercoles'], 'inicio' => '11:00:00', 'fin' => '12:30:00'],
+                        'slot_4' => ['dias' => ['martes', 'jueves'], 'inicio' => '07:30:00', 'fin' => '09:00:00'],
+                        'slot_5' => ['dias' => ['martes', 'jueves'], 'inicio' => '09:15:00', 'fin' => '10:45:00'],
+                        'slot_6' => ['dias' => ['martes', 'jueves'], 'inicio' => '11:00:00', 'fin' => '12:30:00'],
+                        'slot_7' => ['dias' => ['viernes', 'sabado'], 'inicio' => '07:30:00', 'fin' => '09:00:00'],
+                        'slot_8' => ['dias' => ['viernes', 'sabado'], 'inicio' => '09:15:00', 'fin' => '10:45:00'],
+                    ];
+                    $slot = $slotsPool[$slotKey];
+                    $aulaIndex = ($grupoIndex) % 9;
+                    $aulasPool = ['Aula 101', 'Aula 102', 'Aula 103', 'Aula 201', 'Aula 202', 'Aula 203', 'Lab de Computación A', 'Lab de Computación B', 'Auditorio Civil'];
+                    $aula = $aulasPool[$aulaIndex];
+
+                    foreach ($slot['dias'] as $dia) {
+                        $horariosData[] = [
+                            'grupo_id' => $grupoId,
+                            'dia_semana' => $dia,
+                            'hora_inicio' => $slot['inicio'],
+                            'hora_fin' => $slot['fin'],
+                            'aula' => $aula,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ];
+                    }
+
+                    $grupoIndex++;
+                }
             }
         }
 
-        // Procesar admisiones y rankings para esta gestión
-        $admissionService->processAdmissions($g->id);
+        // Insertar grupos, horarios y asignaciones
+        if (!empty($gruposData)) {
+            DB::table('grupos')->insert($gruposData);
+            DB::statement("SELECT setval('grupos_id_seq', ?)", [DB::table('grupos')->max('id')]);
+        }
+        if (!empty($postulanteGrupoData)) {
+            $chunkSize = 1000;
+            foreach (array_chunk($postulanteGrupoData, $chunkSize) as $chunk) {
+                DB::table('postulante_grupo')->insert($chunk);
+            }
+        }
+        if (!empty($asignacionesDocenteData)) {
+            DB::table('asignaciones_docente')->insert($asignacionesDocenteData);
+        }
+        if (!empty($horariosData)) {
+            $chunkSize = 1000;
+            foreach (array_chunk($horariosData, $chunkSize) as $chunk) {
+                DB::table('horarios')->insert($chunk);
+            }
+        }
+
+        return [
+            'userId' => $startUserId + $numPostulantes,
+            'postulanteId' => $startPostulanteId + $numPostulantes,
+        ];
     }
 }
