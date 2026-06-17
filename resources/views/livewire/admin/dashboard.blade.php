@@ -255,7 +255,7 @@
                 </div>
 
                 <!-- Gráfico de Comparación Directa -->
-                <div class="lg:col-span-2 relative h-72 w-full border border-zinc-150 dark:border-zinc-850 p-4 rounded-xl bg-zinc-50/50 dark:bg-zinc-950/10" wire:ignore x-data="comparisonChartData()" x-init="initChart()">
+                <div class="lg:col-span-2 relative h-72 w-full border border-zinc-150 dark:border-zinc-850 p-4 rounded-xl bg-zinc-50/50 dark:bg-zinc-950/10" wire:ignore x-data="comparisonChartData(@json($this->currentStats), @json($this->compareStats))" x-init="initChart()">
                     <canvas x-ref="canvas"></canvas>
                 </div>
             </div>
@@ -686,7 +686,7 @@
             }
         }
 
-        function comparisonChartData() {
+        function comparisonChartData(initialCurrent, initialCompare) {
             return {
                 chart: null,
                 initChart() {
@@ -697,16 +697,16 @@
                             labels: ['Postulantes', 'Aprobados Acad.', 'Admitidos'],
                             datasets: [
                                 {
-                                    label: 'Semestre Seleccionado',
-                                    data: [0, 0, 0],
+                                    label: initialCurrent.nombre,
+                                    data: [initialCurrent.postulantes, initialCurrent.aprobados, initialCurrent.admitidos],
                                     backgroundColor: 'rgba(99, 102, 241, 0.85)', // Indigo
                                     borderColor: 'rgb(99, 102, 241)',
                                     borderRadius: 6,
                                     borderWidth: 1
                                 },
                                 {
-                                    label: 'Semestre de Comparación',
-                                    data: [0, 0, 0],
+                                    label: initialCompare ? initialCompare.nombre : 'Sin comparar',
+                                    data: initialCompare ? [initialCompare.postulantes, initialCompare.aprobados, initialCompare.admitidos] : [0, 0, 0],
                                     backgroundColor: 'rgba(148, 163, 184, 0.85)', // Cool Gray / Slate
                                     borderColor: 'rgb(148, 163, 184)',
                                     borderRadius: 6,
@@ -729,21 +729,23 @@
                         }
                     });
 
-                    window.addEventListener('stats-updated', () => {
-                        this.updateData();
+                    window.addEventListener('stats-updated', (e) => {
+                        if (e.detail && e.detail.current) {
+                            this.updateData(e.detail.current, e.detail.compare);
+                        }
                     });
-                    this.updateData();
                 },
-                updateData() {
-                    @this.get('currentStats').then(current => {
-                        this.chart.data.datasets[0].label = current.nombre;
-                        this.chart.data.datasets[0].data = [current.postulantes, current.aprobados, current.admitidos];
-                        @this.get('compareStats').then(compare => {
-                            this.chart.data.datasets[1].label = compare.nombre;
-                            this.chart.data.datasets[1].data = [compare.postulantes, compare.aprobados, compare.admitidos];
-                            this.chart.update();
-                        });
-                    });
+                updateData(current, compare) {
+                    this.chart.data.datasets[0].label = current.nombre;
+                    this.chart.data.datasets[0].data = [current.postulantes, current.aprobados, current.admitidos];
+                    if (compare) {
+                        this.chart.data.datasets[1].label = compare.nombre;
+                        this.chart.data.datasets[1].data = [compare.postulantes, compare.aprobados, compare.admitidos];
+                    } else {
+                        this.chart.data.datasets[1].label = 'Sin comparar';
+                        this.chart.data.datasets[1].data = [0, 0, 0];
+                    }
+                    this.chart.update();
                 }
             }
         }
