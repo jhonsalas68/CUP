@@ -93,7 +93,7 @@ class Dashboard extends Component
         }
         $this->loadStats();
         // Dispatch event for charts reload
-        $this->dispatch('stats-updated', current: $this->currentStats, compare: $this->compareStats);
+        $this->dispatch('stats-updated', current: $this->currentStats(), compare: $this->compareStats());
     }
 
     public function loadStats()
@@ -268,7 +268,7 @@ class Dashboard extends Component
                 $this->loadStats();
                 
                 // Dispatch event to refresh charts
-                $this->dispatch('stats-updated', current: $this->currentStats, compare: $this->compareStats);
+                $this->dispatch('stats-updated', current: $this->currentStats(), compare: $this->compareStats());
             } else {
                 $this->admissionError = "El proceso no pudo completarse correctamente.";
             }
@@ -457,7 +457,7 @@ class Dashboard extends Component
     public function updatedCompareGestionId()
     {
         $this->loadCompareStats();
-        $this->dispatch('stats-updated', current: $this->currentStats, compare: $this->compareStats);
+        $this->dispatch('stats-updated', current: $this->currentStats(), compare: $this->compareStats());
     }
 
     public function loadCompareStats()

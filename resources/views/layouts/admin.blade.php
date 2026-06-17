@@ -49,6 +49,7 @@
         [x-cloak] { display: none !important; }
     </style>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     @fluxAppearance
 </head>
 <body x-data class="h-full antialiased font-sans text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-950">
