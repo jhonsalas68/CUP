@@ -152,6 +152,120 @@
         </div>
     </div>
 
+    <!-- Sección Comparativa de Semestres (Aprobación y Admisión) -->
+    <div class="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs space-y-6">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-zinc-100 dark:border-zinc-800 pb-4">
+            <div>
+                <flux:heading size="lg" class="font-bold">Comparativa de Aprobación entre Semestres</flux:heading>
+                <flux:subheading>Compara el rendimiento académico y la admisión del semestre seleccionado contra periodos anteriores</flux:subheading>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <span class="text-sm font-semibold text-zinc-500 dark:text-zinc-400">Comparar con:</span>
+                <select wire:model.live="compareGestionId" class="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm font-semibold px-4 py-2 text-zinc-800 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 cursor-pointer">
+                    @foreach($gestiones as $g)
+                        @if($g->id != $selectedGestionId)
+                            <option value="{{ $g->id }}">{{ $g->nombre }}</option>
+                        @endif
+                    @endforeach
+                </select>
+            </div>
+        </div>
+
+        @if($compareGestionId)
+            @php
+                $diffPostulantes = $comparePostulantes > 0 ? (($totalPostulantes - $comparePostulantes) / $comparePostulantes) * 100 : 0;
+                $diffAprobados = $compareAprobados > 0 ? (($currentAprobados - $compareAprobados) / $compareAprobados) * 100 : 0;
+                $diffAdmitidos = $compareAdmitidos > 0 ? (($totalAdmitidos - $compareAdmitidos) / $compareAdmitidos) * 100 : 0;
+            @endphp
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Columna de KPIs Comparativos -->
+                <div class="space-y-4 lg:col-span-1 flex flex-col justify-between">
+                    <!-- Postulantes -->
+                    <div class="bg-zinc-50 dark:bg-zinc-950/20 p-4 rounded-xl border border-zinc-150 dark:border-zinc-850 flex flex-col justify-between">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">Postulantes</span>
+                            @if($diffPostulantes > 0)
+                                <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-250 dark:border-emerald-900/50 shadow-3xs">
+                                    ↑ {{ number_format($diffPostulantes, 1) }}%
+                                </span>
+                            @elseif($diffPostulantes < 0)
+                                <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400 border border-rose-250 dark:border-rose-900/50 shadow-3xs">
+                                    ↓ {{ number_format(abs($diffPostulantes), 1) }}%
+                                </span>
+                            @else
+                                <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-650 dark:bg-zinc-800 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 shadow-3xs">
+                                    = 0%
+                                </span>
+                            @endif
+                        </div>
+                        <div class="flex items-baseline gap-2 mt-2">
+                            <span class="text-2xl font-black text-zinc-900 dark:text-white">{{ $totalPostulantes }}</span>
+                            <span class="text-xs text-zinc-400">vs {{ $comparePostulantes }} ({{ $compareGestionNombre }})</span>
+                        </div>
+                    </div>
+
+                    <!-- Aprobados Académicos -->
+                    <div class="bg-zinc-50 dark:bg-zinc-950/20 p-4 rounded-xl border border-zinc-150 dark:border-zinc-850 flex flex-col justify-between">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">Aprobados Académicos</span>
+                            @if($diffAprobados > 0)
+                                <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-250 dark:border-emerald-900/50 shadow-3xs">
+                                    ↑ {{ number_format($diffAprobados, 1) }}%
+                                </span>
+                            @elseif($diffAprobados < 0)
+                                <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400 border border-rose-250 dark:border-rose-900/50 shadow-3xs">
+                                    ↓ {{ number_format(abs($diffAprobados), 1) }}%
+                                </span>
+                            @else
+                                <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-650 dark:bg-zinc-800 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 shadow-3xs">
+                                    = 0%
+                                </span>
+                            @endif
+                        </div>
+                        <div class="flex items-baseline gap-2 mt-2">
+                            <span class="text-2xl font-black text-zinc-900 dark:text-white">{{ $currentAprobados }}</span>
+                            <span class="text-xs text-zinc-400">vs {{ $compareAprobados }} ({{ $compareGestionNombre }})</span>
+                        </div>
+                    </div>
+
+                    <!-- Admitidos -->
+                    <div class="bg-zinc-50 dark:bg-zinc-950/20 p-4 rounded-xl border border-zinc-150 dark:border-zinc-850 flex flex-col justify-between">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">Admitidos</span>
+                            @if($diffAdmitidos > 0)
+                                <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-250 dark:border-emerald-900/50 shadow-3xs">
+                                    ↑ {{ number_format($diffAdmitidos, 1) }}%
+                                </span>
+                            @elseif($diffAdmitidos < 0)
+                                <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400 border border-rose-250 dark:border-rose-900/50 shadow-3xs">
+                                    ↓ {{ number_format(abs($diffAdmitidos), 1) }}%
+                                </span>
+                            @else
+                                <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-650 dark:bg-zinc-800 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 shadow-3xs">
+                                    = 0%
+                                </span>
+                            @endif
+                        </div>
+                        <div class="flex items-baseline gap-2 mt-2">
+                            <span class="text-2xl font-black text-zinc-900 dark:text-white">{{ $totalAdmitidos }}</span>
+                            <span class="text-xs text-zinc-400">vs {{ $compareAdmitidos }} ({{ $compareGestionNombre }})</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráfico de Comparación Directa -->
+                <div class="lg:col-span-2 relative h-72 w-full border border-zinc-150 dark:border-zinc-850 p-4 rounded-xl bg-zinc-50/50 dark:bg-zinc-950/10" wire:ignore x-data="comparisonChartData()" x-init="initChart()">
+                    <canvas x-ref="canvas"></canvas>
+                </div>
+            </div>
+        @else
+            <div class="text-center py-6 text-zinc-450 dark:text-zinc-500 bg-zinc-50 dark:bg-zinc-950/50 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800">
+                Registra gestiones previas en el sistema para poder visualizar la comparación.
+            </div>
+        @endif
+    </div>
+
     <!-- Panel de Exportación y Reportes Personalizado -->
     <div x-data="{
         tabla: 'postulantes',
@@ -566,6 +680,68 @@
                                 this.chart.data.datasets[1].data = admitidos;
                                 this.chart.update();
                             });
+                        });
+                    });
+                }
+            }
+        }
+
+        function comparisonChartData() {
+            return {
+                chart: null,
+                initChart() {
+                    const ctx = this.$refs.canvas.getContext('2d');
+                    this.chart = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Postulantes', 'Aprobados Acad.', 'Admitidos'],
+                            datasets: [
+                                {
+                                    label: 'Semestre Seleccionado',
+                                    data: [0, 0, 0],
+                                    backgroundColor: 'rgba(99, 102, 241, 0.85)', // Indigo
+                                    borderColor: 'rgb(99, 102, 241)',
+                                    borderRadius: 6,
+                                    borderWidth: 1
+                                },
+                                {
+                                    label: 'Semestre de Comparación',
+                                    data: [0, 0, 0],
+                                    backgroundColor: 'rgba(148, 163, 184, 0.85)', // Cool Gray / Slate
+                                    borderColor: 'rgb(148, 163, 184)',
+                                    borderRadius: 6,
+                                    borderWidth: 1
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { position: 'bottom' }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: { precision: 0 }
+                                }
+                            }
+                        }
+                    });
+
+                    window.addEventListener('stats-updated', () => {
+                        this.updateData();
+                    });
+                    this.updateData();
+                },
+                updateData() {
+                    @this.get('currentStats').then(current => {
+                        this.chart.data.datasets[0].label = current.nombre;
+                        this.chart.data.datasets[0].data = [current.postulantes, current.aprobados, current.admitidos];
+                        @this.get('compareStats').then(compare => {
+                            this.chart.data.datasets[1].label = compare.nombre;
+                            this.chart.data.datasets[1].data = [compare.postulantes, compare.aprobados, compare.admitidos];
+                            this.chart.update();
                         });
                     });
                 }

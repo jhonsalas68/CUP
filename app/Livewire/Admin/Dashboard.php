@@ -11,11 +11,20 @@ use App\Models\Grupo;
 use App\Models\Nota;
 use App\Models\Postulante;
 use Livewire\Component;
+use Livewire\Attributes\Computed;
 
 class Dashboard extends Component
 {
     public $selectedGestionId;
     public $gestiones = [];
+    
+    // comparison stats
+    public $compareGestionId;
+    public $currentAprobados = 0;
+    public $comparePostulantes = 0;
+    public $compareAdmitidos = 0;
+    public $compareAprobados = 0;
+    public $compareGestionNombre = '';
     
     // stats
     public $totalPostulantes = 0;
@@ -70,11 +79,18 @@ class Dashboard extends Component
         $this->carrerasList = Carrera::orderBy('nombre')->get();
         $this->exportGestionId = $this->selectedGestionId;
 
+        $compare = $this->gestiones->where('id', '!=', $this->selectedGestionId)->first();
+        $this->compareGestionId = $compare ? $compare->id : null;
+
         $this->loadStats();
     }
 
     public function updatedSelectedGestionId()
     {
+        if ($this->selectedGestionId == $this->compareGestionId) {
+            $compare = $this->gestiones->where('id', '!=', $this->selectedGestionId)->first();
+            $this->compareGestionId = $compare ? $compare->id : null;
+        }
         $this->loadStats();
         // Dispatch event for charts reload
         $this->dispatch('stats-updated');
@@ -100,6 +116,9 @@ class Dashboard extends Component
             
         $this->totalCuposOcupados = $this->totalAdmitidos;
         $this->totalGrupos = Grupo::where('gestion_id', $this->selectedGestionId)->count();
+        $this->currentAprobados = Postulante::where('gestion_id', $this->selectedGestionId)
+            ->whereIn('estado_admision', ['admitido_primera_opcion', 'admitido_segunda_opcion', 'no_admitido'])
+            ->count();
 
         // 2. Carreras más demandadas (evita N+1 con un solo query)
         $demanda = Postulante::where('gestion_id', $this->selectedGestionId)
@@ -210,6 +229,7 @@ class Dashboard extends Component
             $this->selectedDetailCarreraId = $this->carrerasList->first()->id;
         }
         $this->loadAdmitidosDetalle();
+        $this->loadCompareStats();
     }
 
     public function openAdmissionProcess()
@@ -432,6 +452,57 @@ class Dashboard extends Component
         } catch (\Exception $e) {
             session()->flash('error', "Fallo en la conexión SMTP de Gmail. Razón: " . $e->getMessage());
         }
+    }
+
+    public function updatedCompareGestionId()
+    {
+        $this->loadCompareStats();
+        $this->dispatch('stats-updated');
+    }
+
+    public function loadCompareStats()
+    {
+        if (!$this->compareGestionId) {
+            $this->comparePostulantes = 0;
+            $this->compareAdmitidos = 0;
+            $this->compareAprobados = 0;
+            $this->compareGestionNombre = 'N/A';
+            return;
+        }
+
+        $compareGestion = $this->gestiones->where('id', $this->compareGestionId)->first();
+        $this->compareGestionNombre = $compareGestion ? $compareGestion->nombre : 'N/A';
+
+        $this->comparePostulantes = Postulante::where('gestion_id', $this->compareGestionId)->count();
+        $this->compareAdmitidos = Postulante::where('gestion_id', $this->compareGestionId)
+            ->whereIn('estado_admision', ['admitido_primera_opcion', 'admitido_segunda_opcion'])
+            ->count();
+        $this->compareAprobados = Postulante::where('gestion_id', $this->compareGestionId)
+            ->whereIn('estado_admision', ['admitido_primera_opcion', 'admitido_segunda_opcion', 'no_admitido'])
+            ->count();
+    }
+
+    #[Computed]
+    public function currentStats()
+    {
+        $currentGestion = $this->gestiones->where('id', $this->selectedGestionId)->first();
+        return [
+            'nombre' => $currentGestion ? $currentGestion->nombre : 'Gestión Seleccionada',
+            'postulantes' => $this->totalPostulantes,
+            'aprobados' => $this->currentAprobados,
+            'admitidos' => $this->totalAdmitidos,
+        ];
+    }
+
+    #[Computed]
+    public function compareStats()
+    {
+        return [
+            'nombre' => $this->compareGestionNombre ?: 'Sin comparar',
+            'postulantes' => $this->comparePostulantes,
+            'aprobados' => $this->compareAprobados,
+            'admitidos' => $this->compareAdmitidos,
+        ];
     }
 
     public function render()

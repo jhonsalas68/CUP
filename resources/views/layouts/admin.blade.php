@@ -65,7 +65,7 @@
                     </div>
                 </div>
                 <!-- Toggle button only visible on mobile inside stashed sidebar -->
-                <flux:sidebar.toggle class="lg:hidden text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 p-1 rounded-lg" icon="x-mark" />
+                <flux:sidebar.toggle class="lg:!hidden text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 p-1 rounded-lg" icon="x-mark" />
             </div>
 
             <!-- Menú Lateral Dinámico -->
@@ -73,7 +73,7 @@
         </flux:sidebar>
 
         <!-- Header para dispositivos móviles -->
-        <flux:header class="lg:hidden bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 px-4 py-3 flex items-center justify-between">
+        <flux:header class="lg:!hidden bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 px-4 py-3 flex items-center justify-between">
             <flux:sidebar.toggle class="text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 p-2 rounded-lg" icon="bars-3" />
             <div class="flex items-center gap-2">
                 <img src="{{ asset('images/uagrm-escudo.png') }}" class="h-8 w-8 object-contain" alt="UAGRM Escudo">

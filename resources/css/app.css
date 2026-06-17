@@ -1,5 +1,11 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 @import "../../vendor/livewire/flux/dist/flux.css";
+@source "../views/**/*.blade.php";
+@source "../js/**/*.js";
+@source "../../app/Livewire/**/*.php";
+@source "../../vendor/livewire/flux/stubs/**/*.blade.php";
+@source "../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php";
 
 @theme {
     --font-sans: 'Figtree', sans-serif;
