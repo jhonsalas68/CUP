@@ -191,7 +191,9 @@ class GroupGenerationService
                             $slotKey,
                             $occupiedClassrooms,
                             $grupo,
-                            $slot
+                            $slot,
+                            count($postulanteIds),
+                            $warnings
                         );
 
                         if (!$aulaAsignada) {
@@ -276,6 +278,9 @@ class GroupGenerationService
             $slotKey = $this->findSlotKeyForHorario($horario);
             if ($slotKey) {
                 $occupiedClassrooms[$slotKey][] = $horario->aula;
+                if ($horario->aula_id) {
+                    $occupiedClassrooms[$slotKey][] = $horario->aula_id;
+                }
             }
         }
     }
@@ -392,21 +397,37 @@ class GroupGenerationService
     /**
      * Busca y asigna un aula libre en el slot indicado.
      */
-    private function assignClassroom(string $slotKey, array &$occupiedClassrooms, Grupo $grupo, array $slot): bool
+    private function assignClassroom(string $slotKey, array &$occupiedClassrooms, Grupo $grupo, array $slot, int $studentCount, array &$warnings): bool
     {
         $aulaElegida = null;
 
-        // Buscar la primera aula libre en el pool
-        foreach (self::AULAS as $aula) {
-            $ocupada = isset($occupiedClassrooms[$slotKey]) && in_array($aula, $occupiedClassrooms[$slotKey]);
+        // Cargar aulas de la BD (con fallback automático si está vacío)
+        $aulas = \App\Models\Aula::all();
+        if ($aulas->isEmpty()) {
+            foreach (self::AULAS as $aulaName) {
+                \App\Models\Aula::create([
+                    'nombre' => $aulaName,
+                    'capacidad' => 70,
+                    'ubicacion' => 'Pabellón Central'
+                ]);
+            }
+            $aulas = \App\Models\Aula::all();
+        }
+
+        // Buscar la primera aula libre
+        foreach ($aulas as $aula) {
+            $ocupada = isset($occupiedClassrooms[$slotKey]) && (
+                in_array($aula->id, $occupiedClassrooms[$slotKey]) || 
+                in_array($aula->nombre, $occupiedClassrooms[$slotKey])
+            );
             if (!$ocupada) {
                 $aulaElegida = $aula;
                 break;
             }
         }
 
-        // Si no hay aulas libres, el grupo se genera sin aula (retorna falso, pero guarda horario sin aula o null)
-        $aulaName = $aulaElegida;
+        $aulaName = $aulaElegida ? $aulaElegida->nombre : null;
+        $aulaId = $aulaElegida ? $aulaElegida->id : null;
 
         // Crear las sesiones en la tabla horarios (2 días a la semana según el slot)
         foreach ($slot['dias'] as $dia) {
@@ -416,12 +437,17 @@ class GroupGenerationService
                 'hora_inicio' => $slot['hora_inicio'],
                 'hora_fin' => $slot['hora_fin'],
                 'aula' => $aulaName,
+                'aula_id' => $aulaId,
             ]);
         }
 
         if ($aulaElegida) {
-            // Marcar el aula como ocupada en este slot
-            $occupiedClassrooms[$slotKey][] = $aulaElegida;
+            if ($studentCount > $aulaElegida->capacidad) {
+                $warnings[] = "Grupo '{$grupo->nombre}' ({$grupo->materia->nombre}): La cantidad de alumnos asignados ({$studentCount}) supera la capacidad del Aula '{$aulaElegida->nombre}' (Capacidad: {$aulaElegida->capacidad}).";
+            }
+            // Marcar el aula como ocupada en este slot (guardamos tanto ID como nombre)
+            $occupiedClassrooms[$slotKey][] = $aulaElegida->id;
+            $occupiedClassrooms[$slotKey][] = $aulaElegida->nombre;
             return true;
         }
 

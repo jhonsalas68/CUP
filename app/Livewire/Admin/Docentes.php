@@ -16,6 +16,10 @@ class Docentes extends Component
     public $isEditing = false;
     public $docenteId = null;
 
+    // Static dropdown collections
+    public $gestiones = [];
+    public $carrerasList = [];
+
     // Form fields
     public $name = '';
     public $email = '';
@@ -42,8 +46,12 @@ class Docentes extends Component
     public function mount()
     {
         if (!auth()->user()->hasAnyRole(['Administrador', 'Coordinador'])) {
-            abort(403, 'No autorizado.');
+            abort(403, 'No authorized.');
         }
+
+        // Load static dropdowns once
+        $this->gestiones = \App\Models\Gestion::orderBy('fecha_inicio', 'desc')->get();
+        $this->carrerasList = \App\Models\Carrera::orderBy('nombre')->get();
     }
 
     public function updatingSearch()
@@ -192,9 +200,6 @@ class Docentes extends Component
 
     public function render()
     {
-        $gestiones = \App\Models\Gestion::orderBy('fecha_inicio', 'desc')->get();
-        $carrerasList = \App\Models\Carrera::orderBy('nombre')->get();
-
         $search = trim($this->search);
 
         $docentes = Docente::query()
@@ -228,7 +233,10 @@ class Docentes extends Component
             ->orderBy('id', 'desc')
             ->paginate(10);
 
-        return view('livewire.admin.docentes', compact('docentes', 'gestiones', 'carrerasList'))
-            ->layout('layouts.admin');
+        return view('livewire.admin.docentes', [
+            'docentes' => $docentes,
+            'gestiones' => $this->gestiones,
+            'carrerasList' => $this->carrerasList
+        ])->layout('layouts.admin');
     }
 }

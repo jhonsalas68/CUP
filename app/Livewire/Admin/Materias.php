@@ -17,6 +17,11 @@ class Materias extends Component
     public $isEditing = false;
     public $materiaId = null;
 
+    // Static dropdown collections
+    public $carreras = [];
+    public $gestiones = [];
+    public $carrerasList = [];
+
     // Form fields
     public $nombre = '';
     public $sigla = '';
@@ -39,6 +44,11 @@ class Materias extends Component
         if (!auth()->user()->hasAnyRole(['Administrador', 'Coordinador'])) {
             abort(403, 'No autorizado.');
         }
+
+        // Load static dropdowns once
+        $this->carreras = Carrera::orderBy('nombre')->get();
+        $this->gestiones = \App\Models\Gestion::orderBy('fecha_inicio', 'desc')->get();
+        $this->carrerasList = $this->carreras;
     }
 
     public function updatingSearch()
@@ -164,10 +174,6 @@ class Materias extends Component
 
     public function render()
     {
-        $carreras = Carrera::orderBy('nombre')->get();
-        $gestiones = \App\Models\Gestion::orderBy('fecha_inicio', 'desc')->get();
-        $carrerasList = $carreras;
-
         $materias = Materia::query()
             ->with(['carrera', 'grupos.docentes', 'grupos.postulantes'])
             ->where(function ($q) {
@@ -178,7 +184,11 @@ class Materias extends Component
             ->orderBy('nombre')
             ->paginate(10);
 
-        return view('livewire.admin.materias', compact('materias', 'carreras', 'gestiones', 'carrerasList'))
-            ->layout('layouts.admin');
+        return view('livewire.admin.materias', [
+            'materias' => $materias,
+            'carreras' => $this->carreras,
+            'gestiones' => $this->gestiones,
+            'carrerasList' => $this->carrerasList
+        ])->layout('layouts.admin');
     }
 }

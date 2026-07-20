@@ -15,6 +15,10 @@ class Carreras extends Component
     public $isEditing = false;
     public $carreraId = null;
 
+    // Static dropdown collections
+    public $gestiones = [];
+    public $carrerasList = [];
+
     // Form fields
     public $nombre = '';
     public $sigla = '';
@@ -34,6 +38,10 @@ class Carreras extends Component
         if (!auth()->user()->hasAnyRole(['Administrador', 'Coordinador'])) {
             abort(403, 'No autorizado.');
         }
+
+        // Load static dropdowns once
+        $this->gestiones = \App\Models\Gestion::orderBy('fecha_inicio', 'desc')->get();
+        $this->carrerasList = \App\Models\Carrera::orderBy('nombre')->get();
     }
 
     public function updatingSearch()
@@ -115,9 +123,6 @@ class Carreras extends Component
 
     public function render()
     {
-        $gestiones = \App\Models\Gestion::orderBy('fecha_inicio', 'desc')->get();
-        $carrerasList = \App\Models\Carrera::orderBy('nombre')->get();
-
         $carreras = Carrera::query()
             ->where(function ($q) {
                 $q->where('nombre', 'like', '%' . $this->search . '%')
@@ -127,7 +132,10 @@ class Carreras extends Component
             ->orderBy('nombre')
             ->paginate(10);
 
-        return view('livewire.admin.carreras', compact('carreras', 'gestiones', 'carrerasList'))
-            ->layout('layouts.admin');
+        return view('livewire.admin.carreras', [
+            'carreras' => $carreras,
+            'gestiones' => $this->gestiones,
+            'carrerasList' => $this->carrerasList
+        ])->layout('layouts.admin');
     }
 }

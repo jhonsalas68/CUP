@@ -18,6 +18,11 @@ class Examenes extends Component
     public $search = '';
     public $filterGestion = '';
     public $filterMateria = '';
+
+    // Static dropdown collections
+    public $gestiones = [];
+    public $materias = [];
+    public $carrerasList = [];
     public $showModal = false; // Exam definition modal
     public $isEditing = false;
     public $examenId = null;
@@ -79,6 +84,11 @@ class Examenes extends Component
             $this->filterGestion = $gestionActiva->id;
             $this->gestion_id    = $gestionActiva->id;
         }
+
+        // Load static dropdowns once
+        $this->gestiones = Gestion::orderBy('fecha_inicio', 'desc')->get();
+        $this->materias  = Materia::with('carrera')->orderBy('nombre')->get();
+        $this->carrerasList = \App\Models\Carrera::orderBy('nombre')->get();
     }
 
     public function updatingSearch()       { $this->resetPage(); }
@@ -541,10 +551,6 @@ class Examenes extends Component
 
     public function render()
     {
-        $gestiones = Gestion::orderBy('fecha_inicio', 'desc')->get();
-        $materias  = Materia::with('carrera')->orderBy('nombre')->get();
-        $carrerasList = \App\Models\Carrera::orderBy('nombre')->get();
-
         $examenes = null;
         $calificaciones = null;
 
@@ -608,7 +614,12 @@ class Examenes extends Component
                 ->paginate(50);
         }
 
-        return view('livewire.admin.examenes', compact('examenes', 'calificaciones', 'gestiones', 'materias', 'carrerasList'))
-            ->layout('layouts.admin');
+        return view('livewire.admin.examenes', [
+            'examenes' => $examenes,
+            'calificaciones' => $calificaciones,
+            'gestiones' => $this->gestiones,
+            'materias' => $this->materias,
+            'carrerasList' => $this->carrerasList
+        ])->layout('layouts.admin');
     }
 }

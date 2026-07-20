@@ -301,7 +301,29 @@
                             </div>
                         @endif
 
-                        <div class="lg:col-span-3 grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Tab Navigation for enrolled student -->
+                        <div class="lg:col-span-3 flex flex-wrap gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2 mb-6">
+                            <button type="button" wire:click="selectPortalTab('grades')" class="py-2.5 px-4 font-bold text-xs uppercase tracking-wider rounded-xl transition duration-150 {{ $activePortalTab === 'grades' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white dark:bg-zinc-900 text-zinc-550 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50' }}">
+                                Calificaciones y Horario
+                            </button>
+                            <button type="button" wire:click="selectPortalTab('attendance')" class="py-2.5 px-4 font-bold text-xs uppercase tracking-wider rounded-xl transition duration-150 {{ $activePortalTab === 'attendance' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white dark:bg-zinc-900 text-zinc-550 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50' }}">
+                                Mi Asistencia
+                            </button>
+                            <button type="button" wire:click="selectPortalTab('appeals')" class="py-2.5 px-4 font-bold text-xs uppercase tracking-wider rounded-xl transition duration-150 {{ $activePortalTab === 'appeals' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white dark:bg-zinc-900 text-zinc-550 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50' }}">
+                                Reclamos de Notas
+                            </button>
+                            <button type="button" wire:click="selectPortalTab('notifications')" class="py-2.5 px-4 font-bold text-xs uppercase tracking-wider rounded-xl transition duration-150 relative {{ $activePortalTab === 'notifications' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white dark:bg-zinc-900 text-zinc-550 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50' }}">
+                                Notificaciones
+                                @if($notifications->where('leido', false)->count() > 0)
+                                    <span class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white">
+                                        {{ $notifications->where('leido', false)->count() }}
+                                    </span>
+                                @endif
+                            </button>
+                        </div>
+
+                        @if($activePortalTab === 'grades')
+                            <div class="lg:col-span-3 grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
                             <!-- Column 1: Mis Calificaciones y Exámenes (2/3 width) -->
                             <div class="lg:col-span-2 space-y-6">
                                 <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-xs">
@@ -333,21 +355,42 @@
                                                             @if (is_null($row['primer_parcial']))
                                                                 <span class="text-zinc-300 dark:text-zinc-700">&mdash;</span>
                                                             @else
-                                                                <span class="{{ $row['primer_parcial'] >= 60 ? 'text-indigo-600 dark:text-indigo-400' : 'text-zinc-500' }}">{{ number_format($row['primer_parcial'], 1) }}</span>
+                                                                <div class="inline-flex items-center gap-1.5 justify-center">
+                                                                    <span class="{{ $row['primer_parcial'] >= 60 ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-zinc-500' }}">{{ number_format($row['primer_parcial'], 1) }}</span>
+                                                                    <button type="button" wire:click="openAppeal({{ $row['primer_parcial_id'] }}, 'Primer Parcial', '{{ $row['materia'] }}', {{ $row['primer_parcial'] }})" class="p-0.5 text-zinc-400 hover:text-indigo-650 dark:hover:text-indigo-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded transition cursor-pointer" title="Reclamar o Solicitar revisión">
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.12 2.9 2.5 3.25L3 16.5v.75A2.25 2.25 0 005.25 19.5h13.5A2.25 2.25 0 0021 17.25V6.75A2.25 2.25 0 0018.75 4.5H5.25A2.25 2.25 0 003 6.75v5.26z" />
+                                                                        </svg>
+                                                                    </button>
+                                                                </div>
                                                             @endif
                                                         </td>
                                                         <td class="py-4 text-center font-semibold text-sm">
                                                             @if (is_null($row['segundo_parcial']))
                                                                 <span class="text-zinc-300 dark:text-zinc-700">&mdash;</span>
                                                             @else
-                                                                <span class="{{ $row['segundo_parcial'] >= 60 ? 'text-indigo-600 dark:text-indigo-400' : 'text-zinc-500' }}">{{ number_format($row['segundo_parcial'], 1) }}</span>
+                                                                <div class="inline-flex items-center gap-1.5 justify-center">
+                                                                    <span class="{{ $row['segundo_parcial'] >= 60 ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-zinc-500' }}">{{ number_format($row['segundo_parcial'], 1) }}</span>
+                                                                    <button type="button" wire:click="openAppeal({{ $row['segundo_parcial_id'] }}, 'Segundo Parcial', '{{ $row['materia'] }}', {{ $row['segundo_parcial'] }})" class="p-0.5 text-zinc-400 hover:text-indigo-650 dark:hover:text-indigo-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded transition cursor-pointer" title="Reclamar o Solicitar revisión">
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.12 2.9 2.5 3.25L3 16.5v.75A2.25 2.25 0 005.25 19.5h13.5A2.25 2.25 0 0021 17.25V6.75A2.25 2.25 0 0018.75 4.5H5.25A2.25 2.25 0 003 6.75v5.26z" />
+                                                                        </svg>
+                                                                    </button>
+                                                                </div>
                                                             @endif
                                                         </td>
                                                         <td class="py-4 text-center font-semibold text-sm">
                                                             @if (is_null($row['examen_final']))
                                                                 <span class="text-zinc-300 dark:text-zinc-700">&mdash;</span>
                                                             @else
-                                                                <span class="{{ $row['examen_final'] >= 60 ? 'text-indigo-600 dark:text-indigo-400' : 'text-zinc-500' }}">{{ number_format($row['examen_final'], 1) }}</span>
+                                                                <div class="inline-flex items-center gap-1.5 justify-center">
+                                                                    <span class="{{ $row['examen_final'] >= 60 ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-zinc-500' }}">{{ number_format($row['examen_final'], 1) }}</span>
+                                                                    <button type="button" wire:click="openAppeal({{ $row['examen_final_id'] }}, 'Examen Final', '{{ $row['materia'] }}', {{ $row['examen_final'] }})" class="p-0.5 text-zinc-400 hover:text-indigo-650 dark:hover:text-indigo-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded transition cursor-pointer" title="Reclamar o Solicitar revisión">
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.12 2.9 2.5 3.25L3 16.5v.75A2.25 2.25 0 005.25 19.5h13.5A2.25 2.25 0 0021 17.25V6.75A2.25 2.25 0 0018.75 4.5H5.25A2.25 2.25 0 003 6.75v5.26z" />
+                                                                        </svg>
+                                                                    </button>
+                                                                </div>
                                                             @endif
                                                         </td>
                                                         <td class="py-4 text-center font-bold text-sm">
@@ -524,7 +567,174 @@
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        @endif
+
+                        @if($activePortalTab === 'attendance')
+                            <!-- RENDER ATTENDANCE TAB FOR POSTULANTE -->
+                            <div class="lg:col-span-3 space-y-6 animate-fade-in">
+                                <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-xs">
+                                    <div class="space-y-1 mb-6">
+                                        <h3 class="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">Mi Control de Asistencia</h3>
+                                        <p class="text-xs text-zinc-400">Revisa tu asistencia acumulada por materia para garantizar el cumplimiento del reglamento.</p>
+                                    </div>
+
+                                    @if(count($asistenciasStats) > 0)
+                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            @foreach($asistenciasStats as $gId => $stat)
+                                                <div class="p-4 bg-zinc-50 dark:bg-zinc-950/20 border border-zinc-150 dark:border-zinc-800 rounded-xl space-y-2">
+                                                    <div class="flex justify-between items-start">
+                                                        <div>
+                                                            <h4 class="font-bold text-sm text-zinc-800 dark:text-zinc-200">{{ $stat['materia'] }}</h4>
+                                                            <span class="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wider">{{ $stat['grupo'] }}</span>
+                                                        </div>
+                                                        <span class="text-lg font-black {{ $stat['tasa'] >= 80 ? 'text-emerald-600' : 'text-rose-600' }}">{{ $stat['tasa'] }}%</span>
+                                                    </div>
+                                                    <div class="w-full bg-zinc-200 dark:bg-zinc-800 rounded-full h-1.5">
+                                                        <div class="h-1.5 rounded-full {{ $stat['tasa'] >= 80 ? 'bg-emerald-500' : 'bg-rose-500' }}" style="width: {{ $stat['tasa'] }}%"></div>
+                                                    </div>
+                                                    <div class="flex justify-between text-[10px] text-zinc-400 font-semibold pt-1">
+                                                        <span>Presente: {{ $stat['presente'] }}</span>
+                                                        <span>Licencia: {{ $stat['licencia'] }}</span>
+                                                        <span>Faltas: {{ $stat['falta'] }}</span>
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @endif
+
+                                    <!-- Detailed Logs Table -->
+                                    <div class="mt-8 space-y-4">
+                                        <h4 class="text-sm font-bold text-zinc-800 dark:text-zinc-250">Historial Detallado de Clases</h4>
+                                        <div class="overflow-x-auto border border-zinc-150 dark:border-zinc-800 rounded-xl">
+                                            <table class="w-full text-left text-xs">
+                                                <thead class="bg-zinc-50 dark:bg-zinc-950/50 border-b border-zinc-200 dark:border-zinc-800 text-zinc-450">
+                                                    <tr>
+                                                        <th class="py-2.5 px-4">Fecha</th>
+                                                        <th class="py-2.5 px-4">Materia</th>
+                                                        <th class="py-2.5 px-4">Grupo</th>
+                                                        <th class="py-2.5 px-4 text-right">Estado</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="divide-y divide-zinc-100 dark:divide-zinc-850 text-zinc-700 dark:text-zinc-300">
+                                                    @forelse($asistencias as $asist)
+                                                        <tr class="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/10">
+                                                            <td class="py-2.5 px-4 font-semibold">{{ $asist->fecha->format('d/m/Y') }}</td>
+                                                            <td class="py-2.5 px-4">{{ $asist->grupo->materia->nombre }}</td>
+                                                            <td class="py-2.5 px-4">{{ $asist->grupo->nombre }}</td>
+                                                            <td class="py-2.5 px-4 text-right">
+                                                                @if($asist->estado === 'presente')
+                                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 text-[10px] font-bold border border-emerald-100 dark:border-emerald-900/30">Presente</span>
+                                                                @elseif($asist->estado === 'licencia')
+                                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-450 text-[10px] font-bold border border-amber-100 dark:border-amber-900/30">Licencia</span>
+                                                                @else
+                                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400 text-[10px] font-bold border border-rose-100 dark:border-rose-900/30">Falta</span>
+                                                                @endif
+                                                            </td>
+                                                        </tr>
+                                                    @empty
+                                                        <tr>
+                                                            <td colspan="4" class="text-center py-6 text-zinc-400">No se encontraron registros de asistencia.</td>
+                                                        </tr>
+                                                    @endforelse
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+
+                        @if($activePortalTab === 'appeals')
+                            <!-- RENDER GRADE APPEALS TAB FOR POSTULANTE -->
+                            <div class="lg:col-span-3 space-y-6 animate-fade-in">
+                                <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-xs">
+                                    <div class="space-y-1 mb-6">
+                                        <h3 class="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">Mis Reclamos y Solicitudes de Revisión</h3>
+                                        <p class="text-xs text-zinc-400">Monitorea el estado de tus solicitudes de revisión de calificaciones presentadas a los docentes.</p>
+                                    </div>
+
+                                    <div class="overflow-x-auto border border-zinc-150 dark:border-zinc-800 rounded-xl">
+                                        <table class="w-full text-left text-xs">
+                                            <thead class="bg-zinc-50 dark:bg-zinc-950/50 border-b border-zinc-200 dark:border-zinc-800 text-zinc-450">
+                                                <tr>
+                                                    <th class="py-2.5 px-4">Fecha</th>
+                                                    <th class="py-2.5 px-4">Evaluación</th>
+                                                    <th class="py-2.5 px-4">Justificación</th>
+                                                    <th class="py-2.5 px-4 text-center">Nota Original / Nueva</th>
+                                                    <th class="py-2.5 px-4 text-center">Estado</th>
+                                                    <th class="py-2.5 px-4 text-right">Observación Docente</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-zinc-100 dark:divide-zinc-850 text-zinc-700 dark:text-zinc-300">
+                                                @forelse($appeals as $appeal)
+                                                    <tr class="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/10">
+                                                        <td class="py-3 px-4 font-semibold">{{ $appeal->created_at->format('d/m/Y') }}</td>
+                                                        <td class="py-3 px-4">
+                                                            <div class="font-bold text-zinc-800 dark:text-zinc-250">{{ $appeal->examen->nombre }}</div>
+                                                            <div class="text-[10px] text-zinc-450 font-bold uppercase tracking-wider">{{ $appeal->examen->materia->nombre }}</div>
+                                                        </td>
+                                                        <td class="py-3 px-4 max-w-xs truncate" title="{{ $appeal->descripcion }}">{{ $appeal->descripcion }}</td>
+                                                        <td class="py-3 px-4 text-center font-bold">
+                                                            <span>{{ number_format($appeal->nota_anterior, 1) }}</span>
+                                                            @if($appeal->estado === 'aceptado')
+                                                                <span class="text-emerald-500 font-bold ml-1">→ {{ number_format($appeal->nota_nueva, 1) }}</span>
+                                                            @endif
+                                                        </td>
+                                                        <td class="py-3 px-4 text-center">
+                                                            @if($appeal->estado === 'pendiente')
+                                                                <span class="inline-flex items-center px-2 py-0.5 rounded bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 text-[10px] font-bold border border-amber-150">Pendiente</span>
+                                                            @elseif($appeal->estado === 'en_revision')
+                                                                <span class="inline-flex items-center px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-400 text-[10px] font-bold border border-indigo-150">En Revisión</span>
+                                                            @elseif($appeal->estado === 'aceptado')
+                                                                <span class="inline-flex items-center px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 text-[10px] font-bold border border-emerald-150">Aceptado</span>
+                                                            @else
+                                                                <span class="inline-flex items-center px-2 py-0.5 rounded bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-450 text-[10px] font-bold border border-rose-150">Rechazado</span>
+                                                            @endif
+                                                        </td>
+                                                        <td class="py-3 px-4 text-right max-w-xs truncate" title="{{ $appeal->respuesta_docente ?? 'Sin observaciones' }}">
+                                                            {{ $appeal->respuesta_docente ?? '—' }}
+                                                        </td>
+                                                    </tr>
+                                                @empty
+                                                    <tr>
+                                                        <td colspan="6" class="text-center py-6 text-zinc-400">No has registrado ningún reclamo de nota.</td>
+                                                    </tr>
+                                                @endforelse
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+
+                        @if($activePortalTab === 'notifications')
+                            <!-- RENDER NOTIFICATIONS TAB FOR POSTULANTE -->
+                            <div class="lg:col-span-3 space-y-6 animate-fade-in">
+                                <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-xs">
+                                    <div class="space-y-1 mb-6">
+                                        <h3 class="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">Centro de Notificaciones</h3>
+                                        <p class="text-xs text-zinc-400">Mantente al tanto de las alertas importantes de tu proceso de admisión.</p>
+                                    </div>
+
+                                    <div class="space-y-3">
+                                        @forelse($notifications as $notif)
+                                            <div wire:click="markNotificationRead({{ $notif->id }})" class="p-4 rounded-xl border flex items-start gap-3 transition hover:bg-zinc-50 dark:hover:bg-zinc-850/30 cursor-pointer select-none {{ $notif->leido ? 'bg-zinc-50/50 dark:bg-zinc-950/15 border-zinc-200 dark:border-zinc-800/80 opacity-75' : 'bg-indigo-50/20 dark:bg-indigo-950/10 border-indigo-150 dark:border-indigo-900/40 shadow-2xs font-semibold' }}">
+                                                <div class="h-2 w-2 rounded-full mt-1.5 shrink-0 {{ $notif->leido ? 'bg-zinc-350 dark:bg-zinc-700' : 'bg-rose-500 animate-pulse' }}"></div>
+                                                <div class="grow space-y-0.5">
+                                                    <div class="flex justify-between items-center text-xs">
+                                                        <span class="font-bold text-zinc-800 dark:text-zinc-150">{{ $notif->titulo }}</span>
+                                                        <span class="text-[10px] text-zinc-400">{{ $notif->created_at->diffForHumans() }}</span>
+                                                    </div>
+                                                    <p class="text-xs text-zinc-500 dark:text-zinc-400 leading-normal">{{ $notif->mensaje }}</p>
+                                                </div>
+                                            </div>
+                                        @empty
+                                            <div class="text-center py-8 text-zinc-400 text-sm">No tienes notificaciones registradas.</div>
+                                        @endforelse
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
                     @endif
                 @endif
         @endif
@@ -532,7 +742,26 @@
 
     <!-- ==================== DOCENTE VIEW ==================== -->
     @if ($role === 'Docente')
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Tabs for Docente -->
+        <div class="flex flex-wrap gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2 mb-6">
+            <button type="button" wire:click="selectPortalTab('grades')" class="py-2.5 px-4 font-bold text-xs uppercase tracking-wider rounded-xl transition duration-150 {{ in_array($activePortalTab, ['grades', 'attendance', 'topics']) ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white dark:bg-zinc-900 text-zinc-550 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50' }}">
+                Mis Grupos Académicos
+            </button>
+            <button type="button" wire:click="selectPortalTab('appeals')" class="py-2.5 px-4 font-bold text-xs uppercase tracking-wider rounded-xl transition duration-150 {{ $activePortalTab === 'appeals' ? 'bg-indigo-650 text-white shadow-sm' : 'bg-white dark:bg-zinc-900 text-zinc-550 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50' }}">
+                Reclamos de Alumnos
+            </button>
+            <button type="button" wire:click="selectPortalTab('notifications')" class="py-2.5 px-4 font-bold text-xs uppercase tracking-wider rounded-xl transition duration-150 relative {{ $activePortalTab === 'notifications' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white dark:bg-zinc-900 text-zinc-550 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50' }}">
+                Notificaciones
+                @if($notifications->where('leido', false)->count() > 0)
+                    <span class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white">
+                        {{ $notifications->where('leido', false)->count() }}
+                    </span>
+                @endif
+            </button>
+        </div>
+
+        @if(in_array($activePortalTab, ['grades', 'attendance', 'topics']))
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-in">
             <!-- Left Column: Docente Info & Groups List (5 cols) -->
             <div class="lg:col-span-5 space-y-6">
                 <!-- Docente Profile Summary -->
@@ -589,7 +818,15 @@
             <div class="lg:col-span-7">
                 @if ($selectedGrupo)
                     <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xs overflow-hidden">
-                        <!-- Top Accent header -->
+                        <!-- Inner Sub-Tabs: Calificaciones, Asistencia, Temas -->
+                        <div class="flex border-b border-zinc-150 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/20 px-6 py-2 gap-2">
+                            <button type="button" wire:click="selectPortalTab('grades')" class="py-2 px-3 text-xs font-bold transition rounded-lg {{ $activePortalTab === 'grades' ? 'bg-white dark:bg-zinc-900 text-indigo-650 dark:text-indigo-400 shadow-2xs' : 'text-zinc-400 hover:text-zinc-600' }}">Calificaciones</button>
+                            <button type="button" wire:click="selectPortalTab('attendance')" class="py-2 px-3 text-xs font-bold transition rounded-lg {{ $activePortalTab === 'attendance' ? 'bg-white dark:bg-zinc-900 text-indigo-650 dark:text-indigo-400 shadow-2xs' : 'text-zinc-400 hover:text-zinc-600' }}">Control de Asistencia</button>
+                            <button type="button" wire:click="selectPortalTab('topics')" class="py-2 px-3 text-xs font-bold transition rounded-lg {{ $activePortalTab === 'topics' ? 'bg-white dark:bg-zinc-900 text-indigo-650 dark:text-indigo-400 shadow-2xs' : 'text-zinc-400 hover:text-zinc-600' }}">Avance de Materia</button>
+                        </div>
+
+                        @if($activePortalTab === 'grades')
+                            <!-- Top Accent header -->
                         <div class="p-6 bg-zinc-50 dark:bg-zinc-900/50 border-b border-zinc-100 dark:border-zinc-800/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                             <div>
                                 <h3 class="text-base font-bold text-zinc-900 dark:text-white leading-tight">Calificar Grupo: {{ $selectedGrupo->nombre }}</h3>
@@ -659,6 +896,116 @@
                                 </div>
                             </form>
                         </div>
+                        @endif
+
+                        @if($activePortalTab === 'attendance')
+                            <!-- Teacher Attendance Sheet Panel -->
+                            <div class="p-6 space-y-6 animate-fade-in">
+                                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                    <div class="flex items-center gap-3">
+                                        <label for="attendanceDate" class="text-xs font-bold text-zinc-500 uppercase shrink-0">Fecha Clase:</label>
+                                        <input type="date" id="attendanceDate" wire:model.live="attendanceDate" class="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-transparent px-3 py-1.5 text-xs text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+                                    </div>
+                                    <button type="button" wire:click="loadAttendance" class="text-xs font-bold text-indigo-650 hover:underline">Recargar Asistencia</button>
+                                </div>
+
+                                <form wire:submit.prevent="saveAttendance" class="space-y-4">
+                                    <div class="overflow-x-auto border border-zinc-150 dark:border-zinc-800 rounded-xl">
+                                        <table class="w-full text-left border-collapse text-xs">
+                                            <thead class="bg-zinc-50 dark:bg-zinc-950/50 border-b border-zinc-200 dark:border-zinc-800 text-zinc-450">
+                                                <tr>
+                                                    <th class="py-2.5 px-4">Alumno</th>
+                                                    <th class="py-2.5 px-4">CI</th>
+                                                    <th class="py-2.5 px-4 text-right w-64">Estado de Asistencia</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-zinc-100 dark:divide-zinc-850">
+                                                @foreach($selectedGrupo->postulantes as $student)
+                                                    <tr class="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/10">
+                                                        <td class="py-3 px-4 font-semibold text-zinc-800 dark:text-zinc-150">
+                                                            {{ $student->nombres_apellidos }}
+                                                        </td>
+                                                        <td class="py-3 px-4 text-zinc-450">
+                                                            {{ $student->ci }}
+                                                        </td>
+                                                        <td class="py-3 px-4 text-right">
+                                                            <div class="inline-flex rounded-lg border border-zinc-200 dark:border-zinc-800 p-0.5 bg-zinc-50 dark:bg-zinc-900">
+                                                                <label class="cursor-pointer">
+                                                                    <input type="radio" wire:model="attendanceInput.{{ $student->id }}" value="presente" class="sr-only peer" />
+                                                                    <span class="px-2.5 py-1 text-[10px] font-bold rounded-md block peer-checked:bg-emerald-600 peer-checked:text-white text-zinc-400 hover:text-zinc-650">Presente</span>
+                                                                </label>
+                                                                <label class="cursor-pointer">
+                                                                    <input type="radio" wire:model="attendanceInput.{{ $student->id }}" value="licencia" class="sr-only peer" />
+                                                                    <span class="px-2.5 py-1 text-[10px] font-bold rounded-md block peer-checked:bg-amber-600 peer-checked:text-white text-zinc-400 hover:text-zinc-650">Licencia</span>
+                                                                </label>
+                                                                <label class="cursor-pointer">
+                                                                    <input type="radio" wire:model="attendanceInput.{{ $student->id }}" value="falta" class="sr-only peer" />
+                                                                    <span class="px-2.5 py-1 text-[10px] font-bold rounded-md block peer-checked:bg-rose-600 peer-checked:text-white text-zinc-400 hover:text-zinc-650">Falta</span>
+                                                                </label>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <div class="flex justify-end gap-3 pt-4 border-t border-zinc-150 dark:border-zinc-800">
+                                        <button type="submit" class="px-5 py-2 bg-indigo-650 hover:bg-indigo-750 text-white font-bold rounded-xl text-xs transition duration-150 shadow-sm cursor-pointer select-none">
+                                            Guardar Asistencia
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        @endif
+
+                        @if($activePortalTab === 'topics')
+                            <!-- Teacher Topic Logging Panel -->
+                            <div class="p-6 space-y-6 animate-fade-in">
+                                <form wire:submit.prevent="saveTopic" class="space-y-4">
+                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                        <div class="sm:col-span-1 space-y-1">
+                                            <label for="topicDate" class="text-xs font-bold text-zinc-500 uppercase block">Fecha:</label>
+                                            <input type="date" id="topicDate" wire:model="topicDate" class="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-transparent px-3 py-2 text-xs text-zinc-800 dark:text-zinc-100" />
+                                        </div>
+                                        <div class="sm:col-span-2 space-y-1">
+                                            <label for="topicTema" class="text-xs font-bold text-zinc-500 uppercase block">Tema Avanzado:</label>
+                                            <input type="text" id="topicTema" wire:model="topicTema" placeholder="Ej. Límites algebraicos y continuidad" class="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-transparent px-3 py-2 text-xs text-zinc-800 dark:text-zinc-100" />
+                                        </div>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <label for="topicDescripcion" class="text-xs font-bold text-zinc-500 uppercase block">Descripción del Contenido (Opcional):</label>
+                                        <textarea id="topicDescripcion" wire:model="topicDescripcion" rows="3" placeholder="Detalle los puntos o ejercicios resueltos en clase..." class="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-transparent px-3 py-2 text-xs text-zinc-800 dark:text-zinc-100"></textarea>
+                                    </div>
+
+                                    <div class="flex justify-end pt-2">
+                                        <button type="submit" class="px-5 py-2.5 bg-indigo-650 hover:bg-indigo-755 text-white font-bold rounded-xl text-xs transition duration-150 shadow-md cursor-pointer select-none">
+                                            Registrar Avance
+                                        </button>
+                                    </div>
+                                </form>
+
+                                <!-- Historical avance list -->
+                                <div class="border-t border-zinc-150 dark:border-zinc-800 pt-6 space-y-4">
+                                    <h4 class="text-sm font-bold text-zinc-850 dark:text-zinc-200">Historial de Avance de Materia</h4>
+                                    <div class="space-y-3 max-h-60 overflow-y-auto pr-1">
+                                        @forelse($controlTemas->where('grupo_id', $selectedGrupo->id) as $tema)
+                                            <div class="p-3 bg-zinc-50 dark:bg-zinc-950/20 border border-zinc-150 dark:border-zinc-800 rounded-xl space-y-1">
+                                                <div class="flex justify-between items-center text-xs">
+                                                    <span class="font-bold text-zinc-800 dark:text-zinc-150">{{ $tema->tema }}</span>
+                                                    <span class="text-[10px] text-zinc-400 font-bold">{{ $tema->fecha->format('d/m/Y') }}</span>
+                                                </div>
+                                                @if($tema->descripcion)
+                                                    <p class="text-[11px] text-zinc-500 leading-normal">{{ $tema->descripcion }}</p>
+                                                @endif
+                                            </div>
+                                        @empty
+                                            <div class="text-center py-6 text-zinc-400 text-xs">No se han registrado temas de avance para este grupo.</div>
+                                        @endforelse
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
                     </div>
                 @else
                     <div class="h-64 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl flex flex-col items-center justify-center p-6 text-center bg-white dark:bg-zinc-900 shadow-xs">
@@ -671,6 +1018,102 @@
                 @endif
             </div>
         </div>
+        @endif
+
+        @if($activePortalTab === 'appeals')
+            <!-- Teacher Appeals Management Table (full-width) -->
+            <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl shadow-xs p-6 space-y-4 animate-fade-in">
+                <div>
+                    <h3 class="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">Reclamos y Solicitudes de Revisión de Notas</h3>
+                    <p class="text-xs text-zinc-400">Atiende y resuelve los reclamos de calificaciones de tus alumnos.</p>
+                </div>
+
+                <div class="overflow-x-auto border border-zinc-150 dark:border-zinc-800 rounded-xl">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-zinc-50 dark:bg-zinc-950/50 border-b border-zinc-200 dark:border-zinc-800 text-zinc-450">
+                            <tr>
+                                <th class="py-2.5 px-4 font-bold">Estudiante</th>
+                                <th class="py-2.5 px-4 font-bold">Evaluación</th>
+                                <th class="py-2.5 px-4 font-bold">Justificación de Alumno</th>
+                                <th class="py-2.5 px-4 text-center font-bold">Nota Examen</th>
+                                <th class="py-2.5 px-4 text-center font-bold">Estado</th>
+                                <th class="py-2.5 px-4 text-right font-bold">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-zinc-100 dark:divide-zinc-850 text-zinc-750 dark:text-zinc-300">
+                            @forelse($appeals as $appeal)
+                                <tr class="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/10">
+                                    <td class="py-3 px-4 font-bold">
+                                        {{ $appeal->postulante->nombres_apellidos }}
+                                        <span class="text-[10px] text-zinc-400 font-normal block">CI: {{ $appeal->postulante->ci }}</span>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <div class="font-bold text-zinc-850 dark:text-zinc-250">{{ $appeal->examen->nombre }}</div>
+                                        <div class="text-[10px] text-zinc-450 font-bold uppercase tracking-wider">{{ $appeal->examen->materia->nombre }}</div>
+                                    </td>
+                                    <td class="py-3 px-4 max-w-xs truncate" title="{{ $appeal->descripcion }}">{{ $appeal->descripcion }}</td>
+                                    <td class="py-3 px-4 text-center font-bold">
+                                        <span>{{ number_format($appeal->nota_anterior, 1) }}</span>
+                                        @if($appeal->estado === 'aceptado')
+                                            <span class="text-emerald-500 font-bold ml-1">→ {{ number_format($appeal->nota_nueva, 1) }}</span>
+                                        @endif
+                                    </td>
+                                    <td class="py-3 px-4 text-center">
+                                        @if($appeal->estado === 'pendiente')
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 text-[10px] font-bold border border-amber-150">Pendiente</span>
+                                        @elseif($appeal->estado === 'aceptado')
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 text-[10px] font-bold border border-emerald-150">Aceptado</span>
+                                        @else
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-450 text-[10px] font-bold border border-rose-150">Rechazado</span>
+                                        @endif
+                                    </td>
+                                    <td class="py-3 px-4 text-right font-medium">
+                                        @if($appeal->estado === 'pendiente')
+                                            <button type="button" wire:click="loadAppealToResolve({{ $appeal->id }})" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-[10px] transition cursor-pointer select-none">
+                                                Resolver Reclamo
+                                            </button>
+                                        @else
+                                            <span class="text-[10px] text-zinc-400 font-semibold" title="{{ $appeal->respuesta_docente }}">Resuelto</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="text-center py-6 text-zinc-450">No se han presentado solicitudes de revisión de notas para tus materias.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        @endif
+
+        @if($activePortalTab === 'notifications')
+            <!-- Teacher Notifications list -->
+            <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 space-y-4 animate-fade-in">
+                <div>
+                    <h3 class="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">Centro de Notificaciones</h3>
+                    <p class="text-xs text-zinc-400">Alertas importantes y notificaciones del sistema para docentes.</p>
+                </div>
+
+                <div class="space-y-3">
+                    @forelse($notifications as $notif)
+                        <div wire:click="markNotificationRead({{ $notif->id }})" class="p-4 rounded-xl border flex items-start gap-3 transition hover:bg-zinc-50 dark:hover:bg-zinc-850/30 cursor-pointer select-none {{ $notif->leido ? 'bg-zinc-50/50 dark:bg-zinc-950/15 border-zinc-200 dark:border-zinc-800/80 opacity-75' : 'bg-indigo-50/20 dark:bg-indigo-950/10 border-indigo-150 dark:border-indigo-900/40 shadow-2xs font-semibold' }}">
+                            <div class="h-2 w-2 rounded-full mt-1.5 shrink-0 {{ $notif->leido ? 'bg-zinc-350 dark:bg-zinc-700' : 'bg-rose-500 animate-pulse' }}"></div>
+                            <div class="grow space-y-0.5">
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="font-bold text-zinc-800 dark:text-zinc-150">{{ $notif->titulo }}</span>
+                                    <span class="text-[10px] text-zinc-400">{{ $notif->created_at->diffForHumans() }}</span>
+                                </div>
+                                <p class="text-xs text-zinc-500 dark:text-zinc-400 leading-normal">{{ $notif->mensaje }}</p>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="text-center py-8 text-zinc-400 text-sm font-medium">No tienes notificaciones registradas.</div>
+                    @endforelse
+                </div>
+            </div>
+        @endif
     @endif
 
     <!-- ==================== REGULAR REGISTERED USER VIEW ==================== -->
@@ -693,6 +1136,149 @@
                 </button>
                 <div class="text-[10px] text-zinc-400">
                     Si eres docente o administrativo, por favor solicita la asignación de tu rol al administrador del sistema.
+                </div>
+            </div>
+        </div>
+        </div>
+    @endif
+
+    <!-- Modal de Reclamo (Student Appeal Form) -->
+    @if($showAppealModal)
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <!-- Backdrop -->
+            <div class="fixed inset-0 bg-zinc-950/40 dark:bg-zinc-950/60 backdrop-blur-xs transition-opacity z-40" wire:click="$set('showAppealModal', false)"></div>
+
+            <!-- Content Container -->
+            <div class="relative bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl w-full max-w-lg shadow-2xl p-6 md:p-8 animate-fade-in z-50">
+                <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-500 to-indigo-650"></div>
+
+                <!-- Header -->
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <h3 class="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">Solicitud de Revisión de Calificación</h3>
+                        <p class="text-xs text-zinc-400 mt-1">Presenta un reclamo justificado al docente de la materia.</p>
+                    </div>
+                    <button wire:click="$set('showAppealModal', false)" type="button" class="p-1 rounded-lg text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-850 hover:text-zinc-700">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="p-4 bg-zinc-50 dark:bg-zinc-950/20 border border-zinc-150 dark:border-zinc-850 rounded-xl space-y-1.5 text-xs">
+                        <div><span class="font-bold text-zinc-500">Materia:</span> <span class="font-semibold text-zinc-800 dark:text-zinc-200">{{ $appealMateriaNombre }}</span></div>
+                        <div><span class="font-bold text-zinc-500">Evaluación:</span> <span class="font-semibold text-zinc-800 dark:text-zinc-200">{{ $appealExamenNombre }}</span></div>
+                        <div><span class="font-bold text-zinc-500">Calificación Registrada:</span> <span class="font-bold text-rose-600">{{ number_format($appealNotaAnterior, 1) }} pts</span></div>
+                    </div>
+
+                    <form wire:submit.prevent="submitAppeal" class="space-y-4">
+                        <div class="space-y-1">
+                            <label for="appealDescripcion" class="text-xs font-bold text-zinc-500 uppercase block">Motivo o Justificación del Reclamo:</label>
+                            <textarea id="appealDescripcion" wire:model="appealDescripcion" rows="4" placeholder="Detalla el motivo de tu reclamo y explica por qué consideras que la nota es incorrecta..." class="w-full text-xs rounded-xl border border-zinc-200 dark:border-zinc-855 bg-transparent px-3 py-2 text-zinc-800 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-indigo-500"></textarea>
+                            @error('appealDescripcion') <span class="text-rose-600 text-[10px] font-bold block">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div class="space-y-1">
+                            <label for="appealArchivo" class="text-xs font-bold text-zinc-500 uppercase block">Adjuntar Evidencia (Opcional, PDF o Imagen):</label>
+                            <input type="file" id="appealArchivo" wire:model="appealArchivo" class="w-full text-xs text-zinc-500 dark:text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 dark:file:bg-indigo-950/30 dark:file:text-indigo-400 file:cursor-pointer" />
+                            <div wire:loading wire:target="appealArchivo" class="text-[10px] text-zinc-450 font-bold block mt-1">Cargando archivo...</div>
+                            @error('appealArchivo') <span class="text-rose-600 text-[10px] font-bold block">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div class="flex justify-end gap-3 pt-4 border-t border-zinc-150 dark:border-zinc-850">
+                            <button wire:click="$set('showAppealModal', false)" type="button" class="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-xl text-xs font-bold hover:bg-zinc-200">
+                                Cancelar
+                            </button>
+                            <button type="submit" class="px-5 py-2 bg-indigo-650 hover:bg-indigo-750 text-white font-bold rounded-xl text-xs transition duration-150 shadow-sm cursor-pointer select-none">
+                                Enviar Reclamo
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- Modal para Resolver Reclamo (Teacher Resolve Form) -->
+    @if($selectedAppealId)
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <!-- Backdrop -->
+            <div class="fixed inset-0 bg-zinc-950/40 dark:bg-zinc-950/60 backdrop-blur-xs transition-opacity z-40" wire:click="$set('selectedAppealId', null)"></div>
+
+            <!-- Content Container -->
+            <div class="relative bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl w-full max-w-lg shadow-2xl p-6 md:p-8 animate-fade-in z-50">
+                <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-500 to-indigo-650"></div>
+
+                <!-- Header -->
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <h3 class="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">Resolución de Reclamo de Nota</h3>
+                        <p class="text-xs text-zinc-400 mt-1">Evalúa la solicitud presentada por el postulante.</p>
+                    </div>
+                    <button wire:click="$set('selectedAppealId', null)" type="button" class="p-1 rounded-lg text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-850 hover:text-zinc-700">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+
+                <div class="space-y-4">
+                    <!-- Appeal Details -->
+                    @php
+                        $activeAppeal = \App\Models\ReclamoNota::with(['postulante', 'examen.materia'])->find($selectedAppealId);
+                    @endphp
+                    @if($activeAppeal)
+                        <div class="p-4 bg-zinc-50 dark:bg-zinc-950/20 border border-zinc-150 dark:border-zinc-850 rounded-xl space-y-2 text-xs">
+                            <div><span class="font-bold text-zinc-500">Estudiante:</span> <span class="font-semibold text-zinc-800 dark:text-zinc-200">{{ $activeAppeal->postulante->nombres_apellidos }}</span></div>
+                            <div><span class="font-bold text-zinc-500">Materia / Evaluación:</span> <span class="font-semibold text-zinc-800 dark:text-zinc-200">{{ $activeAppeal->examen->materia->nombre }} &bull; {{ $activeAppeal->examen->nombre }}</span></div>
+                            <div><span class="font-bold text-zinc-500">Nota Anterior:</span> <span class="font-bold text-zinc-800 dark:text-zinc-200">{{ number_format($activeAppeal->nota_anterior, 1) }} pts</span></div>
+                            <div class="pt-2 border-t border-zinc-200/50 dark:border-zinc-800/50">
+                                <span class="font-bold text-zinc-500 block mb-1">Motivo del estudiante:</span>
+                                <p class="text-zinc-600 dark:text-zinc-400 bg-white dark:bg-zinc-900 p-2.5 rounded-lg border border-zinc-150 dark:border-zinc-800 leading-normal">{{ $activeAppeal->descripcion }}</p>
+                            </div>
+                            @if($activeAppeal->archivo_adjunto)
+                                <div class="pt-2">
+                                    <span class="font-bold text-zinc-500 font-semibold block mb-1">Evidencia adjunta:</span>
+                                    <a href="{{ asset('storage/' . $activeAppeal->archivo_adjunto) }}" target="_blank" class="inline-flex items-center gap-1.5 text-indigo-650 hover:underline font-bold bg-indigo-50 dark:bg-indigo-950/30 px-3 py-1.5 rounded-xl transition">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m.75 12l3 3m0 0l3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
+                                        <span>Descargar Evidencia</span>
+                                    </a>
+                                </div>
+                            @endif
+                        </div>
+                    @endif
+
+                    <form wire:submit.prevent="resolveAppeal" class="space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="space-y-1">
+                                <label for="appealStatus" class="text-xs font-bold text-zinc-500 uppercase block">Resolución:</label>
+                                <select id="appealStatus" wire:model.live="appealStatus" class="w-full text-xs rounded-xl border border-zinc-200 dark:border-zinc-850 bg-transparent px-3 py-2 text-zinc-800 dark:text-zinc-100">
+                                    <option value="aceptado">Aceptar Reclamo (Modificar Nota)</option>
+                                    <option value="rechazado">Rechazar Reclamo (Mantener Nota)</option>
+                                </select>
+                            </div>
+                            
+                            @if($appealStatus === 'aceptado')
+                                <div class="space-y-1">
+                                    <label for="appealNewGrade" class="text-xs font-bold text-zinc-500 uppercase block">Nueva Nota (0 - 100):</label>
+                                    <input type="number" step="0.01" min="0" max="100" id="appealNewGrade" wire:model="appealNewGrade" class="w-full text-xs rounded-xl border border-zinc-200 dark:border-zinc-850 bg-transparent px-3 py-2 text-zinc-800 dark:text-zinc-100 font-bold" />
+                                    @error('appealNewGrade') <span class="text-rose-600 text-[10px] font-bold block">{{ $message }}</span> @enderror
+                                </div>
+                            @endif
+                        </div>
+
+                        <div class="space-y-1">
+                            <label for="appealResponseComment" class="text-xs font-bold text-zinc-500 uppercase block">Comentario u Observación Docente:</label>
+                            <textarea id="appealResponseComment" wire:model="appealResponseComment" rows="3" placeholder="Explique brevemente los motivos de la resolución..." class="w-full text-xs rounded-xl border border-zinc-200 dark:border-zinc-855 bg-transparent px-3 py-2 text-zinc-800 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-indigo-500"></textarea>
+                            @error('appealResponseComment') <span class="text-rose-600 text-[10px] font-bold block">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div class="flex justify-end gap-3 pt-4 border-t border-zinc-150 dark:border-zinc-850">
+                            <button wire:click="$set('selectedAppealId', null)" type="button" class="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-xl text-xs font-bold hover:bg-zinc-200">
+                                Cancelar
+                            </button>
+                            <button type="submit" class="px-5 py-2 bg-indigo-650 hover:bg-indigo-755 text-white font-bold rounded-xl text-xs transition duration-150 shadow-sm cursor-pointer select-none">
+                                Guardar Resolución
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>

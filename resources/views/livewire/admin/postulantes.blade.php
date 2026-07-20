@@ -520,10 +520,10 @@
     @if($showNotasModal && $selectedPostulante)
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <!-- Backdrop -->
-            <div class="fixed inset-0 bg-zinc-950/40 dark:bg-zinc-950/60 backdrop-blur-xs transition-opacity" wire:click="$set('showNotasModal', false)"></div>
+            <div class="fixed inset-0 bg-zinc-950/40 dark:bg-zinc-950/60 backdrop-blur-xs transition-opacity z-40" wire:click="$set('showNotasModal', false)"></div>
 
             <!-- Content Container -->
-            <div class="relative bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl w-full max-w-2xl max-h-[85vh] overflow-y-auto shadow-2xl p-6 md:p-8 animate-fade-in z-10">
+            <div class="relative bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl w-full max-w-2xl max-h-[85vh] overflow-y-auto shadow-2xl p-6 md:p-8 animate-fade-in z-50">
                 <!-- Accent Bar -->
                 <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-500 to-indigo-505"></div>
 

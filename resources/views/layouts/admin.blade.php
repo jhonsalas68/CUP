@@ -102,6 +102,9 @@
                     </svg>
                 </button>
 
+                <!-- Campana de Notificaciones (Móvil) -->
+                <livewire:shared.notification-bell />
+
                 <flux:dropdown>
                     <button class="flex items-center">
                         <flux:avatar class="w-8 h-8 rounded-full border border-zinc-200 dark:border-zinc-700" name="{{ auth()->user()->name }}" />
@@ -128,6 +131,13 @@
                 </div>
                 
                 <div class="flex items-center gap-4">
+                    <!-- Global Command Palette Trigger Button -->
+                    <button @click="$dispatch('open-command-palette')" type="button" class="hidden sm:flex items-center gap-3 bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400 px-3.5 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-700 text-xs font-medium transition cursor-pointer">
+                        <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        <span>Buscar todo...</span>
+                        <kbd class="px-1.5 py-0.5 bg-white dark:bg-zinc-700 text-zinc-500 dark:text-zinc-300 text-[10px] font-bold rounded border border-zinc-200 dark:border-zinc-600 shadow-xs">Ctrl K</kbd>
+                    </button>
+
                     <!-- Dark Mode Toggle Button (Desktop) -->
                     <button @click="$store.darkMode.toggle()" type="button" class="relative inline-flex h-9 w-16 items-center justify-between rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-2 cursor-pointer focus:outline-none select-none transition-colors duration-200" aria-label="Toggle Dark Mode">
                         <!-- Sliding circle indicator -->
@@ -148,6 +158,9 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
                         </svg>
                     </button>
+
+                    <!-- Campana de Notificaciones -->
+                    <livewire:shared.notification-bell />
 
                     <!-- Badge de Rol -->
                     <div class="text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-3.5 py-1.5 rounded-full border border-indigo-100 dark:border-indigo-900/50 flex items-center gap-2">
@@ -260,6 +273,7 @@
             }));
         });
     </script>
+    <livewire:shared.command-palette />
     @fluxScripts
 </body>
 </html>

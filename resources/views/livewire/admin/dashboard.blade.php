@@ -26,6 +26,15 @@
                 <span>Procesar Admisiones</span>
             </button>
 
+            <!-- Botón de Simular Proceso -->
+            <button wire:click="openSimulation" type="button" class="inline-flex items-center justify-center gap-2 text-sm font-semibold bg-violet-650 hover:bg-violet-750 text-white px-4 py-2 rounded-xl transition duration-150 shadow-sm cursor-pointer select-none">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4.5 h-4.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 1 0 7.5 7.5h-7.5V6Z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0 0 13.5 3v7.5Z" />
+                </svg>
+                <span>Simulador de Admisión</span>
+            </button>
+
             <!-- Exportar Reportes -->
             <flux:dropdown>
                 <flux:button icon="document-arrow-down" class="cursor-pointer select-none">Exportar</flux:button>
@@ -752,10 +761,10 @@
     @if($showAdmissionModal)
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <!-- Backdrop -->
-            <div class="fixed inset-0 bg-zinc-950/40 dark:bg-zinc-950/60 backdrop-blur-xs transition-opacity" wire:click="$set('showAdmissionModal', false)"></div>
+            <div class="fixed inset-0 bg-zinc-950/40 dark:bg-zinc-950/60 backdrop-blur-xs transition-opacity z-40" wire:click="$set('showAdmissionModal', false)"></div>
 
             <!-- Content Container -->
-            <div class="relative bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl w-full max-w-2xl max-h-[85vh] overflow-y-auto shadow-2xl p-6 md:p-8 animate-fade-in z-10">
+            <div class="relative bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl w-full max-w-2xl max-h-[85vh] overflow-y-auto shadow-2xl p-6 md:p-8 animate-fade-in z-50">
                 <!-- Accent Bar -->
                 <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-500 to-emerald-500"></div>
 
@@ -998,10 +1007,10 @@
     @if($showGroupDetailsModal && $selectedGroupInfo)
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <!-- Backdrop -->
-            <div class="fixed inset-0 bg-zinc-950/40 dark:bg-zinc-950/60 backdrop-blur-xs transition-opacity" wire:click="closeGroupDetails"></div>
+            <div class="fixed inset-0 bg-zinc-950/40 dark:bg-zinc-950/60 backdrop-blur-xs transition-opacity z-40" wire:click="closeGroupDetails"></div>
 
             <!-- Content Container -->
-            <div class="relative bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl w-full max-w-3xl max-h-[85vh] overflow-y-auto shadow-2xl p-6 md:p-8 animate-fade-in z-10">
+            <div class="relative bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl w-full max-w-3xl max-h-[85vh] overflow-y-auto shadow-2xl p-6 md:p-8 animate-fade-in z-50">
                 <!-- Accent Bar -->
                 <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-500 to-violet-500"></div>
 
@@ -1055,6 +1064,173 @@
                 <div class="flex justify-end gap-3 pt-6 border-t border-zinc-150 dark:border-zinc-850 mt-6">
                     <button wire:click="closeGroupDetails" type="button" class="px-5 py-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold text-sm rounded-xl transition duration-150">
                         Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- Modal de Simulación ("What-if") -->
+    @if($showSimulationModal)
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <!-- Backdrop -->
+            <div class="fixed inset-0 bg-zinc-950/40 dark:bg-zinc-950/60 backdrop-blur-xs transition-opacity z-40" wire:click="$set('showSimulationModal', false)"></div>
+
+            <!-- Content Container -->
+            <div class="relative bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl p-6 md:p-8 animate-fade-in z-50">
+                <!-- Accent Bar -->
+                <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-violet-500 to-indigo-500"></div>
+
+                <!-- Modal Header -->
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 class="text-xl font-extrabold text-zinc-900 dark:text-white tracking-tight flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-violet-650">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 1 0 7.5 7.5h-7.5V6Z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0 0 13.5 3v7.5Z" />
+                            </svg>
+                            <span>Simulador de Admisión ("What-If")</span>
+                        </h3>
+                        <p class="text-xs text-zinc-400 mt-1">Ajusta la nota mínima y los cupos disponibles para simular resultados sin alterar la base de datos real.</p>
+                    </div>
+                    <button wire:click="$set('showSimulationModal', false)" type="button" class="p-1.5 rounded-lg text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-700 dark:hover:text-zinc-200">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+
+                <!-- Simulation Settings -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <!-- Nota Mínima Slider -->
+                    <div class="md:col-span-1 p-5 bg-zinc-50 dark:bg-zinc-950/20 border border-zinc-150 dark:border-zinc-850 rounded-2xl space-y-3">
+                        <span class="text-xs font-bold text-zinc-500 uppercase tracking-wider block">Nota Mínima de Aprobación</span>
+                        <div class="flex items-center gap-4">
+                            <input type="range" min="40" max="80" step="1" wire:model.live="simNotaMinima" class="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer dark:bg-zinc-750 accent-violet-600">
+                            <span class="text-lg font-black text-violet-600 shrink-0">{{ $simNotaMinima }} pts</span>
+                        </div>
+                        <p class="text-[10px] text-zinc-450 leading-normal">Los postulantes con promedios finales inferiores a este puntaje quedarán como Reprobados automáticamente.</p>
+                    </div>
+
+                    <!-- Cupos configurables por carrera -->
+                    <div class="md:col-span-2 p-5 bg-zinc-50 dark:bg-zinc-950/20 border border-zinc-150 dark:border-zinc-850 rounded-2xl space-y-4">
+                        <span class="text-xs font-bold text-zinc-500 uppercase tracking-wider block">Configuración de Cupos por Carrera</span>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                            @foreach($simCupos as $cId => $cDetails)
+                                <div class="flex items-center justify-between border-b border-zinc-150 dark:border-zinc-850 pb-2">
+                                    <div class="min-w-0">
+                                        <span class="font-bold text-xs text-zinc-800 dark:text-zinc-200 block truncate">{{ $cDetails['nombre'] }}</span>
+                                        <span class="text-[10px] font-bold text-violet-600 uppercase tracking-widest">{{ $cDetails['sigla'] }}</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 shrink-0 ml-4">
+                                        <div class="space-y-0.5">
+                                            <span class="text-[9px] text-zinc-400 block font-semibold">1ra Opción</span>
+                                            <input type="number" min="0" wire:model="simCupos.{{ $cId }}.primera" class="w-16 text-xs text-center font-bold border border-zinc-200 dark:border-zinc-800 rounded bg-white dark:bg-zinc-900 py-1 text-zinc-800 dark:text-white" />
+                                        </div>
+                                        <div class="space-y-0.5">
+                                            <span class="text-[9px] text-zinc-400 block font-semibold">2da Opción</span>
+                                            <input type="number" min="0" wire:model="simCupos.{{ $cId }}.segunda" class="w-16 text-xs text-center font-bold border border-zinc-200 dark:border-zinc-800 rounded bg-white dark:bg-zinc-900 py-1 text-zinc-800 dark:text-white" />
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Simulation Trigger -->
+                <div class="flex justify-end gap-3 mb-6">
+                    <button wire:click="runSimulation" type="button" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-violet-650 hover:bg-violet-750 active:scale-98 text-white font-bold text-sm rounded-xl transition duration-150 shadow-sm cursor-pointer select-none">
+                        @if($isSimulating)
+                            <svg class="animate-spin w-4 h-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                            <span>Simulando...</span>
+                        @else
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" />
+                            </svg>
+                            <span>Ejecutar Simulación</span>
+                        @endif
+                    </button>
+                </div>
+
+                <!-- Simulation Results -->
+                @if($simulationStats)
+                    @if(isset($simulationStats['error']))
+                        <div class="p-4 bg-rose-50 dark:bg-rose-950/20 text-rose-800 dark:text-rose-450 rounded-2xl border border-rose-100 dark:border-rose-900/50 flex items-center gap-2 font-semibold text-xs">
+                            {{ $simulationStats['error'] }}
+                        </div>
+                    @else
+                        <!-- Results Summary -->
+                        <div class="space-y-6 border-t border-zinc-150 dark:border-zinc-800 pt-6 animate-fade-in">
+                            <div class="flex items-center gap-2 text-sm font-bold text-zinc-800 dark:text-zinc-200">
+                                <span class="w-2.5 h-2.5 rounded-full bg-violet-500"></span>
+                                <span>Resultados Proyectados de la Simulación</span>
+                            </div>
+
+                            <!-- KPIs Proyectados -->
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                <div class="bg-violet-50/30 dark:bg-violet-950/10 p-4 rounded-xl border border-violet-100 dark:border-violet-900/30">
+                                    <span class="text-[10px] text-zinc-500 uppercase tracking-wider block font-bold">Total Postulantes</span>
+                                    <span class="text-xl font-black text-zinc-900 dark:text-white">{{ $simulationStats['general']['total_postulantes'] }}</span>
+                                </div>
+                                <div class="bg-emerald-50/30 dark:bg-emerald-950/10 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
+                                    <span class="text-[10px] text-zinc-500 uppercase tracking-wider block font-bold">Admitidos Proyectados</span>
+                                    <span class="text-xl font-black text-emerald-650 dark:text-emerald-450">{{ $simulationStats['general']['total_admitidos'] }}</span>
+                                    <span class="text-[9px] text-zinc-450 block font-semibold">{{ $simulationStats['general']['tasa_admision'] }}% de ingreso</span>
+                                </div>
+                                <div class="bg-rose-50/30 dark:bg-rose-950/10 p-4 rounded-xl border border-rose-100 dark:border-rose-900/30">
+                                    <span class="text-[10px] text-zinc-500 uppercase tracking-wider block font-bold">Reprobados</span>
+                                    <span class="text-xl font-black text-rose-600 dark:text-rose-455">{{ $simulationStats['general']['reprobados'] }}</span>
+                                </div>
+                                <div class="bg-amber-50/30 dark:bg-amber-950/10 p-4 rounded-xl border border-amber-100 dark:border-amber-900/30">
+                                    <span class="text-[10px] text-zinc-500 uppercase tracking-wider block font-bold">Aprobados Sin Cupo</span>
+                                    <span class="text-xl font-black text-amber-600 dark:text-amber-450">{{ $simulationStats['general']['no_admitidos'] }}</span>
+                                </div>
+                            </div>
+
+                            <!-- Career-specific stats -->
+                            <div class="space-y-3">
+                                <h4 class="text-xs font-bold text-zinc-800 dark:text-zinc-200">Resultados por Carrera (Simulado)</h4>
+                                <div class="overflow-x-auto border border-zinc-200 dark:border-zinc-800 rounded-2xl">
+                                    <table class="w-full text-left text-xs">
+                                        <thead class="bg-zinc-50 dark:bg-zinc-950/50 border-b border-zinc-200 dark:border-zinc-800 text-zinc-450">
+                                            <tr>
+                                                <th class="py-2.5 px-4">Carrera</th>
+                                                <th class="py-2.5 px-4 text-center">Inscritos</th>
+                                                <th class="py-2.5 px-4 text-center">Cupos Sim. (1ra/2da)</th>
+                                                <th class="py-2.5 px-4 text-center">Admitidos Sim. (1ra/2da)</th>
+                                                <th class="py-2.5 px-4 text-center">Aprobados Sin Cupo</th>
+                                                <th class="py-2.5 px-4 text-right">Nota Corte Sim.</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-zinc-150 dark:divide-zinc-850 text-zinc-750 dark:text-zinc-300">
+                                            @foreach($simulationStats['carreras'] as $sigla => $cStats)
+                                                <tr class="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/10">
+                                                    <td class="py-3 px-4 font-bold">
+                                                        {{ $sigla }} 
+                                                        <span class="text-[10px] font-normal text-zinc-400 block">{{ $cStats['nombre'] }}</span>
+                                                    </td>
+                                                    <td class="py-3 px-4 text-center font-medium">{{ $cStats['inscritos_primera_opcion'] }}</td>
+                                                    <td class="py-3 px-4 text-center text-zinc-500 font-semibold">{{ $cStats['cupo_primera_opcion'] }} / {{ $cStats['cupo_segunda_opcion'] }}</td>
+                                                    <td class="py-3 px-4 text-center">
+                                                        <span class="text-emerald-600 font-bold">{{ $cStats['admitidos_primera_opcion'] }}</span> /
+                                                        <span class="text-emerald-500 font-semibold">{{ $cStats['admitidos_segunda_opcion'] }}</span>
+                                                    </td>
+                                                    <td class="py-3 px-4 text-center text-amber-600 font-medium">{{ $cStats['no_admitidos'] }}</td>
+                                                    <td class="py-3 px-4 text-right font-black text-violet-600 dark:text-violet-400">
+                                                        {{ number_format($cStats['nota_minima_ingreso'], 2) }} pts
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+                @endif
+
+                <div class="flex justify-end gap-3 pt-6 border-t border-zinc-150 dark:border-zinc-850 mt-6">
+                    <button wire:click="$set('showSimulationModal', false)" type="button" class="px-5 py-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold text-sm rounded-xl transition duration-150">
+                        Cerrar Simulador
                     </button>
                 </div>
             </div>

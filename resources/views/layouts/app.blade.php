@@ -69,6 +69,7 @@
                 {{ $slot }}
             </main>
         </div>
+        <livewire:shared.command-palette />
         @fluxScripts
     </body>
 </html>

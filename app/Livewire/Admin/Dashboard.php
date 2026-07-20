@@ -72,11 +72,18 @@ class Dashboard extends Component
             abort(403, 'No autorizado.');
         }
 
-        $this->gestiones = Gestion::orderBy('fecha_inicio', 'desc')->get();
+        // Cache static list catalogs for 10 minutes to save roundtrips
+        $this->gestiones = \Illuminate\Support\Facades\Cache::remember('dashboard_gestiones_list', 600, function () {
+            return Gestion::orderBy('fecha_inicio', 'desc')->get();
+        });
+        
         $active = $this->gestiones->where('activo', true)->first() ?? $this->gestiones->first();
         $this->selectedGestionId = $active ? $active->id : null;
         
-        $this->carrerasList = Carrera::orderBy('nombre')->get();
+        $this->carrerasList = \Illuminate\Support\Facades\Cache::remember('dashboard_carreras_list', 600, function () {
+            return Carrera::orderBy('nombre')->get();
+        });
+        
         $this->exportGestionId = $this->selectedGestionId;
 
         $compare = $this->gestiones->where('id', '!=', $this->selectedGestionId)->first();
@@ -102,128 +109,148 @@ class Dashboard extends Component
             return;
         }
 
-        // 1. KPIs
-        $this->totalPostulantes = Postulante::where('gestion_id', $this->selectedGestionId)->count();
-        $this->totalAdmitidos = Postulante::where('gestion_id', $this->selectedGestionId)
-            ->whereIn('estado_admision', ['admitido_primera_opcion', 'admitido_segunda_opcion'])
-            ->count();
-        $this->totalReprobados = Postulante::where('gestion_id', $this->selectedGestionId)
-            ->where('estado_admision', 'reprobado')
-            ->count();
-            
-        $this->totalCuposDisponibles = Cupo::where('gestion_id', $this->selectedGestionId)->sum('cantidad_primera_opcion')
-            + Cupo::where('gestion_id', $this->selectedGestionId)->sum('cantidad_segunda_opcion');
-            
-        $this->totalCuposOcupados = $this->totalAdmitidos;
-        $this->totalGrupos = Grupo::where('gestion_id', $this->selectedGestionId)->count();
-        $this->currentAprobados = Postulante::where('gestion_id', $this->selectedGestionId)
-            ->whereIn('estado_admision', ['admitido_primera_opcion', 'admitido_segunda_opcion', 'no_admitido'])
-            ->count();
+        $cacheKey = 'dashboard_stats_' . $this->selectedGestionId;
 
-        // 2. Carreras más demandadas (evita N+1 con un solo query)
-        $demanda = Postulante::where('gestion_id', $this->selectedGestionId)
-            ->select('carrera_primera_opcion_id', \DB::raw('count(*) as total'))
-            ->groupBy('carrera_primera_opcion_id')
-            ->orderBy('total', 'desc')
-            ->get();
-
-        $carrerasMap = Carrera::whereIn('id', $demanda->pluck('carrera_primera_opcion_id'))
-            ->pluck('sigla', 'id');
-
-        $this->carrerasLabels = [];
-        $this->carrerasValues = [];
-        foreach ($demanda as $item) {
-            if (isset($carrerasMap[$item->carrera_primera_opcion_id])) {
-                $this->carrerasLabels[] = $carrerasMap[$item->carrera_primera_opcion_id];
-                $this->carrerasValues[] = $item->total;
-            }
-        }
-
-        // 3. Rendimiento por grupo (Altamente optimizado con agregación SQL)
-        $statsRaw = \DB::select("
-            SELECT 
-                g.id as grupo_id,
-                g.nombre as grupo_nombre,
-                m.nombre as materia_nombre,
-                COUNT(pg.postulante_id) as total_alumnos,
-                COALESCE(AVG(student_grades.nota_materia), 0) as promedio_grupo,
-                COALESCE(SUM(CASE WHEN student_grades.nota_materia >= 60.00 THEN 1 ELSE 0 END), 0) as aprobados
-            FROM grupos g
-            JOIN materias m ON g.materia_id = m.id
-            LEFT JOIN postulante_grupo pg ON g.id = pg.grupo_id
-            LEFT JOIN (
+        // Cache main stats for 2 minutes
+        $stats = \Illuminate\Support\Facades\Cache::remember($cacheKey, 120, function () {
+            // 1. KPIs (7 queries combined into 1)
+            $kpiStats = \DB::selectOne("
                 SELECT 
-                    pg2.grupo_id,
-                    pg2.postulante_id,
-                    COALESCE(SUM(n.puntaje * e.ponderacion / 100), 0) as nota_materia
-                FROM postulante_grupo pg2
-                JOIN grupos g2 ON pg2.grupo_id = g2.id
-                JOIN examenes e ON g2.materia_id = e.materia_id AND g2.gestion_id = e.gestion_id
-                LEFT JOIN notas n ON pg2.postulante_id = n.postulante_id AND e.id = n.examen_id
-                WHERE g2.gestion_id = :gestion_id_1
-                GROUP BY pg2.grupo_id, pg2.postulante_id
-            ) as student_grades ON g.id = student_grades.grupo_id AND pg.postulante_id = student_grades.postulante_id
-            WHERE g.gestion_id = :gestion_id_2
-            GROUP BY g.id, g.nombre, m.nombre
-            ORDER BY g.nombre
-        ", [
-            'gestion_id_1' => $this->selectedGestionId,
-            'gestion_id_2' => $this->selectedGestionId,
-        ]);
+                    (SELECT COUNT(*) FROM postulantes WHERE gestion_id = :g1) as total_postulantes,
+                    (SELECT COUNT(*) FROM postulantes WHERE gestion_id = :g2 AND estado_admision IN ('admitido_primera_opcion', 'admitido_segunda_opcion')) as total_admitidos,
+                    (SELECT COUNT(*) FROM postulantes WHERE gestion_id = :g3 AND estado_admision = 'reprobado') as total_reprobados,
+                    (SELECT COUNT(*) FROM postulantes WHERE gestion_id = :g4 AND estado_admision IN ('admitido_primera_opcion', 'admitido_segunda_opcion', 'no_admitido')) as current_aprobados,
+                    (SELECT COALESCE(SUM(cantidad_primera_opcion + cantidad_segunda_opcion), 0) FROM cupos WHERE gestion_id = :g5) as total_cupos,
+                    (SELECT COUNT(*) FROM grupos WHERE gestion_id = :g6) as total_grupos
+            ", [
+                'g1' => $this->selectedGestionId,
+                'g2' => $this->selectedGestionId,
+                'g3' => $this->selectedGestionId,
+                'g4' => $this->selectedGestionId,
+                'g5' => $this->selectedGestionId,
+                'g6' => $this->selectedGestionId,
+            ]);
 
-        $grupoDocentes = \DB::table('asignaciones_docente')
-            ->join('docentes', 'asignaciones_docente.docente_id', '=', 'docentes.id')
-            ->join('grupos', 'asignaciones_docente.grupo_id', '=', 'grupos.id')
-            ->where('grupos.gestion_id', $this->selectedGestionId)
-            ->select('asignaciones_docente.grupo_id', 'docentes.nombre')
-            ->get()
-            ->groupBy('grupo_id');
+            // 2. Carreras más demandadas (joins Carrera to get sigla and count in one go)
+            $demanda = Postulante::where('postulantes.gestion_id', $this->selectedGestionId)
+                ->join('carreras', 'postulantes.carrera_primera_opcion_id', '=', 'carreras.id')
+                ->select('carreras.sigla', \DB::raw('count(*) as total'))
+                ->groupBy('carreras.sigla')
+                ->orderBy('total', 'desc')
+                ->get();
 
-        $this->gruposRendimiento = [];
-        foreach ($statsRaw as $row) {
-            $docenteNombre = 'No asignado';
-            if (isset($grupoDocentes[$row->grupo_id])) {
-                $docenteNombre = $grupoDocentes[$row->grupo_id]->pluck('nombre')->first() ?? 'No asignado';
+            // 3. Rendimiento por grupo + Docente name directly in query via STRING_AGG / GROUP_CONCAT
+            $driver = \DB::connection()->getDriverName();
+            $docenteConcat = $driver === 'sqlite' ? "group_concat(d.nombre, ', ')" : "STRING_AGG(d.nombre, ', ')";
+
+            $statsRaw = \DB::select("
+                SELECT 
+                    g.id as grupo_id,
+                    g.nombre as grupo_nombre,
+                    m.nombre as materia_nombre,
+                    COUNT(pg.postulante_id) as total_alumnos,
+                    COALESCE(AVG(student_grades.nota_materia), 0) as promedio_grupo,
+                    COALESCE(SUM(CASE WHEN student_grades.nota_materia >= 60.00 THEN 1 ELSE 0 END), 0) as aprobados,
+                    COALESCE((
+                        SELECT {$docenteConcat}
+                        FROM asignaciones_docente ad 
+                        JOIN docentes d ON ad.docente_id = d.id 
+                        WHERE ad.grupo_id = g.id
+                    ), 'No asignado') as docente_nombre
+                FROM grupos g
+                JOIN materias m ON g.materia_id = m.id
+                LEFT JOIN postulante_grupo pg ON g.id = pg.grupo_id
+                LEFT JOIN (
+                    SELECT 
+                        pg2.grupo_id,
+                        pg2.postulante_id,
+                        COALESCE(SUM(n.puntaje * e.ponderacion / 100), 0) as nota_materia
+                    FROM postulante_grupo pg2
+                    JOIN grupos g2 ON pg2.grupo_id = g2.id
+                    JOIN examenes e ON g2.materia_id = e.materia_id AND g2.gestion_id = e.gestion_id
+                    LEFT JOIN notas n ON pg2.postulante_id = n.postulante_id AND e.id = n.examen_id
+                    WHERE g2.gestion_id = :gestion_id_1
+                    GROUP BY pg2.grupo_id, pg2.postulante_id
+                ) as student_grades ON g.id = student_grades.grupo_id AND pg.postulante_id = student_grades.postulante_id
+                WHERE g.gestion_id = :gestion_id_2
+                GROUP BY g.id, g.nombre, m.nombre
+                ORDER BY g.nombre
+            ", [
+                'gestion_id_1' => $this->selectedGestionId,
+                'gestion_id_2' => $this->selectedGestionId,
+            ]);
+
+            $gruposRendimiento = [];
+            foreach ($statsRaw as $row) {
+                $total = (int) $row->total_alumnos;
+                $aprobados = (int) $row->aprobados;
+                
+                $promedioGrupo = round((float) $row->promedio_grupo, 2);
+                $porcentajeAprobacion = $total > 0 ? round(($aprobados / $total) * 100, 2) : 0.00;
+
+                $gruposRendimiento[] = [
+                    'id' => $row->grupo_id,
+                    'nombre' => $row->grupo_nombre,
+                    'materia' => $row->materia_nombre,
+                    'docente' => $row->docente_nombre,
+                    'total_alumnos' => $total,
+                    'promedio' => $promedioGrupo,
+                    'tasa_aprobacion' => $porcentajeAprobacion,
+                ];
             }
 
-            $total = (int) $row->total_alumnos;
-            $aprobados = (int) $row->aprobados;
+            // 4. Estadísticas Históricas (LEFT JOIN query combining all metrics)
+            $historico = \DB::select("
+                SELECT 
+                    g.nombre as gestion_nombre,
+                    COUNT(p.id) as total_postulantes,
+                    COUNT(CASE WHEN p.estado_admision IN ('admitido_primera_opcion', 'admitido_segunda_opcion') THEN 1 END) as total_admitidos
+                FROM gestiones g
+                LEFT JOIN postulantes p ON g.id = p.gestion_id
+                GROUP BY g.id, g.nombre, g.fecha_inicio
+                ORDER BY g.fecha_inicio ASC
+            ");
+
+            $historicoLabels = [];
+            $historicoPostulantes = [];
+            $historicoAdmitidos = [];
             
-            $promedioGrupo = round((float) $row->promedio_grupo, 2);
-            $porcentajeAprobacion = $total > 0 ? round(($aprobados / $total) * 100, 2) : 0.00;
+            foreach ($historico as $row) {
+                $historicoLabels[] = $row->gestion_nombre;
+                $historicoPostulantes[] = (int) $row->total_postulantes;
+                $historicoAdmitidos[] = (int) $row->total_admitidos;
+            }
 
-            $this->gruposRendimiento[] = [
-                'id' => $row->grupo_id,
-                'nombre' => $row->grupo_nombre,
-                'materia' => $row->materia_nombre,
-                'docente' => $docenteNombre,
-                'total_alumnos' => $total,
-                'promedio' => $promedioGrupo,
-                'tasa_aprobacion' => $porcentajeAprobacion,
+            return [
+                'totalPostulantes' => (int) $kpiStats->total_postulantes,
+                'totalAdmitidos' => (int) $kpiStats->total_admitidos,
+                'totalReprobados' => (int) $kpiStats->total_reprobados,
+                'totalCuposDisponibles' => (float) $kpiStats->total_cupos,
+                'totalGrupos' => (int) $kpiStats->total_grupos,
+                'currentAprobados' => (int) $kpiStats->current_aprobados,
+                'carrerasLabels' => $demanda->pluck('sigla')->toArray(),
+                'carrerasValues' => $demanda->pluck('total')->toArray(),
+                'gruposRendimiento' => $gruposRendimiento,
+                'historicoLabels' => $historicoLabels,
+                'historicoPostulantes' => $historicoPostulantes,
+                'historicoAdmitidos' => $historicoAdmitidos,
             ];
-        }
+        });
 
-        // 4. Estadísticas Históricas (Optimizado para evitar consultas N+1 en bucle)
-        $gestiones = Gestion::orderBy('fecha_inicio', 'asc')->get();
-        
-        $postulantesCounts = Postulante::select('gestion_id', \DB::raw('count(*) as total'))
-            ->groupBy('gestion_id')
-            ->pluck('total', 'gestion_id');
-
-        $admitidosCounts = Postulante::select('gestion_id', \DB::raw('count(*) as total'))
-            ->whereIn('estado_admision', ['admitido_primera_opcion', 'admitido_segunda_opcion'])
-            ->groupBy('gestion_id')
-            ->pluck('total', 'gestion_id');
-
-        $this->historicoLabels = [];
-        $this->historicoPostulantes = [];
-        $this->historicoAdmitidos = [];
-        
-        foreach ($gestiones as $g) {
-            $this->historicoLabels[] = $g->nombre;
-            $this->historicoPostulantes[] = $postulantesCounts->get($g->id, 0);
-            $this->historicoAdmitidos[] = $admitidosCounts->get($g->id, 0);
-        }
+        // Hydrate public properties
+        $this->totalPostulantes = $stats['totalPostulantes'];
+        $this->totalAdmitidos = $stats['totalAdmitidos'];
+        $this->totalReprobados = $stats['totalReprobados'];
+        $this->totalCuposDisponibles = $stats['totalCuposDisponibles'];
+        $this->totalCuposOcupados = $this->totalAdmitidos;
+        $this->totalGrupos = $stats['totalGrupos'];
+        $this->currentAprobados = $stats['currentAprobados'];
+        $this->carrerasLabels = $stats['carrerasLabels'];
+        $this->carrerasValues = $stats['carrerasValues'];
+        $this->gruposRendimiento = $stats['gruposRendimiento'];
+        $this->historicoLabels = $stats['historicoLabels'];
+        $this->historicoPostulantes = $stats['historicoPostulantes'];
+        $this->historicoAdmitidos = $stats['historicoAdmitidos'];
 
         if (!$this->selectedDetailCarreraId && count($this->carrerasList) > 0) {
             $this->selectedDetailCarreraId = $this->carrerasList->first()->id;
@@ -251,6 +278,13 @@ class Dashboard extends Component
                 // Load fresh stats for summary
                 $this->admissionStats = $service->getStats($this->selectedGestionId);
                 
+                // Clear the cache keys so stats refresh
+                \Illuminate\Support\Facades\Cache::forget('dashboard_stats_' . $this->selectedGestionId);
+                \Illuminate\Support\Facades\Cache::forget('dashboard_compare_' . $this->selectedGestionId);
+                foreach ($this->carrerasList as $c) {
+                    \Illuminate\Support\Facades\Cache::forget('dashboard_admitidos_' . $this->selectedGestionId . '_' . $c->id);
+                }
+
                 // Log activity
                 $gestionNombre = $this->gestiones->where('id', $this->selectedGestionId)->first()?->nombre ?? $this->selectedGestionId;
                 \App\Models\Bitacora::create([
@@ -341,29 +375,33 @@ class Dashboard extends Component
             return;
         }
 
-        $this->admitidosDetalle = Postulante::where('gestion_id', $this->selectedGestionId)
-            ->where(function ($query) {
-                $query->where(function ($q) {
-                    $q->where('carrera_primera_opcion_id', $this->selectedDetailCarreraId)
-                      ->where('estado_admision', 'admitido_primera_opcion');
-                })->orWhere(function ($q) {
-                    $q->where('carrera_segunda_opcion_id', $this->selectedDetailCarreraId)
-                      ->where('estado_admision', 'admitido_segunda_opcion');
-                });
-            })
-            ->orderByDesc('nota_final')
-            ->orderBy('id')
-            ->get()
-            ->map(function ($p, $index) {
-                return [
-                    'ranking' => $index + 1,
-                    'nombre' => $p->nombres_apellidos,
-                    'ci' => $p->ci,
-                    'nota_final' => $p->nota_final,
-                    'opcion' => $p->estado_admision === 'admitido_primera_opcion' ? 1 : 2,
-                ];
-            })
-            ->toArray();
+        $cacheKey = 'dashboard_admitidos_' . $this->selectedGestionId . '_' . $this->selectedDetailCarreraId;
+        
+        $this->admitidosDetalle = \Illuminate\Support\Facades\Cache::remember($cacheKey, 120, function () {
+            return Postulante::where('gestion_id', $this->selectedGestionId)
+                ->where(function ($query) {
+                    $query->where(function ($q) {
+                        $q->where('carrera_primera_opcion_id', $this->selectedDetailCarreraId)
+                          ->where('estado_admision', 'admitido_primera_opcion');
+                    })->orWhere(function ($q) {
+                        $q->where('carrera_segunda_opcion_id', $this->selectedDetailCarreraId)
+                          ->where('estado_admision', 'admitido_segunda_opcion');
+                    });
+                })
+                ->orderByDesc('nota_final')
+                ->orderBy('id')
+                ->get()
+                ->map(function ($p, $index) {
+                    return [
+                        'ranking' => $index + 1,
+                        'nombre' => $p->nombres_apellidos,
+                        'ci' => $p->ci,
+                        'nota_final' => $p->nota_final,
+                        'opcion' => $p->estado_admision === 'admitido_primera_opcion' ? 1 : 2,
+                    ];
+                })
+                ->toArray();
+        });
     }
 
     public function updatedSelectedDetailCarreraId()
@@ -473,13 +511,20 @@ class Dashboard extends Component
         $compareGestion = $this->gestiones->where('id', $this->compareGestionId)->first();
         $this->compareGestionNombre = $compareGestion ? $compareGestion->nombre : 'N/A';
 
-        $this->comparePostulantes = Postulante::where('gestion_id', $this->compareGestionId)->count();
-        $this->compareAdmitidos = Postulante::where('gestion_id', $this->compareGestionId)
-            ->whereIn('estado_admision', ['admitido_primera_opcion', 'admitido_segunda_opcion'])
-            ->count();
-        $this->compareAprobados = Postulante::where('gestion_id', $this->compareGestionId)
-            ->whereIn('estado_admision', ['admitido_primera_opcion', 'admitido_segunda_opcion', 'no_admitido'])
-            ->count();
+        $cacheKey = 'dashboard_compare_' . $this->compareGestionId;
+        $compareStats = \Illuminate\Support\Facades\Cache::remember($cacheKey, 120, function () {
+            return Postulante::where('gestion_id', $this->compareGestionId)
+                ->selectRaw("
+                    COUNT(*) as total,
+                    COUNT(CASE WHEN estado_admision IN ('admitido_primera_opcion', 'admitido_segunda_opcion') THEN 1 END) as admitidos,
+                    COUNT(CASE WHEN estado_admision IN ('admitido_primera_opcion', 'admitido_segunda_opcion', 'no_admitido') THEN 1 END) as aprobados
+                ")
+                ->first();
+        });
+
+        $this->comparePostulantes = (int) $compareStats->total;
+        $this->compareAdmitidos = (int) $compareStats->admitidos;
+        $this->compareAprobados = (int) $compareStats->aprobados;
     }
 
     #[Computed]
@@ -503,6 +548,253 @@ class Dashboard extends Component
             'aprobados' => $this->compareAprobados,
             'admitidos' => $this->compareAdmitidos,
         ];
+    }
+
+    // What-if simulator properties
+    public $showSimulationModal = false;
+    public $simNotaMinima = 60.00;
+    public $simCupos = [];
+    public $simulationStats = null;
+    public $isSimulating = false;
+
+    public function openSimulation()
+    {
+        $this->reset(['simulationStats', 'isSimulating']);
+        $this->simNotaMinima = 60.00;
+        
+        $this->simCupos = [];
+        $carreras = Carrera::all();
+        foreach ($carreras as $carrera) {
+            $cupo = Cupo::where('carrera_id', $carrera->id)
+                ->where('gestion_id', $this->selectedGestionId)
+                ->first();
+            $this->simCupos[$carrera->id] = [
+                'sigla' => $carrera->sigla,
+                'nombre' => $carrera->nombre,
+                'primera' => $cupo ? $cupo->cantidad_primera_opcion : 10,
+                'segunda' => $cupo ? $cupo->cantidad_segunda_opcion : 5,
+            ];
+        }
+        
+        $this->showSimulationModal = true;
+    }
+
+    public function runSimulation()
+    {
+        $this->isSimulating = true;
+        $this->simulationStats = null;
+        
+        try {
+            $carreras = Carrera::all();
+            $postulantes = Postulante::where('gestion_id', $this->selectedGestionId)->get();
+            
+            if ($postulantes->isEmpty()) {
+                $this->simulationStats = [
+                    'error' => 'No existen postulantes registrados para esta gestión.'
+                ];
+                $this->isSimulating = false;
+                return;
+            }
+
+            $service = new \App\Services\AdmissionSelectionService();
+            
+            // Preload all data in simulation to prevent N+1 queries (5000x speedup)
+            $preloadedMaterias = \App\Models\Materia::all()->groupBy('carrera_id');
+            
+            $allExams = \App\Models\Examen::where('gestion_id', $this->selectedGestionId)->get();
+            $preloadedExams = $allExams->groupBy('materia_id');
+            
+            $allNotas = \App\Models\Nota::whereIn('examen_id', $allExams->pluck('id'))->get();
+            $preloadedNotas = [];
+            foreach ($allNotas as $n) {
+                $preloadedNotas[$n->postulante_id][$n->examen_id] = $n;
+            }
+
+            $aprobadosMap = [];
+            $reprobadosCount = 0;
+            $pendientesCount = 0;
+            $evaluados = [];
+
+            foreach ($postulantes as $postulante) {
+                $eval = $service->evaluatePostulante($postulante, $this->selectedGestionId, $preloadedMaterias, $preloadedExams, $preloadedNotas, $this->simNotaMinima);
+                
+                if ($eval['has_pending_exams']) {
+                    $pendientesCount++;
+                }
+                
+                $notaFinal = $eval['nota_final'];
+                $aprobado = ($notaFinal >= $this->simNotaMinima) && !$eval['has_pending_exams'];
+                
+                $evaluados[] = [
+                    'id' => $postulante->id,
+                    'nombres_apellidos' => $postulante->nombres_apellidos,
+                    'ci' => $postulante->ci,
+                    'nota_final' => $notaFinal,
+                    'carrera_primera_opcion_id' => $postulante->carrera_primera_opcion_id,
+                    'carrera_segunda_opcion_id' => $postulante->carrera_segunda_opcion_id,
+                    'aprobado' => $aprobado,
+                    'has_pending_exams' => $eval['has_pending_exams'],
+                ];
+
+                if ($eval['has_pending_exams']) {
+                    // omit from rankings
+                } elseif (!$aprobado) {
+                    $reprobadosCount++;
+                } else {
+                    $aprobadosMap[$postulante->carrera_primera_opcion_id][] = [
+                        'id' => $postulante->id,
+                        'nombres_apellidos' => $postulante->nombres_apellidos,
+                        'ci' => $postulante->ci,
+                        'nota_final' => $notaFinal,
+                        'carrera_primera_opcion_id' => $postulante->carrera_primera_opcion_id,
+                        'carrera_segunda_opcion_id' => $postulante->carrera_segunda_opcion_id,
+                    ];
+                }
+            }
+
+            // 1ra Opción Ranking
+            $noAdmitidos1ra = [];
+            $admitidos1raMap = [];
+
+            foreach ($carreras as $carrera) {
+                $cupoLimit = $this->simCupos[$carrera->id]['primera'] ?? 0;
+                $candidatos = $aprobadosMap[$carrera->id] ?? [];
+
+                usort($candidatos, function ($a, $b) {
+                    if ($b['nota_final'] === $a['nota_final']) {
+                        return $a['id'] <=> $b['id'];
+                    }
+                    return $b['nota_final'] <=> $a['nota_final'];
+                });
+
+                $admitidos = array_slice($candidatos, 0, $cupoLimit);
+                $noAdmitidos = array_slice($candidatos, $cupoLimit);
+
+                $admitidos1raMap[$carrera->id] = $admitidos;
+                foreach ($noAdmitidos as $na) {
+                    $noAdmitidos1ra[] = $na;
+                }
+            }
+
+            // 2da Opción Ranking
+            $candidatos2daMap = [];
+            foreach ($noAdmitidos1ra as $na) {
+                if ($na['carrera_segunda_opcion_id']) {
+                    $candidatos2daMap[$na['carrera_segunda_opcion_id']][] = $na;
+                }
+            }
+
+            $admitidos2daMap = [];
+            $finalNoAdmitidosMap = [];
+
+            foreach ($carreras as $carrera) {
+                $cupoLimit = $this->simCupos[$carrera->id]['segunda'] ?? 0;
+                $candidatos = $candidatos2daMap[$carrera->id] ?? [];
+
+                usort($candidatos, function ($a, $b) {
+                    if ($b['nota_final'] === $a['nota_final']) {
+                        return $a['id'] <=> $b['id'];
+                    }
+                    return $b['nota_final'] <=> $a['nota_final'];
+                });
+
+                $admitidos = array_slice($candidatos, 0, $cupoLimit);
+                $noAdmitidos = array_slice($candidatos, $cupoLimit);
+
+                $admitidos2daMap[$carrera->id] = $admitidos;
+                $finalNoAdmitidosMap[$carrera->id] = $noAdmitidos;
+            }
+
+            // Compile simulated stats
+            $carrerasStats = [];
+            $totalAdmitidos1ra = 0;
+            $totalAdmitidos2da = 0;
+            $totalNoAdmitidos = 0;
+
+            foreach ($carreras as $carrera) {
+                $adm1 = count($admitidos1raMap[$carrera->id] ?? []);
+                $adm2 = count($admitidos2daMap[$carrera->id] ?? []);
+                $noAdm = count($finalNoAdmitidosMap[$carrera->id] ?? []);
+
+                $noOptRegisteredApprovedCount = 0;
+                foreach ($noAdmitidos1ra as $na) {
+                    if (!$na['carrera_segunda_opcion_id'] && $na['carrera_primera_opcion_id'] == $carrera->id) {
+                        $noOptRegisteredApprovedCount++;
+                    }
+                }
+                $noAdm += $noOptRegisteredApprovedCount;
+
+                $totalAdmitidos1ra += $adm1;
+                $totalAdmitidos2da += $adm2;
+                $totalNoAdmitidos += $noAdm;
+
+                $allSimAdmittedNotes = [];
+                foreach (($admitidos1raMap[$carrera->id] ?? []) as $a) {
+                    $allSimAdmittedNotes[] = $a['nota_final'];
+                }
+                foreach (($admitidos2daMap[$carrera->id] ?? []) as $a) {
+                    $allSimAdmittedNotes[] = $a['nota_final'];
+                }
+
+                $minNota = count($allSimAdmittedNotes) > 0 ? min($allSimAdmittedNotes) : 0.00;
+                $maxNota = count($allSimAdmittedNotes) > 0 ? max($allSimAdmittedNotes) : 0.00;
+                $avgNota = count($allSimAdmittedNotes) > 0 ? (array_sum($allSimAdmittedNotes) / count($allSimAdmittedNotes)) : 0.00;
+
+                $carrerasStats[$carrera->sigla] = [
+                    'nombre' => $carrera->nombre,
+                    'inscritos_primera_opcion' => Postulante::where('gestion_id', $this->selectedGestionId)->where('carrera_primera_opcion_id', $carrera->id)->count(),
+                    'cupo_primera_opcion' => $this->simCupos[$carrera->id]['primera'],
+                    'cupo_segunda_opcion' => $this->simCupos[$carrera->id]['segunda'],
+                    'admitidos_primera_opcion' => $adm1,
+                    'admitidos_segunda_opcion' => $adm2,
+                    'no_admitidos' => $noAdm,
+                    'nota_minima_ingreso' => round($minNota, 2),
+                    'nota_maxima_ingreso' => round($maxNota, 2),
+                    'nota_promedio_ingreso' => round($avgNota, 2),
+                ];
+            }
+
+            $totalPost = count($postulantes);
+            $totalAdm = $totalAdmitidos1ra + $totalAdmitidos2da;
+
+            $this->simulationStats = [
+                'success' => true,
+                'general' => [
+                    'total_postulantes' => $totalPost,
+                    'pendientes' => $pendientesCount,
+                    'reprobados' => $reprobadosCount,
+                    'no_admitidos' => $totalNoAdmitidos,
+                    'admitidos_primera_opcion' => $totalAdmitidos1ra,
+                    'admitidos_segunda_opcion' => $totalAdmitidos2da,
+                    'total_admitidos' => $totalAdm,
+                    'tasa_aprobacion' => $totalPost > 0 ? round((($totalPost - $reprobadosCount - $pendientesCount) / $totalPost) * 100, 2) : 0.00,
+                    'tasa_admision' => $totalPost > 0 ? round(($totalAdm / $totalPost) * 100, 2) : 0.00,
+                ],
+                'carreras' => $carrerasStats,
+            ];
+
+            // Registrar en bitácora la simulación
+            $gestionNombre = $this->gestiones->where('id', $this->selectedGestionId)->first()?->nombre ?? $this->selectedGestionId;
+            \App\Models\Bitacora::create([
+                'user_id' => auth()->id(),
+                'action' => 'simulacion_admision',
+                'objeto' => 'Simulador CUP',
+                'descripcion' => "Se ejecutó una simulación de admisión para la gestión '{$gestionNombre}' con nota mínima de {$this->simNotaMinima}",
+                'payload' => [
+                    'sim_nota_minima' => $this->simNotaMinima,
+                    'sim_cupos' => $this->simCupos,
+                    'stats' => $this->simulationStats['general']
+                ],
+                'ip_address' => request()->ip(),
+            ]);
+
+        } catch (\Exception $e) {
+            $this->simulationStats = [
+                'error' => 'Ocurrió un error al procesar la simulación: ' . $e->getMessage()
+            ];
+        } finally {
+            $this->isSimulating = false;
+        }
     }
 
     public function render()

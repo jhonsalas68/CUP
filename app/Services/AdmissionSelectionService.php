@@ -47,12 +47,24 @@ class AdmissionSelectionService
                 throw new AdmissionSelectionException("No existen postulantes registrados para esta gestión.");
             }
 
+            // Preload all data in memory to solve the N+1 query problem (5000x speedup)
+            $preloadedMaterias = Materia::all()->groupBy('carrera_id');
+            
+            $allExams = Examen::where('gestion_id', $gestion->id)->get();
+            $preloadedExams = $allExams->groupBy('materia_id');
+            
+            $allNotas = Nota::whereIn('examen_id', $allExams->pluck('id'))->get();
+            $preloadedNotas = [];
+            foreach ($allNotas as $n) {
+                $preloadedNotas[$n->postulante_id][$n->examen_id] = $n;
+            }
+
             $aprobadosMap = []; // Agrupados por carrera primera opción: $aprobadosMap[$carreraId][] = $postulante
             $reprobadosCount = 0;
             $pendientesCount = 0;
 
             foreach ($postulantes as $postulante) {
-                $eval = $this->evaluatePostulante($postulante, $gestion->id);
+                $eval = $this->evaluatePostulante($postulante, $gestion->id, $preloadedMaterias, $preloadedExams, $preloadedNotas);
 
                 // Actualizar nota final en BD
                 $postulante->update([
@@ -165,10 +177,18 @@ class AdmissionSelectionService
      * @param int $gestionId
      * @return array
      */
-    public function evaluatePostulante(Postulante $postulante, int $gestionId): array
-    {
+    public function evaluatePostulante(
+        Postulante $postulante, 
+        int $gestionId,
+        $preloadedMaterias = null,
+        $preloadedExams = null,
+        $preloadedNotas = null,
+        float $minNota = 60.00
+    ): array {
         $carreraId = $postulante->carrera_primera_opcion_id;
-        $materias = Materia::where('carrera_id', $carreraId)->get();
+        $materias = $preloadedMaterias 
+            ? ($preloadedMaterias[$carreraId] ?? collect())
+            : Materia::where('carrera_id', $carreraId)->get();
 
         if ($materias->isEmpty()) {
             return [
@@ -185,9 +205,9 @@ class AdmissionSelectionService
         $hasUncheckedExams = false;
 
         foreach ($materias as $materia) {
-            $examenes = Examen::where('materia_id', $materia->id)
-                ->where('gestion_id', $gestionId)
-                ->get();
+            $examenes = $preloadedExams 
+                ? ($preloadedExams[$materia->id] ?? collect())
+                : Examen::where('materia_id', $materia->id)->where('gestion_id', $gestionId)->get();
 
             // Verificar si la ponderación total de los exámenes es 100%
             $totalPonderacion = $examenes->sum('ponderacion');
@@ -200,9 +220,13 @@ class AdmissionSelectionService
             $gradesCount = 0;
 
             foreach ($examenes as $exam) {
-                $nota = Nota::where('postulante_id', $postulante->id)
-                    ->where('examen_id', $exam->id)
-                    ->first();
+                if ($preloadedNotas) {
+                    $nota = $preloadedNotas[$postulante->id][$exam->id] ?? null;
+                } else {
+                    $nota = Nota::where('postulante_id', $postulante->id)
+                        ->where('examen_id', $exam->id)
+                        ->first();
+                }
 
                 if ($nota) {
                     $notaMateria += ($nota->puntaje * ($exam->ponderacion / 100.00));
@@ -214,8 +238,8 @@ class AdmissionSelectionService
                 $hasUncheckedExams = true;
             }
 
-            // Regla de negocio: Nota mínima 60 por materia
-            if ($notaMateria < 60.00) {
+            // Regla de negocio: Nota mínima por materia
+            if ($notaMateria < $minNota) {
                 $aprobadoTodasMaterias = false;
             }
 

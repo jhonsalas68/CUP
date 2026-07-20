@@ -49,6 +49,14 @@ Route::get('admin/bitacora', \App\Livewire\Admin\Bitacora::class)
     ->middleware(['auth', 'verified'])
     ->name('admin.bitacora');
 
+Route::get('admin/aulas', \App\Livewire\Admin\Aulas::class)
+    ->middleware(['auth', 'verified'])
+    ->name('admin.aulas');
+
+Route::get('calculadora', \App\Livewire\CalculadoraAdmision::class)
+    ->middleware(['auth', 'verified'])
+    ->name('calculadora');
+
 
 
 Route::view('profile', 'profile')

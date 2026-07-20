@@ -34,23 +34,33 @@
                 Exámenes
             </flux:navlist.item>
 
+            <flux:navlist.item icon="home" href="{{ route('admin.aulas') }}" :current="request()->routeIs('admin.aulas')">
+                Aulas
+            </flux:navlist.item>
+
+            <flux:navlist.item icon="calculator" href="{{ route('calculadora') }}" :current="request()->routeIs('calculadora')">
+                Calculadora Admisión
+            </flux:navlist.item>
+
             @if(auth()->user()->hasRole('Administrador'))
                 <flux:navlist.item icon="command-line" href="{{ route('admin.bitacora') }}" :current="request()->routeIs('admin.bitacora')">
                     Bitácora
                 </flux:navlist.item>
             @endif
 
-
         @elseif(auth()->user()->hasRole('Docente'))
-            <flux:navlist.item icon="squares-2x2" href="#" current>
+            <flux:navlist.item icon="squares-2x2" href="{{ route('dashboard') }}" :current="request()->routeIs('dashboard')">
                 Mi Dashboard
             </flux:navlist.item>
-            <flux:navlist.item icon="pencil-square" href="#">
-                Registrar Notas
+            <flux:navlist.item icon="calculator" href="{{ route('calculadora') }}" :current="request()->routeIs('calculadora')">
+                Calculadora Admisión
             </flux:navlist.item>
         @elseif(auth()->user()->hasRole('Postulante'))
-            <flux:navlist.item icon="squares-2x2" href="#" current>
+            <flux:navlist.item icon="squares-2x2" href="{{ route('dashboard') }}" :current="request()->routeIs('dashboard')">
                 Mis Resultados
+            </flux:navlist.item>
+            <flux:navlist.item icon="calculator" href="{{ route('calculadora') }}" :current="request()->routeIs('calculadora')">
+                Calculadora Admisión
             </flux:navlist.item>
         @endif
     </flux:navlist>

@@ -18,6 +18,11 @@ class Grupos extends Component
     public $filterCarrera = '';
     public $filterMateria = '';
 
+    // Static dropdown collections
+    public $gestiones = [];
+    public $carreras = [];
+    public $docentesList = [];
+
     public $showModal = false;
     public $isEditing = false;
     public $grupoId = null;
@@ -52,6 +57,11 @@ class Grupos extends Component
         if (!auth()->user()->hasAnyRole(['Administrador', 'Coordinador'])) {
             abort(403, 'No autorizado.');
         }
+
+        // Load static dropdowns once
+        $this->gestiones = Gestion::orderBy('fecha_inicio', 'desc')->get();
+        $this->carreras = Carrera::orderBy('nombre')->get();
+        $this->docentesList = \App\Models\Docente::orderBy('nombre')->get();
     }
 
     public function updatingSearch()
@@ -152,10 +162,6 @@ class Grupos extends Component
 
     public function render()
     {
-        $gestiones = Gestion::orderBy('fecha_inicio', 'desc')->get();
-        $carreras = Carrera::orderBy('nombre')->get();
-        $docentesList = \App\Models\Docente::orderBy('nombre')->get();
-
         $grupos = Grupo::with(['materia.carrera', 'gestion', 'postulantes', 'docentes'])
             ->when($this->search, function ($query) {
                 $query->where('nombre', 'like', '%' . $this->search . '%')
@@ -171,10 +177,10 @@ class Grupos extends Component
 
         return view('livewire.admin.grupos', [
             'grupos' => $grupos,
-            'gestiones' => $gestiones,
-            'carreras' => $carreras,
+            'gestiones' => $this->gestiones,
+            'carreras' => $this->carreras,
             'materias' => $this->materias,
-            'docentesList' => $docentesList,
+            'docentesList' => $this->docentesList,
         ])->layout('layouts.admin');
     }
 }

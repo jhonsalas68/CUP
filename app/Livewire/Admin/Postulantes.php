@@ -23,6 +23,11 @@ class Postulantes extends Component
     public $filterNotaMin = '';
     public $filterNotaMax = '';
 
+    // Static dropdown collections
+    public $carreras = [];
+    public $gestiones = [];
+    public $materias = [];
+
     // Requisitos de inscripción
     public $ci_vigente = false;
     public $titulo_bachiller = false;
@@ -105,6 +110,11 @@ class Postulantes extends Component
         if ($gestionActiva) {
             $this->filterGestion = $gestionActiva->id;
         }
+
+        // Load static dropdowns once
+        $this->carreras = Carrera::orderBy('nombre')->get();
+        $this->gestiones = Gestion::orderBy('fecha_inicio', 'desc')->get();
+        $this->materias = Materia::with('carrera')->orderBy('carrera_id')->orderBy('nombre')->get();
     }
 
     public function updatingSearch()    { $this->resetPage(); }
@@ -476,10 +486,6 @@ class Postulantes extends Component
 
     public function render()
     {
-        $carreras = Carrera::orderBy('nombre')->get();
-        $gestiones = Gestion::orderBy('fecha_inicio', 'desc')->get();
-        $materias = Materia::with('carrera')->orderBy('carrera_id')->orderBy('nombre')->get();
-
         $postulantes = Postulante::query()
             ->with(['user', 'carreraPrimeraOpn', 'carreraSegundaOpn', 'gestion'])
             ->when($this->search, function ($q) {
@@ -540,8 +546,12 @@ class Postulantes extends Component
             ->orderBy('id', 'desc')
             ->paginate(15);
 
-        return view('livewire.admin.postulantes', compact('postulantes', 'carreras', 'gestiones', 'materias'))
-            ->layout('layouts.admin');
+        return view('livewire.admin.postulantes', [
+            'postulantes' => $postulantes,
+            'carreras' => $this->carreras,
+            'gestiones' => $this->gestiones,
+            'materias' => $this->materias
+        ])->layout('layouts.admin');
     }
 
     public function openNotas($id)
