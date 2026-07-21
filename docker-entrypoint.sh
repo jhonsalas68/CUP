@@ -18,9 +18,9 @@ php artisan route:cache
 php artisan view:cache
 php artisan event:cache
 
-# 3. Correr migraciones y poblar datos automáticamente en la base de datos
+# 3. Correr migraciones y crear usuario admin al iniciar
 php artisan migrate --force || true
-php artisan db:seed --force || true
+php artisan db:seed --class=AdminOnlySeeder --force || true
 
 # 4. Iniciar Apache en primer plano (Comando crucial para que el contenedor no muera)
 echo "Iniciando Apache..."
