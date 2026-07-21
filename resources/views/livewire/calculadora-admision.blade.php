@@ -11,7 +11,7 @@
                 </div>
                 <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Calculadora e Indicador de Admisión</h1>
                 <p class="text-indigo-200 text-sm mt-1 max-w-2xl">
-                    Simula tus notas de exámenes restantes en tiempo real, proyecta tu promedio final ponderado y calcula la nota exacta necesaria para asegurar tu admisión.
+                    Selecciona cualquier carrera y postulante para simular las notas de sus exámenes restantes en tiempo real y calcular la nota necesaria de admisión.
                 </p>
             </div>
 
@@ -38,29 +38,55 @@
         </div>
     </div>
 
-    <!-- Admin/Docente Postulante Selector -->
-    @if(auth()->user() && !auth()->user()->hasRole('Postulante') && count($postulantesLista) > 0)
-        <div class="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div class="flex items-center gap-3">
-                <div class="p-2 bg-indigo-50 dark:bg-indigo-950/50 rounded-lg text-indigo-600 dark:text-indigo-400">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                </div>
-                <div>
-                    <div class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Modo Administrador / Docente</div>
-                    <div class="text-xs text-zinc-500 dark:text-zinc-400">Selecciona un postulante para consultar o simular sus notas:</div>
+    <!-- Career & Postulante Filter Toolbar -->
+    <div class="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">
+        <div class="flex items-center gap-2">
+            <svg class="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+            <h2 class="text-base font-bold text-zinc-900 dark:text-zinc-100">Filtros de Búsqueda y Selección</h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- 1. Filtrar por Carrera -->
+            <div>
+                <label class="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1.5">1. Filtrar por Carrera</label>
+                <select wire:model.live="selectedCarreraId" class="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 font-semibold">
+                    <option value="">Todas las Carreras</option>
+                    @foreach($carrerasLista as $c)
+                        <option value="{{ $c->id }}">{{ $c->nombre }} ({{ $c->sigla }})</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <!-- 2. Buscar Postulante (Nombre o CI) -->
+            <div>
+                <label class="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1.5">2. Buscar por Nombre o CI</label>
+                <div class="relative">
+                    <input type="text" wire:model.live.debounce.200ms="searchPostulante" class="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-xl pl-9 pr-3.5 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500" placeholder="Ej: Carlos o 1234567...">
+                    <svg class="w-4 h-4 text-zinc-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 </div>
             </div>
-            <select wire:model.live="selectedPostulanteId" class="w-full sm:w-72 bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 font-medium">
-                @foreach($postulantesLista as $p)
-                    <option value="{{ $p->id }}">{{ $p->nombres_apellidos }} (CI: {{ $p->ci }})</option>
-                @endforeach
-            </select>
+
+            <!-- 3. Seleccionar Postulante de la lista -->
+            <div>
+                <label class="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1.5">3. Seleccionar Alumno ({{ count($postulantesLista) }})</label>
+                <select wire:model.live="selectedPostulanteId" class="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 font-semibold">
+                    @if(empty($postulantesLista))
+                        <option value="">No hay postulantes coincidentes</option>
+                    @else
+                        @foreach($postulantesLista as $p)
+                            <option value="{{ $p['id'] }}">{{ $p['nombres_apellidos'] }} (CI: {{ $p['ci'] }}) - {{ $p['carrera'] }}</option>
+                        @endforeach
+                    @endif
+                </select>
+            </div>
         </div>
-    @endif
+    </div>
 
     @if(!$postulante)
-        <div class="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 p-6 rounded-xl text-center">
-            <p class="font-medium">No se encontró información del postulante registrado.</p>
+        <div class="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 p-8 rounded-2xl text-center space-y-2">
+            <svg class="w-10 h-10 mx-auto text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            <p class="font-bold text-base">No se encontró ningún postulante que coincida con los filtros seleccionados.</p>
+            <p class="text-xs text-amber-600 dark:text-amber-400">Intenta borrar la búsqueda o cambiar la carrera en los filtros superiores.</p>
         </div>
     @else
         <!-- Information Grid: Student & Career Details -->
@@ -70,32 +96,32 @@
                 <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white font-bold text-lg shadow">
                     {{ strtoupper(substr($postulante->nombres_apellidos ?? 'P', 0, 1)) }}
                 </div>
-                <div>
-                    <div class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Postulante</div>
-                    <div class="text-base font-bold text-zinc-900 dark:text-zinc-100">{{ $postulante->nombres_apellidos }}</div>
-                    <div class="text-xs text-zinc-500 dark:text-zinc-400">CI: {{ $postulante->ci }} | Cód: #{{ $postulante->id }}</div>
+                <div class="min-w-0 flex-1">
+                    <div class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Postulante Seleccionado</div>
+                    <div class="text-base font-bold text-zinc-900 dark:text-zinc-100 truncate">{{ $postulante->nombres_apellidos }}</div>
+                    <div class="text-xs text-zinc-500 dark:text-zinc-400">CI: {{ $postulante->ci }} | ID: #{{ $postulante->id }}</div>
                 </div>
             </div>
 
             <!-- Primera Opción Card -->
             <div class="bg-white dark:bg-zinc-900 p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
                 <div class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1">Primera Opción de Carrera</div>
-                <div class="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                <div class="text-base font-bold text-zinc-900 dark:text-zinc-100 truncate">
                     {{ $carreraPrimera?->nombre ?? 'Sin Asignar' }}
                 </div>
                 <div class="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                    Cupos: <span class="font-semibold text-zinc-700 dark:text-zinc-300">{{ $carreraPrimera?->cupos_primera_opcion ?? '0' }} disponibles</span>
+                    Cupos 1ª Opción: <span class="font-semibold text-zinc-700 dark:text-zinc-300">{{ $carreraPrimera?->cupos_primera_opcion ?? '0' }} plazas</span>
                 </div>
             </div>
 
             <!-- Segunda Opción Card -->
             <div class="bg-white dark:bg-zinc-900 p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
                 <div class="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-1">Segunda Opción de Carrera</div>
-                <div class="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                <div class="text-base font-bold text-zinc-900 dark:text-zinc-100 truncate">
                     {{ $carreraSegunda?->nombre ?? 'Sin Asignar' }}
                 </div>
                 <div class="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                    Cupos: <span class="font-semibold text-zinc-700 dark:text-zinc-300">{{ $carreraSegunda?->cupos_segunda_opcion ?? '0' }} disponibles</span>
+                    Cupos 2ª Opción: <span class="font-semibold text-zinc-700 dark:text-zinc-300">{{ $carreraSegunda?->cupos_segunda_opcion ?? '0' }} plazas</span>
                 </div>
             </div>
         </div>

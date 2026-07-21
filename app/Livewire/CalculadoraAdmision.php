@@ -25,41 +25,97 @@ class CalculadoraAdmision extends Component
     // Target score desired by the student (defaults to 60.00)
     public $targetScore = 60.00;
 
-    // Admin/Docente selector
+    // Admin/Docente selector & Filters
+    public $carrerasLista = [];
+    public $selectedCarreraId = '';
+    public $searchPostulante = '';
     public $postulantesLista = [];
     public $selectedPostulanteId = null;
 
     public function mount($postulanteId = null)
     {
+        $this->carrerasLista = Carrera::orderBy('nombre')->get();
         $user = auth()->user();
 
-        if ($user && $user->hasRole('Postulante')) {
+        if ($user && $user->hasRole('Postulante') && $user->postulante && !$postulanteId) {
             $this->postulante = $user->postulante;
+            $this->selectedPostulanteId = $this->postulante->id;
+            $this->selectedCarreraId = $this->postulante->carrera_primera_opcion_id ?? '';
         } else {
-            // If Admin or Docente, load list of postulantes for selection
-            $this->postulantesLista = Postulante::with(['user', 'carreraPrimeraOpn'])
-                ->orderBy('nombres_apellidos')
-                ->limit(50)
-                ->get();
-
             if ($postulanteId) {
                 $this->postulante = Postulante::find($postulanteId);
-                $this->selectedPostulanteId = $postulanteId;
-            } elseif ($this->postulantesLista->isNotEmpty()) {
-                $this->postulante = $this->postulantesLista->first();
-                $this->selectedPostulanteId = $this->postulante->id;
+                if ($this->postulante) {
+                    $this->selectedPostulanteId = $this->postulante->id;
+                    $this->selectedCarreraId = $this->postulante->carrera_primera_opcion_id ?? '';
+                }
+            }
+
+            $this->actualizarListaPostulantes();
+
+            if (!$this->postulante && !empty($this->postulantesLista)) {
+                $this->postulante = Postulante::find($this->postulantesLista[0]['id']);
+                $this->selectedPostulanteId = $this->postulante?->id;
+                $this->selectedCarreraId = $this->postulante?->carrera_primera_opcion_id ?? '';
             }
         }
 
         $this->cargarDatos();
     }
 
+    public function updatedSelectedCarreraId()
+    {
+        $this->actualizarListaPostulantes();
+        if (!empty($this->postulantesLista)) {
+            $this->selectedPostulanteId = $this->postulantesLista[0]['id'];
+            $this->postulante = Postulante::find($this->selectedPostulanteId);
+        } else {
+            $this->selectedPostulanteId = null;
+            $this->postulante = null;
+        }
+        $this->cargarDatos();
+    }
+
+    public function updatedSearchPostulante()
+    {
+        $this->actualizarListaPostulantes();
+    }
+
     public function updatedSelectedPostulanteId($value)
     {
         if ($value) {
             $this->postulante = Postulante::find($value);
+            if ($this->postulante) {
+                $this->selectedCarreraId = $this->postulante->carrera_primera_opcion_id ?? '';
+            }
             $this->cargarDatos();
         }
+    }
+
+    public function actualizarListaPostulantes()
+    {
+        $query = Postulante::with(['carreraPrimeraOpn'])
+            ->orderBy('nombres_apellidos');
+
+        if ($this->selectedCarreraId) {
+            $query->where('carrera_primera_opcion_id', $this->selectedCarreraId);
+        }
+
+        if (trim($this->searchPostulante) !== '') {
+            $s = trim($this->searchPostulante);
+            $query->where(function ($q) use ($s) {
+                $q->where('nombres_apellidos', 'like', "%{$s}%")
+                  ->orWhere('ci', 'like', "%{$s}%");
+            });
+        }
+
+        $this->postulantesLista = $query->limit(200)->get()->map(function ($p) {
+            return [
+                'id' => $p->id,
+                'nombres_apellidos' => $p->nombres_apellidos,
+                'ci' => $p->ci,
+                'carrera' => $p->carreraPrimeraOpn?->nombre ?? 'Sin Asignar',
+            ];
+        })->toArray();
     }
 
     public function cargarDatos()
