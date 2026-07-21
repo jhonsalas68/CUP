@@ -191,10 +191,14 @@ class ComprehensiveDataSeeder extends Seeder
             );
         }
 
-        // 7. Ejecutar generación automática de grupos
+        // 7. Ejecutar generación automática de grupos (si no existen exámenes previos)
         $this->command->info('Generando grupos automáticos...');
-        $groupService = new GroupGenerationService();
-        $groupService->generate($gestion->id);
+        try {
+            $groupService = new GroupGenerationService();
+            $groupService->generate($gestion->id);
+        } catch (\Throwable $e) {
+            $this->command->warn('Grupos ya configurados previamente: ' . $e->getMessage());
+        }
 
         // 8. Crear exámenes para cada materia y gestión
         $this->command->info('Creando exámenes...');
