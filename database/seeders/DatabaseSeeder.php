@@ -18,12 +18,11 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. Correr seeders de Roles y Permisos, Carreras y Materias
+        // 1. Correr seeders iniciales de Roles, Carreras y Materias
         $this->call([
             RolesAndPermissionsSeeder::class,
             CarreraSeeder::class,
             MateriaSeeder::class,
-            ComprehensiveDataSeeder::class,  // Población comprehensiva con 1000+ datos
         ]);
 
         // 2. Crear Gestión Activa de Prueba (I-2026)
@@ -45,13 +44,13 @@ class DatabaseSeeder extends Seeder
                     'gestion_id' => $gestion->id,
                 ],
                 [
-                    'cantidad_primera_opcion' => 10,
-                    'cantidad_segunda_opcion' => 5,
+                    'cantidad_primera_opcion' => 80,
+                    'cantidad_segunda_opcion' => 45,
                 ]
             );
         }
 
-        // 4. Crear Usuario Administrador
+        // 4. Crear Usuario Administrador (GARANTIZADO)
         $admin = User::firstOrCreate(
             ['email' => 'admin@cup.edu.bo'],
             [
@@ -105,8 +104,8 @@ class DatabaseSeeder extends Seeder
         );
         $userPostulante->assignRole('Postulante');
 
-        $carreraSistemas = Carrera::where('sigla', 'SIS')->first();
-        $carreraInformatica = Carrera::where('sigla', 'INF')->first();
+        $carreraSistemas = Carrera::where('sigla', 'SIS')->first() ?? $carreras->first();
+        $carreraInformatica = Carrera::where('sigla', 'INF')->first() ?? $carreras->last();
 
         Postulante::firstOrCreate(
             ['user_id' => $userPostulante->id],
@@ -125,5 +124,10 @@ class DatabaseSeeder extends Seeder
                 'libreta_legalizada' => true,
             ]
         );
+
+        // 8. Correr población masiva con 1000+ postulantes
+        $this->call([
+            ComprehensiveDataSeeder::class,
+        ]);
     }
 }

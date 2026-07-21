@@ -194,7 +194,7 @@ class ComprehensiveDataSeeder extends Seeder
         // 7. Ejecutar generación automática de grupos
         $this->command->info('Generando grupos automáticos...');
         $groupService = new GroupGenerationService();
-        $groupService->generateGroupsForGestion($gestion->id);
+        $groupService->generate($gestion->id);
 
         // 8. Crear exámenes para cada materia y gestión
         $this->command->info('Creando exámenes...');
