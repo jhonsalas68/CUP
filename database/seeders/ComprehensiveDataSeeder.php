@@ -240,27 +240,35 @@ class ComprehensiveDataSeeder extends Seeder
             );
         }
 
-        // 9. Asignar notas a los postulantes
-        $this->command->info('Asignando notas...');
+        // 9. Asignar notas a los postulantes (optimizado con transacción)
+        $this->command->info('Asignando notas (optimizado)...');
         $examService = new ExamService();
-        $postulantes = Postulante::all();
-        $examenes = Examen::where('gestion_id', $gestion->id)->get();
 
-        foreach ($postulantes as $postulante) {
-            foreach ($examenes as $exam) {
-                Nota::firstOrCreate(
-                    [
-                        'postulante_id' => $postulante->id,
-                        'examen_id' => $exam->id,
-                    ],
-                    [
-                        'puntaje' => rand(40, 95),
-                    ]
-                );
+        DB::transaction(function () use ($gestion, $examService) {
+            $postulantes = Postulante::with('carreraPrimeraOpn.materias')->get();
+            $examenesGrouped = Examen::where('gestion_id', $gestion->id)->get()->groupBy('materia_id');
+
+            foreach ($postulantes as $postulante) {
+                $materiasIds = $postulante->carreraPrimeraOpn?->materias?->pluck('id') ?? collect();
+
+                foreach ($materiasIds as $materiaId) {
+                    $materiaExams = $examenesGrouped->get($materiaId) ?? collect();
+                    foreach ($materiaExams as $exam) {
+                        Nota::firstOrCreate(
+                            [
+                                'postulante_id' => $postulante->id,
+                                'examen_id' => $exam->id,
+                            ],
+                            [
+                                'puntaje' => rand(45, 95),
+                            ]
+                        );
+                    }
+                }
+                // Recalcular nota final del postulante
+                $examService->recalculatePostulanteScore($postulante->id, $gestion->id);
             }
-            // Recalcular nota final del postulante
-            $examService->recalculatePostulanteScore($postulante->id, $gestion->id);
-        }
+        });
 
         $this->command->info('✅ ¡Población de datos completada exitosamente con 1000 postulantes!');
     }
