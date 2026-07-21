@@ -187,4 +187,12 @@ class ExamService
             'estado_admision' => $nuevoEstado,
         ]);
     }
+
+    /**
+     * Alias para compatibilidad con seeders.
+     */
+    public function calculateFinalGrade(int $postulanteId, int $gestionId): void
+    {
+        $this->recalculatePostulanteScore($postulanteId, $gestionId);
+    }
 }

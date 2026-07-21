@@ -255,7 +255,7 @@ class ComprehensiveDataSeeder extends Seeder
                 );
             }
             // Recalcular nota final del postulante
-            $examService->calculateFinalGrade($postulante->id, $gestion->id);
+            $examService->recalculatePostulanteScore($postulante->id, $gestion->id);
         }
 
         $this->command->info('✅ ¡Población de datos completada exitosamente con 1000 postulantes!');
