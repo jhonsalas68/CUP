@@ -13,10 +13,10 @@
         "livewire/livewire": "^3.6.4",
         "livewire/volt": "^1.7.0",
         "spatie/laravel-permission": "^6.25",
-        "stripe/stripe-php": "*",
-        "fakerphp/faker": "^1.23"
+        "stripe/stripe-php": "*"
     },
     "require-dev": {
+        "fakerphp/faker": "^1.23",
         "laravel/breeze": "^2.4",
         "laravel/pail": "^1.2.2",
         "laravel/pint": "^1.24",
