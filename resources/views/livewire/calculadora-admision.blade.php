@@ -7,11 +7,11 @@
             <div>
                 <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/30 text-indigo-200 text-xs font-semibold uppercase tracking-wider mb-2 backdrop-blur-sm border border-indigo-400/20">
                     <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
-                    Herramienta Interactiva CUP
+                    Simulador Interactivo de Admisión
                 </div>
                 <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Calculadora e Indicador de Admisión</h1>
                 <p class="text-indigo-200 text-sm mt-1 max-w-2xl">
-                    Selecciona cualquier carrera y postulante para simular las notas de sus exámenes restantes en tiempo real y calcular la nota necesaria de admisión.
+                    Mueve los deslizadores o cambia cualquier nota para simular diferentes escenarios ("¿Qué pasa si saco 30 ó 90?") y saber si apruebas en tiempo real.
                 </p>
             </div>
 
@@ -40,9 +40,16 @@
 
     <!-- Career & Postulante Filter Toolbar -->
     <div class="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">
-        <div class="flex items-center gap-2">
-            <svg class="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
-            <h2 class="text-base font-bold text-zinc-900 dark:text-zinc-100">Filtros de Búsqueda y Selección</h2>
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <svg class="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+                <h2 class="text-base font-bold text-zinc-900 dark:text-zinc-100">Filtros de Búsqueda y Selección</h2>
+            </div>
+
+            <button wire:click="restablecerNotasOficiales" class="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs font-bold rounded-lg transition flex items-center gap-1.5 border border-zinc-200 dark:border-zinc-700">
+                <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                Restablecer Notas Oficiales
+            </button>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -136,7 +143,7 @@
                         <svg class="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                         Calculador de Nota Objetivo Automático
                     </h2>
-                    <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Ingresa la nota final que deseas obtener y calcularemos automáticamente qué nota necesitas sacar en los exámenes pendientes.</p>
+                    <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Ingresa la nota deseada (Ej: 60 ó 80) y calcularemos qué notas requiere en los exámenes.</p>
                 </div>
 
                 <div class="flex items-center gap-3 w-full sm:w-auto">
@@ -147,7 +154,7 @@
 
                     <button wire:click="calcularObjetivo" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition shadow-sm hover:shadow flex items-center gap-2 whitespace-nowrap">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
-                        Calcular Requerido
+                        Simular Objetivo
                     </button>
                 </div>
             </div>
@@ -172,8 +179,8 @@
                                 </div>
                             </div>
 
-                            <!-- List of Exams with Sliders -->
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <!-- List of Exams with Fully Editable Sliders & Inputs -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 @foreach($materia['examenes'] as $eIndex => $exam)
                                     <div class="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-3">
                                         <div class="flex items-center justify-between">
@@ -183,41 +190,38 @@
                                             </span>
                                         </div>
 
-                                        <!-- Badge: Real vs Simulated -->
                                         @if($exam['es_real'])
-                                            <div class="flex items-center justify-between bg-emerald-50 dark:bg-emerald-950/40 p-2.5 rounded-lg border border-emerald-200 dark:border-emerald-900">
-                                                <span class="text-xs font-medium text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
-                                                    <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                                    Nota Registrada Oficial
+                                            <div class="flex items-center justify-between text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                                                <span class="flex items-center gap-1">
+                                                    <svg class="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                                    Nota Registrada Oficial:
                                                 </span>
-                                                <span class="text-base font-black text-emerald-700 dark:text-emerald-300">
-                                                    {{ number_format($exam['nota_real'], 2) }} pts
-                                                </span>
-                                            </div>
-                                        @else
-                                            <!-- Interactive Slider -->
-                                            <div class="space-y-2">
-                                                <div class="flex items-center justify-between text-xs">
-                                                    <span class="text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-1">
-                                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                                        Nota Simulada
-                                                    </span>
-                                                    <span class="font-extrabold text-zinc-900 dark:text-zinc-100 text-sm">
-                                                        {{ number_format($exam['nota_simulada'], 2) }} pts
-                                                    </span>
-                                                </div>
-
-                                                <input type="range" min="0" max="100" step="1"
-                                                       wire:model.live="materiasData.{{ $mIndex }}.examenes.{{ $eIndex }}.nota_simulada"
-                                                       class="w-full h-2 bg-zinc-200 dark:bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-indigo-600">
-
-                                                <div class="flex justify-between text-[10px] text-zinc-400 font-mono">
-                                                    <span>0 pts</span>
-                                                    <span>50 pts</span>
-                                                    <span>100 pts</span>
-                                                </div>
+                                                <span class="font-bold">{{ number_format($exam['nota_real'], 2) }} pts</span>
                                             </div>
                                         @endif
+
+                                        <!-- Fully Interactive Slider & Numeric Input -->
+                                        <div class="space-y-2">
+                                            <div class="flex items-center justify-between gap-2">
+                                                <span class="text-xs text-indigo-600 dark:text-indigo-400 font-semibold">Simular Nota:</span>
+                                                <div class="flex items-center gap-1">
+                                                    <input type="number" min="0" max="100" step="1"
+                                                           wire:model.live.debounce.150ms="materiasData.{{ $mIndex }}.examenes.{{ $eIndex }}.nota_simulada"
+                                                           class="w-20 bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-lg px-2 py-1 text-xs font-bold text-center focus:ring-2 focus:ring-indigo-500">
+                                                    <span class="text-xs text-zinc-400 font-bold">pts</span>
+                                                </div>
+                                            </div>
+
+                                            <input type="range" min="0" max="100" step="1"
+                                                   wire:model.live="materiasData.{{ $mIndex }}.examenes.{{ $eIndex }}.nota_simulada"
+                                                   class="w-full h-2 bg-zinc-200 dark:bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+
+                                            <div class="flex justify-between text-[10px] text-zinc-400 font-mono">
+                                                <span>0 pts</span>
+                                                <span>50 pts</span>
+                                                <span>100 pts</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 @endforeach
                             </div>

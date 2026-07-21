@@ -193,7 +193,19 @@ class CalculadoraAdmision extends Component
     }
 
     /**
-     * Compute target score needed on missing exams to reach $targetScore
+     * Restablecer todas las notas simuladas a las notas oficiales registradas
+     */
+    public function restablecerNotasOficiales()
+    {
+        foreach ($this->materiasData as $mIndex => $materia) {
+            foreach ($materia['examenes'] as $eIndex => $exam) {
+                $this->materiasData[$mIndex]['examenes'][$eIndex]['nota_simulada'] = $exam['nota_real'] !== null ? $exam['nota_real'] : 0.00;
+            }
+        }
+    }
+
+    /**
+     * Compute target score needed on pending exams to reach $targetScore
      */
     public function calcularObjetivo()
     {
@@ -203,14 +215,14 @@ class CalculadoraAdmision extends Component
         }
 
         $totalMaterias = count($this->materiasData);
-
         $targetTotalSum = $target * $totalMaterias;
+
         $fixedSum = 0.00;
         $pendingPonderacionTotal = 0.00;
 
         foreach ($this->materiasData as $mIndex => $materia) {
             foreach ($materia['examenes'] as $eIndex => $exam) {
-                if ($exam['es_real']) {
+                if (!empty($exam['es_real'])) {
                     $fixedSum += ($exam['nota_simulada'] * ($exam['ponderacion'] / 100.00));
                 } else {
                     $pendingPonderacionTotal += ($exam['ponderacion'] / 100.00);
@@ -218,7 +230,14 @@ class CalculadoraAdmision extends Component
             }
         }
 
+        // Si todos los exámenes ya son oficiales o no hay pendientes, calcular uniformemente
         if ($pendingPonderacionTotal <= 0) {
+            $scoreNeeded = max(0, min(100, round($targetTotalSum / max(1, $totalMaterias), 2)));
+            foreach ($this->materiasData as $mIndex => $materia) {
+                foreach ($materia['examenes'] as $eIndex => $exam) {
+                    $this->materiasData[$mIndex]['examenes'][$eIndex]['nota_simulada'] = $scoreNeeded;
+                }
+            }
             return;
         }
 
@@ -228,7 +247,7 @@ class CalculadoraAdmision extends Component
 
         foreach ($this->materiasData as $mIndex => $materia) {
             foreach ($materia['examenes'] as $eIndex => $exam) {
-                if (!$exam['es_real']) {
+                if (empty($exam['es_real'])) {
                     $this->materiasData[$mIndex]['examenes'][$eIndex]['nota_simulada'] = $neededScoreClean;
                 }
             }
