@@ -64,7 +64,7 @@ class CalculadoraAdmision extends Component
 
     public function cargarDatos()
     {
-        $this->gestionActiva = Gestion::where('activa', true)->first() ?? Gestion::latest()->first();
+        $this->gestionActiva = Gestion::where('activo', true)->first() ?? Gestion::latest()->first();
 
         if (!$this->postulante || !$this->gestionActiva) {
             $this->materiasData = [];

@@ -29,13 +29,13 @@ class ComprehensiveDataSeeder extends Seeder
     public function run(): void
     {
         // 1. Obtener o crear gestión activa
-        $gestion = Gestion::where('activa', true)->first();
+        $gestion = Gestion::where('activo', true)->first();
         if (!$gestion) {
             $gestion = Gestion::create([
                 'nombre' => 'I-2026',
                 'fecha_inicio' => '2026-02-01',
                 'fecha_fin' => '2026-06-30',
-                'activa' => true,
+                'activo' => true,
             ]);
         }
 

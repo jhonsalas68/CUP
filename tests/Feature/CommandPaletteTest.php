@@ -36,7 +36,7 @@ class CommandPaletteTest extends TestCase
             'nombre' => 'I-2026',
             'fecha_inicio' => '2026-02-01',
             'fecha_fin' => '2026-06-30',
-            'activa' => true,
+            'activo' => true,
         ]);
 
         $carrera = Carrera::create([
