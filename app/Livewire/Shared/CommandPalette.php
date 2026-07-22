@@ -150,7 +150,7 @@ class CommandPalette extends Component
 
             // Search Carreras
             $results['carreras'] = Carrera::where('nombre', 'like', "%{$query}%")
-                ->orWhere('codigo', 'like', "%{$query}%")
+                ->orWhere('sigla', 'like', "%{$query}%")
                 ->limit(5)
                 ->get();
 

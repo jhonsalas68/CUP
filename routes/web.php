@@ -53,6 +53,10 @@ Route::get('admin/aulas', \App\Livewire\Admin\Aulas::class)
     ->middleware(['auth', 'verified'])
     ->name('admin.aulas');
 
+Route::get('admin/aulas/{aulaId}/visualizador', \App\Livewire\Admin\VisualizadorAula::class)
+    ->middleware(['auth', 'verified'])
+    ->name('admin.aulas.visualizador');
+
 Route::get('calculadora', \App\Livewire\CalculadoraAdmision::class)
     ->middleware(['auth', 'verified'])
     ->name('calculadora');

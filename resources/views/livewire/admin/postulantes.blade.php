@@ -196,7 +196,7 @@
         <div x-data="voiceSearchWidget($wire)" class="relative flex items-center gap-2 grow">
             <!-- Floating message (centered above the input) -->
             <div 
-                x-show="isListening && currentTranscript" 
+                x-show="isListening || currentTranscript" 
                 x-transition:enter="transition ease-out duration-300"
                 x-transition:enter-start="opacity-0 -translate-y-2 scale-95"
                 x-transition:enter-end="opacity-100 translate-y-0 scale-100"

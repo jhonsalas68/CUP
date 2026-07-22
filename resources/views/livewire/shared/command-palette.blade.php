@@ -118,7 +118,7 @@
                             <div class="flex items-center justify-between px-3 py-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800">
                                 <div class="flex flex-col min-w-0">
                                     <span class="text-xs font-bold text-zinc-900 dark:text-zinc-100">{{ $c->nombre }}</span>
-                                    <span class="text-[11px] text-zinc-400">Código: {{ $c->codigo ?? 'N/A' }}</span>
+                                    <span class="text-[11px] text-zinc-400">Sigla: {{ $c->sigla ?? 'N/A' }}</span>
                                 </div>
                                 <div class="text-[11px] font-medium text-zinc-500">
                                     Cupos 1ª: <span class="font-bold text-indigo-600 dark:text-indigo-400">{{ $c->cupos_primera_opcion }}</span> | 

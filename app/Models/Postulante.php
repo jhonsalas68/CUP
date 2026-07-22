@@ -94,6 +94,7 @@ class Postulante extends Model
     public function grupos()
     {
         return $this->belongsToMany(Grupo::class, 'postulante_grupo', 'postulante_id', 'grupo_id')
+                    ->withPivot('nro_asiento')
                     ->withTimestamps();
     }
 

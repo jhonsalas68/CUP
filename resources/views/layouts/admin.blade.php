@@ -217,7 +217,7 @@
     <flux:toast />
     
     <script>
-        document.addEventListener('alpine:init', () => {
+        function initVoiceSearchWidget() {
             Alpine.data('voiceSearchWidget', (wire) => ({
                 isListening: false,
                 currentTranscript: '',
@@ -271,7 +271,13 @@
                     recognition.start();
                 }
             }));
-        });
+        }
+
+        if (window.Alpine) {
+            initVoiceSearchWidget();
+        } else {
+            document.addEventListener('alpine:init', initVoiceSearchWidget);
+        }
     </script>
     <livewire:shared.command-palette />
     @fluxScripts

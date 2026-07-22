@@ -476,6 +476,16 @@
                                                         <span class="text-[10px] text-zinc-400">No hay horarios registrados para este grupo.</span>
                                                     @endforelse
                                                 </div>
+
+                                                <!-- Seat assignment -->
+                                                @if($grupo->pivot && $grupo->pivot->nro_asiento)
+                                                    <div class="mt-2.5 p-2 bg-violet-50 dark:bg-violet-950/15 border border-violet-100 dark:border-violet-900/30 rounded-xl flex items-center justify-between">
+                                                        <span class="text-[10px] font-bold text-violet-750 dark:text-violet-400 uppercase tracking-wider">Asiento Asignado:</span>
+                                                        <span class="bg-violet-600 text-white text-[11px] font-black px-2.5 py-0.5 rounded-full shadow-xs">
+                                                            Nro {{ $grupo->pivot->nro_asiento }}
+                                                        </span>
+                                                    </div>
+                                                @endif
                                             </div>
                                         @empty
                                             <div class="text-center py-8 bg-zinc-50 dark:bg-zinc-800/25 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl">

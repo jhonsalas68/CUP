@@ -190,7 +190,7 @@
         <div x-data="voiceSearchWidget($wire)" class="relative flex items-center gap-2 grow">
             <!-- Floating message (centered above the input) -->
             <div 
-                x-show="isListening && currentTranscript" 
+                x-show="isListening || currentTranscript" 
                 x-cloak
                 class="absolute -top-14 left-1/2 -translate-x-1/2 bg-rose-600 dark:bg-rose-700 text-white text-xs font-bold px-4 py-2.5 rounded-2xl shadow-xl flex items-center gap-2 border border-rose-500 whitespace-nowrap z-50 animate-bounce"
             >

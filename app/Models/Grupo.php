@@ -36,6 +36,7 @@ class Grupo extends Model
     public function postulantes()
     {
         return $this->belongsToMany(Postulante::class, 'postulante_grupo', 'grupo_id', 'postulante_id')
+                    ->withPivot('nro_asiento')
                     ->withTimestamps();
     }
 

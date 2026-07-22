@@ -29,7 +29,7 @@
     <div class="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs flex items-center gap-2">
         <div x-data="voiceSearchWidget($wire)" class="relative flex items-center gap-2 grow">
             <div 
-                x-show="isListening && currentTranscript" 
+                x-show="isListening || currentTranscript" 
                 x-cloak
                 class="absolute -top-14 left-1/2 -translate-x-1/2 bg-rose-600 dark:bg-rose-700 text-white text-xs font-bold px-4 py-2.5 rounded-2xl shadow-xl flex items-center gap-2 border border-rose-500 whitespace-nowrap z-50 animate-bounce"
             >
@@ -94,9 +94,10 @@
                             </flux:table.cell>
                             <flux:table.cell class="text-center font-bold text-sm text-indigo-600 dark:text-indigo-400">
                                 {{ $aula->capacidad }} personas
-                            </flux:cell>
+                            </flux:table.cell>
                             <flux:table.cell class="text-right">
                                 <div class="flex justify-end gap-2">
+                                    <flux:button href="{{ route('admin.aulas.visualizador', ['aulaId' => $aula->id]) }}" size="sm" variant="ghost" icon="squares-plus" title="Ver Croquis 2D" />
                                     <flux:button wire:click="openEdit({{ $aula->id }})" size="sm" variant="ghost" icon="pencil-square" />
                                     <flux:button wire:click="delete({{ $aula->id }})" wire:confirm="¿Seguro que deseas eliminar esta aula? Los grupos asociados perderán su asignación física." size="sm" variant="ghost" icon="trash" class="text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30" />
                                 </div>
