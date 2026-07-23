@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Livewire\Admin\CargaLotes;
 use App\Models\Carrera;
 use App\Models\Gestion;
 use App\Models\Postulante;
@@ -17,8 +18,11 @@ class CargaLotesTest extends TestCase
     use RefreshDatabase;
 
     private User $admin;
+
     private Gestion $gestion;
+
     private Carrera $carreraSIS;
+
     private Carrera $carreraINF;
 
     protected function setUp(): void
@@ -50,7 +54,7 @@ class CargaLotesTest extends TestCase
     public function test_carga_lotes_requires_authorization()
     {
         $user = User::factory()->create();
-        
+
         $this->actingAs($user)
             ->get(route('admin.carga-lotes'))
             ->assertStatus(403);
@@ -69,7 +73,7 @@ class CargaLotesTest extends TestCase
 
         $file = UploadedFile::fake()->create('document.pdf', 100);
 
-        Livewire::test(\App\Livewire\Admin\CargaLotes::class)
+        Livewire::test(CargaLotes::class)
             ->set('file', $file)
             ->set('selectedGestionId', $this->gestion->id)
             ->call('procesar')
@@ -84,7 +88,7 @@ class CargaLotesTest extends TestCase
         $csvContent = "nombre,email,telefono,fecha_nacimiento,sexo\nCarlos Perez,carlos@test.com,700000,2005-01-01,M";
         $file = UploadedFile::fake()->createWithContent('postulantes.csv', $csvContent);
 
-        Livewire::test(\App\Livewire\Admin\CargaLotes::class)
+        Livewire::test(CargaLotes::class)
             ->set('file', $file)
             ->set('selectedGestionId', $this->gestion->id)
             ->call('procesar')
@@ -97,13 +101,13 @@ class CargaLotesTest extends TestCase
         $this->actingAs($this->admin);
 
         // Line 2 has invalid email and invalid career. Line 3 has missing CI.
-        $csvContent = "nombre,email,ci,telefono,fecha_nacimiento,sexo,direccion,colegio,ciudad,carrera_1ra,ci_vigente,titulo_bachiller,libreta_legalizada\n" .
-                      "Juan Perez,invalid-email,12345,78912,2005-08-15,M,Calle 1,Florida,SC,XYZ,1,1,1\n" .
-                      "Ana Gomez,ana@test.com,,78913,2006-01-20,F,Calle 2,Florida,SC,SIS,1,1,1";
-        
+        $csvContent = "nombre,email,ci,telefono,fecha_nacimiento,sexo,direccion,colegio,ciudad,carrera_1ra,ci_vigente,titulo_bachiller,libreta_legalizada\n".
+                      "Juan Perez,invalid-email,12345,78912,2005-08-15,M,Calle 1,Florida,SC,XYZ,1,1,1\n".
+                      'Ana Gomez,ana@test.com,,78913,2006-01-20,F,Calle 2,Florida,SC,SIS,1,1,1';
+
         $file = UploadedFile::fake()->createWithContent('postulantes.csv', $csvContent);
 
-        Livewire::test(\App\Livewire\Admin\CargaLotes::class)
+        Livewire::test(CargaLotes::class)
             ->set('file', $file)
             ->set('selectedGestionId', $this->gestion->id)
             ->call('procesar')
@@ -137,15 +141,15 @@ class CargaLotesTest extends TestCase
         $this->actingAs($this->admin);
 
         // CSV with duplicates against database and duplicates inside the file itself
-        $csvContent = "nombre,email,ci,telefono,fecha_nacimiento,sexo,direccion,colegio,ciudad,carrera_1ra,ci_vigente,titulo_bachiller,libreta_legalizada\n" .
-                      "Dup DB Email,existing@test.com,99999,78912,2005-08-15,M,Calle 1,Florida,SC,SIS,1,1,1\n" .
-                      "Dup DB CI,new@test.com,12345,78912,2005-08-15,M,Calle 1,Florida,SC,SIS,1,1,1\n" .
-                      "Inner Dup,inner@test.com,88888,78912,2005-08-15,M,Calle 1,Florida,SC,SIS,1,1,1\n" .
-                      "Inner Dup2,inner@test.com,88888,78912,2005-08-15,M,Calle 1,Florida,SC,SIS,1,1,1";
-        
+        $csvContent = "nombre,email,ci,telefono,fecha_nacimiento,sexo,direccion,colegio,ciudad,carrera_1ra,ci_vigente,titulo_bachiller,libreta_legalizada\n".
+                      "Dup DB Email,existing@test.com,99999,78912,2005-08-15,M,Calle 1,Florida,SC,SIS,1,1,1\n".
+                      "Dup DB CI,new@test.com,12345,78912,2005-08-15,M,Calle 1,Florida,SC,SIS,1,1,1\n".
+                      "Inner Dup,inner@test.com,88888,78912,2005-08-15,M,Calle 1,Florida,SC,SIS,1,1,1\n".
+                      'Inner Dup2,inner@test.com,88888,78912,2005-08-15,M,Calle 1,Florida,SC,SIS,1,1,1';
+
         $file = UploadedFile::fake()->createWithContent('postulantes.csv', $csvContent);
 
-        Livewire::test(\App\Livewire\Admin\CargaLotes::class)
+        Livewire::test(CargaLotes::class)
             ->set('file', $file)
             ->set('selectedGestionId', $this->gestion->id)
             ->call('procesar')
@@ -160,13 +164,13 @@ class CargaLotesTest extends TestCase
     {
         $this->actingAs($this->admin);
 
-        $csvContent = "nombre,email,ci,telefono,fecha_nacimiento,sexo,direccion,colegio,ciudad,carrera_1ra,carrera_2da,ci_vigente,titulo_bachiller,libreta_legalizada\n" .
-                      "Carlos Perez,carlosperez@cup.edu.bo,111222,78912345,2005-08-15,M,Av. Busch #456,Colegio Florida,Santa Cruz,SIS,INF,1,1,1\n" .
-                      "Ana Gomez,anagomez@cup.edu.bo,333444,78912346,2006-01-20,F,Calle Florida #45,Colegio Adventista,Santa Cruz,INF,,1,0,1";
+        $csvContent = "nombre,email,ci,telefono,fecha_nacimiento,sexo,direccion,colegio,ciudad,carrera_1ra,carrera_2da,ci_vigente,titulo_bachiller,libreta_legalizada\n".
+                      "Carlos Perez,carlosperez@cup.edu.bo,111222,78912345,2005-08-15,M,Av. Busch #456,Colegio Florida,Santa Cruz,SIS,INF,1,1,1\n".
+                      'Ana Gomez,anagomez@cup.edu.bo,333444,78912346,2006-01-20,F,Calle Florida #45,Colegio Adventista,Santa Cruz,INF,,1,0,1';
 
         $file = UploadedFile::fake()->createWithContent('postulantes.csv', $csvContent);
 
-        Livewire::test(\App\Livewire\Admin\CargaLotes::class)
+        Livewire::test(CargaLotes::class)
             ->set('file', $file)
             ->set('selectedGestionId', $this->gestion->id)
             ->call('procesar')
@@ -184,9 +188,9 @@ class CargaLotesTest extends TestCase
         $this->assertEquals('111222', $postCarlos->ci);
         $this->assertEquals($this->carreraSIS->id, $postCarlos->carrera_primera_opcion_id);
         $this->assertEquals($this->carreraINF->id, $postCarlos->carrera_segunda_opcion_id);
-        $this->assertTrue((bool)$postCarlos->ci_vigente);
-        $this->assertTrue((bool)$postCarlos->titulo_bachiller);
-        $this->assertTrue((bool)$postCarlos->libreta_legalizada);
+        $this->assertTrue((bool) $postCarlos->ci_vigente);
+        $this->assertTrue((bool) $postCarlos->titulo_bachiller);
+        $this->assertTrue((bool) $postCarlos->libreta_legalizada);
 
         // Verify Ana Gomez
         $userAna = User::where('email', 'anagomez@cup.edu.bo')->first();
@@ -197,7 +201,7 @@ class CargaLotesTest extends TestCase
         $this->assertEquals('333444', $postAna->ci);
         $this->assertEquals($this->carreraINF->id, $postAna->carrera_primera_opcion_id);
         $this->assertNull($postAna->carrera_segunda_opcion_id);
-        $this->assertTrue((bool)$postAna->ci_vigente);
-        $this->assertFalse((bool)$postAna->titulo_bachiller);
+        $this->assertTrue((bool) $postAna->ci_vigente);
+        $this->assertFalse((bool) $postAna->titulo_bachiller);
     }
 }

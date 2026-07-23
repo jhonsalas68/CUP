@@ -6,7 +6,7 @@ $passwords = ['postgres', 'root', 'admin', 'admin123', '123456', '1234', 'salas'
 foreach ($hosts as $host) {
     foreach ($passwords as $pwd) {
         try {
-            $conn = new PDO("pgsql:host=$host;port=5432;dbname=postgres", "postgres", $pwd);
+            $conn = new PDO("pgsql:host=$host;port=5432;dbname=postgres", 'postgres', $pwd);
             echo "SUCCESS: connected to '$host' as 'postgres' with password '$pwd'\n";
             exit;
         } catch (Exception $e) {

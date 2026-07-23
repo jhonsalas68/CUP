@@ -4,27 +4,31 @@ namespace App\Livewire\Admin;
 
 use App\Models\Aula;
 use App\Models\Grupo;
-use App\Models\Postulante;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 
 class VisualizadorAula extends Component
 {
     public $aula;
+
     public $grupos = [];
+
     public $selectedGrupoId = null;
+
     public $distributionCriteria = 'alfabetico_asc';
 
     public $cols = 6;
+
     public $rows = 5;
 
     // We will pass these arrays to the view
     public $seatingMap = [];
+
     public $unassignedStudents = [];
 
     public function mount($aulaId)
     {
-        if (!auth()->user()->hasAnyRole(['Administrador', 'Coordinador'])) {
+        if (! auth()->user()->hasAnyRole(['Administrador', 'Coordinador'])) {
             abort(403, 'No autorizado.');
         }
 
@@ -49,9 +53,10 @@ class VisualizadorAula extends Component
 
     public function cargarDatos()
     {
-        if (!$this->selectedGrupoId) {
+        if (! $this->selectedGrupoId) {
             $this->seatingMap = [];
             $this->unassignedStudents = [];
+
             return;
         }
 
@@ -59,7 +64,7 @@ class VisualizadorAula extends Component
 
         // Grid calculation: standard 6 columns (very readable)
         $this->cols = 6;
-        $this->rows = (int)ceil($this->aula->capacidad / $this->cols);
+        $this->rows = (int) ceil($this->aula->capacidad / $this->cols);
 
         // Initialize empty seating map
         $this->seatingMap = [];
@@ -103,15 +108,20 @@ class VisualizadorAula extends Component
                 $count++;
             }
         }
+
         return $initials ?: 'P';
     }
 
     public function assignSeat($studentId, $seatNumber)
     {
-        if (!$this->selectedGrupoId) return;
+        if (! $this->selectedGrupoId) {
+            return;
+        }
 
-        $seatNumber = (int)$seatNumber;
-        if ($seatNumber < 1 || $seatNumber > $this->aula->capacidad) return;
+        $seatNumber = (int) $seatNumber;
+        if ($seatNumber < 1 || $seatNumber > $this->aula->capacidad) {
+            return;
+        }
 
         $grupo = Grupo::with(['postulantes'])->findOrFail($this->selectedGrupoId);
 
@@ -122,7 +132,9 @@ class VisualizadorAula extends Component
 
         // Check if the dragged student was already seated somewhere else
         $draggedStudent = $grupo->postulantes()->find($studentId);
-        if (!$draggedStudent) return;
+        if (! $draggedStudent) {
+            return;
+        }
         $oldSeat = $draggedStudent->pivot->nro_asiento;
 
         if ($occupiedBy) {
@@ -146,7 +158,9 @@ class VisualizadorAula extends Component
 
     public function unassignSeat($studentId)
     {
-        if (!$this->selectedGrupoId) return;
+        if (! $this->selectedGrupoId) {
+            return;
+        }
 
         $grupo = Grupo::findOrFail($this->selectedGrupoId);
         $grupo->postulantes()->updateExistingPivot($studentId, ['nro_asiento' => null]);
@@ -156,7 +170,9 @@ class VisualizadorAula extends Component
 
     public function autoAssignRemaining()
     {
-        if (!$this->selectedGrupoId) return;
+        if (! $this->selectedGrupoId) {
+            return;
+        }
 
         $grupo = Grupo::with(['postulantes'])->findOrFail($this->selectedGrupoId);
 
@@ -174,6 +190,7 @@ class VisualizadorAula extends Component
 
         if (empty($unassigned)) {
             session()->flash('message', 'No hay estudiantes pendientes de asignación.');
+
             return;
         }
 
@@ -188,6 +205,7 @@ class VisualizadorAula extends Component
                 usort($unassigned, function ($a, $b) {
                     $gradeA = $a->nota_final ?? 0;
                     $gradeB = $b->nota_final ?? 0;
+
                     return $gradeB <=> $gradeA; // Descending
                 });
                 break;
@@ -195,6 +213,7 @@ class VisualizadorAula extends Component
                 usort($unassigned, function ($a, $b) {
                     $gradeA = $a->nota_final ?? 0;
                     $gradeB = $b->nota_final ?? 0;
+
                     return $gradeA <=> $gradeB; // Ascending
                 });
                 break;
@@ -214,11 +233,13 @@ class VisualizadorAula extends Component
             $totalUnassigned = count($unassigned);
 
             for ($i = 1; $i <= $this->aula->capacidad; $i++) {
-                if ($unassignedIndex >= $totalUnassigned) break;
+                if ($unassignedIndex >= $totalUnassigned) {
+                    break;
+                }
 
-                if (!isset($occupiedSeats[$i])) {
+                if (! isset($occupiedSeats[$i])) {
                     $student = $unassigned[$unassignedIndex];
-                    
+
                     DB::table('postulante_grupo')
                         ->where('grupo_id', $grupo->id)
                         ->where('postulante_id', $student->id)
@@ -235,7 +256,9 @@ class VisualizadorAula extends Component
 
     public function clearAllAssignments()
     {
-        if (!$this->selectedGrupoId) return;
+        if (! $this->selectedGrupoId) {
+            return;
+        }
 
         $grupo = Grupo::findOrFail($this->selectedGrupoId);
 
@@ -250,12 +273,12 @@ class VisualizadorAula extends Component
 
     public function render()
     {
-        $grupo = $this->selectedGrupoId 
-            ? Grupo::find($this->selectedGrupoId) 
+        $grupo = $this->selectedGrupoId
+            ? Grupo::find($this->selectedGrupoId)
             : null;
 
         return view('livewire.admin.visualizador-aula', [
-            'grupo' => $grupo
+            'grupo' => $grupo,
         ])->layout('layouts.admin', ['title' => 'Visualizador de Aula 2D']);
     }
 }

@@ -2,17 +2,22 @@
 
 namespace App\Livewire;
 
+use App\Models\Asistencia;
 use App\Models\Carrera;
+use App\Models\ControlTema;
 use App\Models\Docente;
 use App\Models\Examen;
 use App\Models\Gestion;
 use App\Models\Grupo;
 use App\Models\Nota;
+use App\Models\Notificacion;
 use App\Models\Postulante;
+use App\Models\ReclamoNota;
+use App\Services\AdmissionSelectionService;
 use App\Services\ExamService;
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 use Livewire\WithFileUploads;
-use Illuminate\Support\Facades\DB;
 
 class DashboardPortal extends Component
 {
@@ -20,26 +25,41 @@ class DashboardPortal extends Component
 
     // Common
     public $role = '';
-    
+
     // Postulante Profile Registration Form
     public $ci = '';
+
     public $telefono = '';
+
     public $fecha_nacimiento = '';
+
     public $sexo = '';
+
     public $direccion = '';
+
     public $colegio_procedencia = '';
+
     public $ciudad = '';
+
     public $carrera_primera_opcion_id = '';
+
     public $carrera_segunda_opcion_id = '';
+
     public $carrerasDisponibles = [];
+
     public $selectedGroups = []; // [materia_id => grupo_id]
 
     // Docente Grading Form
     public $selectedGrupoId = null;
+
     public $selectedExamenTipo = 'Primer Parcial'; // 'Primer Parcial', 'Segundo Parcial', 'Examen Final'
+
     public $gradesInput = []; // [postulante_id => score]
+
     public $fechaExamen = '';
+
     public $successMessage = '';
+
     public $errorMessage = '';
 
     // What-If / Portal Tab Controls
@@ -47,36 +67,48 @@ class DashboardPortal extends Component
 
     // Grade Appeals Properties
     public $showAppealModal = false;
+
     public $appealExamenId = null;
+
     public $appealExamenNombre = '';
+
     public $appealMateriaNombre = '';
+
     public $appealNotaAnterior = 0;
+
     public $appealDescripcion = '';
+
     public $appealArchivo = null;
 
     // Docente Resolve Appeal Properties
     public $selectedAppealId = null;
+
     public $appealStatus = 'aceptado'; // 'aceptado' or 'rechazado'
+
     public $appealResponseComment = '';
+
     public $appealNewGrade = '';
 
     // Attendance Properties
     public $attendanceDate = '';
+
     public $attendanceInput = []; // [postulante_id => 'presente'|'falta'|'licencia']
 
     // Control Temas Properties
     public $topicDate = '';
+
     public $topicTema = '';
+
     public $topicDescripcion = '';
 
     public function mount()
     {
         $user = auth()->user();
-        
+
         if ($user->hasRole('Postulante')) {
             $this->role = 'Postulante';
             $this->carrerasDisponibles = Carrera::orderBy('nombre')->get();
-            
+
             // Pre-fill form if profile already exists but we want to know
             $postulante = $user->postulante;
             if ($postulante) {
@@ -106,7 +138,7 @@ class DashboardPortal extends Component
     public function registerPostulante()
     {
         $user = auth()->user();
-        
+
         $this->validate([
             'ci' => 'required|string|max:20',
             'telefono' => 'required|string|max:20',
@@ -122,8 +154,9 @@ class DashboardPortal extends Component
         ]);
 
         $activeGestion = Gestion::where('activo', true)->first();
-        if (!$activeGestion) {
+        if (! $activeGestion) {
             $this->errorMessage = 'No hay una gestión académica activa en este momento para el registro.';
+
             return;
         }
 
@@ -135,6 +168,7 @@ class DashboardPortal extends Component
 
         if ($ciExists) {
             $this->errorMessage = 'El documento de identidad (CI) ingresado ya está registrado para otro postulante en esta gestión.';
+
             return;
         }
 
@@ -168,34 +202,39 @@ class DashboardPortal extends Component
     {
         $user = auth()->user();
         $postulante = $user->postulante;
-        
-        if (!$postulante) {
+
+        if (! $postulante) {
             $this->errorMessage = 'No tienes perfil de postulante.';
+
             return;
         }
-        
-        if (!$postulante->pago_realizado) {
+
+        if (! $postulante->pago_realizado) {
             $this->errorMessage = 'Debes pagar tu inscripción para poder inscribirte a las materias.';
+
             return;
         }
-        
-        if (!$postulante->habilitado) {
+
+        if (! $postulante->habilitado) {
             $this->errorMessage = 'Tu perfil debe ser habilitado por el administrador.';
+
             return;
         }
 
         $activeGestion = Gestion::where('activo', true)->first();
-        if (!$activeGestion) {
+        if (! $activeGestion) {
             $this->errorMessage = 'No hay una gestión activa en este momento.';
+
             return;
         }
 
         // Fetch career materias
         $carrera = Carrera::with('materias')->find($postulante->carrera_primera_opcion_id);
         $materias = $carrera ? $carrera->materias : collect();
-        
+
         if ($materias->isEmpty()) {
             $this->errorMessage = 'No hay materias configuradas para tu carrera.';
+
             return;
         }
 
@@ -203,6 +242,7 @@ class DashboardPortal extends Component
         foreach ($materias as $materia) {
             if (empty($this->selectedGroups[$materia->id])) {
                 $this->errorMessage = "Por favor selecciona un grupo para la materia: {$materia->nombre}.";
+
                 return;
             }
         }
@@ -215,8 +255,9 @@ class DashboardPortal extends Component
                 ->where('gestion_id', $activeGestion->id)
                 ->find($grupoId);
 
-            if (!$grupo) {
+            if (! $grupo) {
                 $this->errorMessage = "El grupo seleccionado para la materia {$materia->nombre} no es válido.";
+
                 return;
             }
 
@@ -224,6 +265,7 @@ class DashboardPortal extends Component
             $currentCount = $grupo->postulantes()->count();
             if ($currentCount >= $grupo->cupo_maximo) {
                 $this->errorMessage = "El grupo {$grupo->nombre} de la materia {$materia->nombre} ya no tiene cupos disponibles.";
+
                 return;
             }
 
@@ -264,10 +306,14 @@ class DashboardPortal extends Component
      */
     public function loadGrades()
     {
-        if (!$this->selectedGrupoId) return;
+        if (! $this->selectedGrupoId) {
+            return;
+        }
 
         $grupo = Grupo::with(['materia', 'postulantes'])->find($this->selectedGrupoId);
-        if (!$grupo) return;
+        if (! $grupo) {
+            return;
+        }
 
         // Find or create exam for this group, subject, active gestion
         $examen = Examen::where('materia_id', $grupo->materia_id)
@@ -300,10 +346,14 @@ class DashboardPortal extends Component
         $this->successMessage = '';
         $this->errorMessage = '';
 
-        if (!$this->selectedGrupoId) return;
+        if (! $this->selectedGrupoId) {
+            return;
+        }
 
         $grupo = Grupo::find($this->selectedGrupoId);
-        if (!$grupo) return;
+        if (! $grupo) {
+            return;
+        }
 
         // Validate all grades are correct format
         $gradesToRegister = [];
@@ -311,15 +361,17 @@ class DashboardPortal extends Component
             if ($score === '' || $score === null) {
                 continue;
             }
-            if (!is_numeric($score) || $score < 0 || $score > 100) {
+            if (! is_numeric($score) || $score < 0 || $score > 100) {
                 $this->errorMessage = 'Todas las notas deben ser valores numéricos entre 0.00 y 100.00.';
+
                 return;
             }
-            $gradesToRegister[$studentId] = (float)$score;
+            $gradesToRegister[$studentId] = (float) $score;
         }
 
         if (empty($gradesToRegister)) {
             $this->errorMessage = 'No has ingresado ninguna nota válida para guardar.';
+
             return;
         }
 
@@ -331,7 +383,7 @@ class DashboardPortal extends Component
                     ->where('nombre', $this->selectedExamenTipo)
                     ->first();
 
-                if (!$examen) {
+                if (! $examen) {
                     $examen = $examService->createExam(
                         $grupo->materia_id,
                         $grupo->gestion_id,
@@ -346,11 +398,9 @@ class DashboardPortal extends Component
             $this->successMessage = '¡Notas guardadas y promedios recalculados con éxito!';
             $this->loadGrades();
         } catch (\Exception $e) {
-            $this->errorMessage = 'Error al registrar notas: ' . $e->getMessage();
+            $this->errorMessage = 'Error al registrar notas: '.$e->getMessage();
         }
     }
-
-
 
     /**
      * Changes active tab and loads corresponding data
@@ -376,12 +426,12 @@ class DashboardPortal extends Component
     {
         $this->resetValidation();
         $this->reset(['appealDescripcion', 'appealArchivo']);
-        
+
         $this->appealExamenId = $examenId;
         $this->appealExamenNombre = $examenNombre;
         $this->appealMateriaNombre = $materiaNombre;
         $this->appealNotaAnterior = $nota;
-        
+
         $this->showAppealModal = true;
     }
 
@@ -401,20 +451,22 @@ class DashboardPortal extends Component
         ]);
 
         $postulante = auth()->user()->postulante;
-        if (!$postulante) return;
+        if (! $postulante) {
+            return;
+        }
 
         $filePath = null;
         if ($this->appealArchivo) {
             $filePath = $this->appealArchivo->store('apelaciones', 'public');
         }
 
-        $examen = \App\Models\Examen::findOrFail($this->appealExamenId);
+        $examen = Examen::findOrFail($this->appealExamenId);
 
         // Find primary teacher of the group
         $grupo = $postulante->grupos()->where('materia_id', $examen->materia_id)->first();
         $docenteId = $grupo?->docentes()->first()?->id;
 
-        $reclamo = \App\Models\ReclamoNota::create([
+        $reclamo = ReclamoNota::create([
             'postulante_id' => $postulante->id,
             'examen_id' => $this->appealExamenId,
             'descripcion' => $this->appealDescripcion,
@@ -425,8 +477,8 @@ class DashboardPortal extends Component
         ]);
 
         // Send Notification to teacher
-        if ($docenteId && $docenteUser = \App\Models\Docente::find($docenteId)?->user) {
-            \App\Models\Notificacion::enviar(
+        if ($docenteId && $docenteUser = Docente::find($docenteId)?->user) {
+            Notificacion::enviar(
                 $docenteUser->id,
                 'Nuevo Reclamo de Nota',
                 "El estudiante '{$postulante->nombres_apellidos}' ha presentado una solicitud de revisión sobre el '{$this->appealExamenNombre}' de '{$this->appealMateriaNombre}'."
@@ -442,16 +494,20 @@ class DashboardPortal extends Component
      */
     public function loadAttendance()
     {
-        if (!$this->selectedGrupoId) return;
+        if (! $this->selectedGrupoId) {
+            return;
+        }
 
-        if (!$this->attendanceDate) {
+        if (! $this->attendanceDate) {
             $this->attendanceDate = today()->format('Y-m-d');
         }
 
         $grupo = Grupo::with('postulantes')->find($this->selectedGrupoId);
-        if (!$grupo) return;
+        if (! $grupo) {
+            return;
+        }
 
-        $existingAsistencias = \App\Models\Asistencia::where('grupo_id', $this->selectedGrupoId)
+        $existingAsistencias = Asistencia::where('grupo_id', $this->selectedGrupoId)
             ->where('fecha', $this->attendanceDate)
             ->pluck('estado', 'postulante_id')
             ->toArray();
@@ -467,7 +523,9 @@ class DashboardPortal extends Component
      */
     public function saveAttendance()
     {
-        if (!$this->selectedGrupoId) return;
+        if (! $this->selectedGrupoId) {
+            return;
+        }
 
         $this->validate([
             'attendanceDate' => 'required|date',
@@ -477,7 +535,7 @@ class DashboardPortal extends Component
         try {
             DB::transaction(function () {
                 foreach ($this->attendanceInput as $alumnoId => $estado) {
-                    \App\Models\Asistencia::updateOrCreate(
+                    Asistencia::updateOrCreate(
                         [
                             'grupo_id' => $this->selectedGrupoId,
                             'postulante_id' => $alumnoId,
@@ -492,7 +550,7 @@ class DashboardPortal extends Component
 
             $this->successMessage = '¡Control de asistencia guardado correctamente!';
         } catch (\Exception $e) {
-            $this->errorMessage = 'Error al guardar asistencia: ' . $e->getMessage();
+            $this->errorMessage = 'Error al guardar asistencia: '.$e->getMessage();
         }
     }
 
@@ -501,7 +559,9 @@ class DashboardPortal extends Component
      */
     public function saveTopic()
     {
-        if (!$this->selectedGrupoId) return;
+        if (! $this->selectedGrupoId) {
+            return;
+        }
 
         $this->validate([
             'topicDate' => 'required|date',
@@ -513,7 +573,7 @@ class DashboardPortal extends Component
         ]);
 
         try {
-            \App\Models\ControlTema::updateOrCreate(
+            ControlTema::updateOrCreate(
                 [
                     'grupo_id' => $this->selectedGrupoId,
                     'fecha' => $this->topicDate,
@@ -527,7 +587,7 @@ class DashboardPortal extends Component
             $this->successMessage = '¡Avance de materia y control de temas guardado con éxito!';
             $this->reset(['topicTema', 'topicDescripcion']);
         } catch (\Exception $e) {
-            $this->errorMessage = 'Error al registrar tema: ' . $e->getMessage();
+            $this->errorMessage = 'Error al registrar tema: '.$e->getMessage();
         }
     }
 
@@ -536,7 +596,7 @@ class DashboardPortal extends Component
      */
     public function loadAppealToResolve($appealId)
     {
-        $appeal = \App\Models\ReclamoNota::with(['postulante', 'examen.materia'])->findOrFail($appealId);
+        $appeal = ReclamoNota::with(['postulante', 'examen.materia'])->findOrFail($appealId);
         $this->selectedAppealId = $appeal->id;
         $this->appealStatus = 'aceptado';
         $this->appealResponseComment = '';
@@ -557,12 +617,12 @@ class DashboardPortal extends Component
             'appealNewGrade.required_if' => 'Debes ingresar la nueva calificación para el caso aprobado.',
         ]);
 
-        $appeal = \App\Models\ReclamoNota::with(['postulante', 'examen.materia'])->findOrFail($this->selectedAppealId);
+        $appeal = ReclamoNota::with(['postulante', 'examen.materia'])->findOrFail($this->selectedAppealId);
 
         try {
             DB::transaction(function () use ($appeal) {
                 $status = $this->appealStatus;
-                $newGrade = $status === 'aceptado' ? (float)$this->appealNewGrade : null;
+                $newGrade = $status === 'aceptado' ? (float) $this->appealNewGrade : null;
 
                 $appeal->update([
                     'estado' => $status,
@@ -572,7 +632,7 @@ class DashboardPortal extends Component
 
                 if ($status === 'aceptado') {
                     // Update/Create original grade
-                    \App\Models\Nota::updateOrCreate(
+                    Nota::updateOrCreate(
                         [
                             'postulante_id' => $appeal->postulante_id,
                             'examen_id' => $appeal->examen_id,
@@ -588,11 +648,11 @@ class DashboardPortal extends Component
                 }
 
                 // Send notification to student
-                $msg = $status === 'aceptado' 
+                $msg = $status === 'aceptado'
                     ? "Tu solicitud de revisión sobre el '{$appeal->examen->nombre}' de '{$appeal->examen->materia->nombre}' fue ACEPTADA. Nueva nota: {$newGrade}."
                     : "Tu solicitud de revisión sobre el '{$appeal->examen->nombre}' de '{$appeal->examen->materia->nombre}' fue RECHAZADA. Observación: {$this->appealResponseComment}.";
 
-                \App\Models\Notificacion::enviar(
+                Notificacion::enviar(
                     $appeal->postulante->user_id,
                     'Resultado de Revisión de Nota',
                     $msg
@@ -603,7 +663,7 @@ class DashboardPortal extends Component
             $this->selectedAppealId = null;
             $this->loadGrades();
         } catch (\Exception $e) {
-            $this->errorMessage = 'Error al resolver el reclamo: ' . $e->getMessage();
+            $this->errorMessage = 'Error al resolver el reclamo: '.$e->getMessage();
         }
     }
 
@@ -612,16 +672,16 @@ class DashboardPortal extends Component
      */
     private function recalculateStudentAverage($postulante)
     {
-        $service = new \App\Services\AdmissionSelectionService();
+        $service = new AdmissionSelectionService;
         $eval = $service->evaluatePostulante($postulante, $postulante->gestion_id);
-        
+
         $postulante->update([
             'nota_final' => $eval['nota_final'],
         ]);
 
         if (in_array($postulante->estado_admision, ['reprobado', 'pendiente', 'no_admitido'])) {
             $postulante->update([
-                'estado_admision' => $eval['reprobado'] ? 'reprobado' : ($eval['has_pending_exams'] ? 'pendiente' : 'pendiente')
+                'estado_admision' => $eval['reprobado'] ? 'reprobado' : ($eval['has_pending_exams'] ? 'pendiente' : 'pendiente'),
             ]);
         }
     }
@@ -631,7 +691,7 @@ class DashboardPortal extends Component
      */
     public function markNotificationRead($id)
     {
-        $notif = \App\Models\Notificacion::where('user_id', auth()->id())->findOrFail($id);
+        $notif = Notificacion::where('user_id', auth()->id())->findOrFail($id);
         $notif->update(['leido' => true]);
     }
 
@@ -647,7 +707,7 @@ class DashboardPortal extends Component
         $isEnrolled = false;
 
         // Load Notifications for active user
-        $notifications = \App\Models\Notificacion::where('user_id', $user->id)
+        $notifications = Notificacion::where('user_id', $user->id)
             ->orderBy('created_at', 'desc')
             ->take(20)
             ->get();
@@ -657,11 +717,11 @@ class DashboardPortal extends Component
             if ($postulante) {
                 $assignedGroups = $postulante->grupos()->with(['materia', 'docentes.user', 'horarios'])->get();
                 $isEnrolled = $assignedGroups->isNotEmpty();
-                
+
                 $carrera = Carrera::with('materias')->find($postulante->carrera_primera_opcion_id);
                 $materias = $carrera ? $carrera->materias : collect();
-                
-                if (!$isEnrolled && $postulante->pago_realizado && $postulante->habilitado) {
+
+                if (! $isEnrolled && $postulante->pago_realizado && $postulante->habilitado) {
                     $activeGestion = Gestion::where('activo', true)->first();
                     foreach ($materias as $materia) {
                         $groups = Grupo::where('materia_id', $materia->id)
@@ -670,11 +730,12 @@ class DashboardPortal extends Component
                             ->get()
                             ->map(function ($grupo) {
                                 $grupo->current_postulantes_count = $grupo->postulantes()->count();
+
                                 return $grupo;
                             });
                         $availableGroupsByMateria[$materia->id] = [
                             'materia' => $materia,
-                            'groups' => $groups
+                            'groups' => $groups,
                         ];
                     }
                 }
@@ -692,13 +753,13 @@ class DashboardPortal extends Component
                     ->keyBy('examen_id');
 
                 // Load student appeals
-                $appeals = \App\Models\ReclamoNota::where('postulante_id', $postulante->id)
+                $appeals = ReclamoNota::where('postulante_id', $postulante->id)
                     ->with(['examen.materia'])
                     ->orderBy('created_at', 'desc')
                     ->get();
 
                 // Load attendance records
-                $asistencias = \App\Models\Asistencia::where('postulante_id', $postulante->id)
+                $asistencias = Asistencia::where('postulante_id', $postulante->id)
                     ->with('grupo.materia')
                     ->orderBy('fecha', 'desc')
                     ->get();
@@ -744,7 +805,7 @@ class DashboardPortal extends Component
                     foreach (['Primer Parcial' => 'primer_parcial', 'Segundo Parcial' => 'segundo_parcial', 'Examen Final' => 'examen_final'] as $examName => $key) {
                         if (isset($materiaExamenes[$examName])) {
                             $exam = $materiaExamenes[$examName];
-                            $row[$key . '_id'] = $exam->id;
+                            $row[$key.'_id'] = $exam->id;
                             $notaObj = $notas->get($exam->id);
                             if ($notaObj) {
                                 $row[$key] = $notaObj->puntaje;
@@ -769,15 +830,15 @@ class DashboardPortal extends Component
             $docente = $user->docente;
             if ($docente) {
                 $assignedGroups = $docente->grupos()->with(['materia', 'postulantes'])->get();
-                
+
                 // Load appeals for teacher's groups
-                $appeals = \App\Models\ReclamoNota::where('docente_id', $docente->id)
+                $appeals = ReclamoNota::where('docente_id', $docente->id)
                     ->with(['postulante', 'examen.materia'])
                     ->orderBy('created_at', 'desc')
                     ->get();
 
                 // Load topic controls
-                $controlTemas = \App\Models\ControlTema::whereIn('grupo_id', $assignedGroups->pluck('id'))
+                $controlTemas = ControlTema::whereIn('grupo_id', $assignedGroups->pluck('id'))
                     ->orderBy('fecha', 'desc')
                     ->get();
             }

@@ -6,6 +6,7 @@ use App\Models\Carrera;
 use App\Models\Gestion;
 use App\Models\Postulante;
 use App\Models\User;
+use App\Services\ExamService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Component;
@@ -16,15 +17,20 @@ class CargaLotes extends Component
     use WithFileUploads;
 
     public $file;
+
     public $selectedGestionId = '';
+
     public $gestiones = [];
+
     public $errorsList = [];
+
     public $successCount = 0;
+
     public $isProcessed = false;
 
     public function mount()
     {
-        if (!auth()->user()->hasAnyRole(['Administrador', 'Coordinador'])) {
+        if (! auth()->user()->hasAnyRole(['Administrador', 'Coordinador'])) {
             abort(403, 'No autorizado.');
         }
 
@@ -49,7 +55,7 @@ class CargaLotes extends Component
             'carrera_2da',
             'ci_vigente',
             'titulo_bachiller',
-            'libreta_legalizada'
+            'libreta_legalizada',
         ];
 
         $sampleRow = [
@@ -66,15 +72,15 @@ class CargaLotes extends Component
             'INF',
             '1',
             '1',
-            '1'
+            '1',
         ];
 
         return response()->streamDownload(function () use ($headers, $sampleRow) {
             $handle = fopen('php://output', 'w');
-            
+
             // UTF-8 BOM to open correctly in Excel
             fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
-            
+
             fputcsv($handle, $headers);
             fputcsv($handle, $sampleRow);
             fclose($handle);
@@ -99,24 +105,27 @@ class CargaLotes extends Component
         ]);
 
         $filePath = $this->file->getRealPath();
-        
+
         // Open file
         if (($handle = fopen($filePath, 'r')) === false) {
             $this->addError('file', 'No se pudo abrir el archivo subido.');
+
             return;
         }
 
         // 2. Read headers
-        $firstRow = fgetcsv($handle, 10000, ",");
-        if (!$firstRow) {
+        $firstRow = fgetcsv($handle, 10000, ',');
+        if (! $firstRow) {
             $this->addError('file', 'El archivo CSV está vacío.');
             fclose($handle);
+
             return;
         }
 
         // Clean headers: lowercase and remove accents/BOM
         $headers = array_map(function ($h) {
             $h = preg_replace('/[\x{FEFF}\x{200B}]/u', '', $h); // remove BOM
+
             return trim(mb_strtolower($h, 'UTF-8'));
         }, $firstRow);
 
@@ -161,23 +170,24 @@ class CargaLotes extends Component
             }
         }
 
-        if (!empty($missing)) {
-            $this->addError('file', 'Faltan columnas obligatorias en la cabecera del CSV: ' . implode(', ', $missing));
+        if (! empty($missing)) {
+            $this->addError('file', 'Faltan columnas obligatorias en la cabecera del CSV: '.implode(', ', $missing));
             fclose($handle);
+
             return;
         }
 
         // 3. Cache Database Queries in Memory (Optimized, no N+1)
         $carrerasMap = Carrera::pluck('id', 'sigla')
-            ->mapWithKeys(fn($id, $sigla) => [strtoupper(trim($sigla)) => $id])
+            ->mapWithKeys(fn ($id, $sigla) => [strtoupper(trim($sigla)) => $id])
             ->toArray();
 
         $existingEmails = User::pluck('email')
-            ->map(fn($e) => mb_strtolower(trim($e), 'UTF-8'))
+            ->map(fn ($e) => mb_strtolower(trim($e), 'UTF-8'))
             ->toArray();
 
         $existingCis = Postulante::pluck('ci')
-            ->map(fn($c) => trim($c))
+            ->map(fn ($c) => trim($c))
             ->toArray();
 
         $processedEmails = [];
@@ -186,9 +196,9 @@ class CargaLotes extends Component
         $lineNumber = 1; // header is 1
 
         // 4. Validate rows in memory first
-        while (($row = fgetcsv($handle, 10000, ",")) !== false) {
+        while (($row = fgetcsv($handle, 10000, ',')) !== false) {
             $lineNumber++;
-            
+
             // Skip empty rows
             if (empty($row) || count($row) < 5 || (count($row) === 1 && empty(trim($row[0])))) {
                 continue;
@@ -205,7 +215,7 @@ class CargaLotes extends Component
             $colegio = trim($row[$headerMap['colegio']] ?? '');
             $ciudad = trim($row[$headerMap['ciudad']] ?? '');
             $carrera_1ra_sigla = strtoupper(trim($row[$headerMap['carrera_1ra']] ?? ''));
-            
+
             $carrera_2da_sigla = '';
             if ($headerMap['carrera_2da'] !== -1) {
                 $carrera_2da_sigla = strtoupper(trim($row[$headerMap['carrera_2da']] ?? ''));
@@ -230,40 +240,40 @@ class CargaLotes extends Component
 
             // Fields validation
             if (empty($nombre)) {
-                $rowErrors[] = "El nombre es obligatorio.";
+                $rowErrors[] = 'El nombre es obligatorio.';
             }
             if (empty($email)) {
-                $rowErrors[] = "El correo electrónico es obligatorio.";
-            } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $rowErrors[] = 'El correo electrónico es obligatorio.';
+            } elseif (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $rowErrors[] = "El correo '{$email}' no tiene un formato válido.";
             }
             if (empty($ci)) {
-                $rowErrors[] = "El CI es obligatorio.";
+                $rowErrors[] = 'El CI es obligatorio.';
             }
             if (empty($telefono)) {
-                $rowErrors[] = "El teléfono es obligatorio.";
+                $rowErrors[] = 'El teléfono es obligatorio.';
             }
             if (empty($direccion)) {
-                $rowErrors[] = "La dirección es obligatoria.";
+                $rowErrors[] = 'La dirección es obligatoria.';
             }
             if (empty($colegio)) {
-                $rowErrors[] = "El colegio de procedencia es obligatorio.";
+                $rowErrors[] = 'El colegio de procedencia es obligatorio.';
             }
             if (empty($ciudad)) {
-                $rowErrors[] = "La ciudad es obligatoria.";
+                $rowErrors[] = 'La ciudad es obligatoria.';
             }
 
             // Sexo validation
-            if (!in_array($sexo, ['M', 'F'])) {
+            if (! in_array($sexo, ['M', 'F'])) {
                 $rowErrors[] = "El campo sexo debe ser 'M' o 'F' (se recibió '{$sexo}').";
             }
 
             // Birthdate validation
             if (empty($fecha_nacimiento)) {
-                $rowErrors[] = "La fecha de nacimiento es obligatoria.";
+                $rowErrors[] = 'La fecha de nacimiento es obligatoria.';
             } else {
                 $time = strtotime($fecha_nacimiento);
-                if (!$time) {
+                if (! $time) {
                     $rowErrors[] = "La fecha de nacimiento '{$fecha_nacimiento}' no es válida. Use formato AAAA-MM-DD.";
                 } else {
                     $fecha_nacimiento = date('Y-m-d', $time);
@@ -272,16 +282,16 @@ class CargaLotes extends Component
 
             // Careers validation
             if (empty($carrera_1ra_sigla)) {
-                $rowErrors[] = "La carrera de 1ra opción es obligatoria.";
-            } elseif (!isset($carrerasMap[$carrera_1ra_sigla])) {
+                $rowErrors[] = 'La carrera de 1ra opción es obligatoria.';
+            } elseif (! isset($carrerasMap[$carrera_1ra_sigla])) {
                 $rowErrors[] = "La carrera de 1ra opción con sigla '{$carrera_1ra_sigla}' no existe.";
             }
 
-            if (!empty($carrera_2da_sigla)) {
-                if (!isset($carrerasMap[$carrera_2da_sigla])) {
+            if (! empty($carrera_2da_sigla)) {
+                if (! isset($carrerasMap[$carrera_2da_sigla])) {
                     $rowErrors[] = "La carrera de 2da opción con sigla '{$carrera_2da_sigla}' no existe.";
                 } elseif ($carrera_1ra_sigla === $carrera_2da_sigla) {
-                    $rowErrors[] = "La carrera de 2da opción debe ser diferente a la de 1ra opción.";
+                    $rowErrors[] = 'La carrera de 2da opción debe ser diferente a la de 1ra opción.';
                 }
             }
 
@@ -307,8 +317,8 @@ class CargaLotes extends Component
             }
 
             // If there are errors in this line, record them and keep checking others
-            if (!empty($rowErrors)) {
-                $this->errorsList[] = "Línea {$lineNumber}: " . implode(' ', $rowErrors);
+            if (! empty($rowErrors)) {
+                $this->errorsList[] = "Línea {$lineNumber}: ".implode(' ', $rowErrors);
             } else {
                 $rowsToInsert[] = [
                     'name' => $nombre,
@@ -321,7 +331,7 @@ class CargaLotes extends Component
                     'colegio' => $colegio,
                     'ciudad' => $ciudad,
                     'carrera_primera_opcion_id' => $carrerasMap[$carrera_1ra_sigla],
-                    'carrera_segunda_opcion_id' => !empty($carrera_2da_sigla) ? $carrerasMap[$carrera_2da_sigla] : null,
+                    'carrera_segunda_opcion_id' => ! empty($carrera_2da_sigla) ? $carrerasMap[$carrera_2da_sigla] : null,
                     'ci_vigente' => $ci_vigente,
                     'titulo_bachiller' => $titulo_bachiller,
                     'libreta_legalizada' => $libreta_legalizada,
@@ -332,20 +342,22 @@ class CargaLotes extends Component
         fclose($handle);
 
         // 5. Transactional Execution
-        if (!empty($this->errorsList)) {
+        if (! empty($this->errorsList)) {
             // Cancel whole process if any row fails
             $this->isProcessed = true;
+
             return;
         }
 
         if (empty($rowsToInsert)) {
             $this->addError('file', 'No se encontraron registros válidos para importar.');
+
             return;
         }
 
         DB::beginTransaction();
         try {
-            $examService = new \App\Services\ExamService();
+            $examService = new ExamService;
 
             foreach ($rowsToInsert as $data) {
                 // Create User
@@ -388,7 +400,7 @@ class CargaLotes extends Component
 
         } catch (\Exception $e) {
             DB::rollBack();
-            $this->errorsList[] = "Error interno durante la inserción en base de datos: " . $e->getMessage();
+            $this->errorsList[] = 'Error interno durante la inserción en base de datos: '.$e->getMessage();
             $this->isProcessed = true;
         }
     }

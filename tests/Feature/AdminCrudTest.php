@@ -2,14 +2,22 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
-use App\Models\Docente;
-use App\Models\Postulante;
+use App\Livewire\Admin\Carreras;
+use App\Livewire\Admin\Docentes;
+use App\Livewire\Admin\Examenes;
+use App\Livewire\Admin\Materias;
+use App\Livewire\Admin\Postulantes;
+use App\Livewire\DashboardPortal;
 use App\Models\Carrera;
-use App\Models\Materia;
-use App\Models\Gestion;
+use App\Models\Docente;
 use App\Models\Examen;
+use App\Models\Gestion;
+use App\Models\Grupo;
+use App\Models\Materia;
 use App\Models\Nota;
+use App\Models\Postulante;
+use App\Models\User;
+use App\Services\ExamService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -20,14 +28,17 @@ class AdminCrudTest extends TestCase
     use RefreshDatabase;
 
     private User $admin;
+
     private Gestion $activeGestion;
+
     private Carrera $carrera;
+
     private Materia $materia;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Seed roles and permissions
         $this->seed(RolesAndPermissionsSeeder::class);
 
@@ -79,7 +90,7 @@ class AdminCrudTest extends TestCase
 
         $this->actingAs($this->admin);
 
-        Livewire::test(\App\Livewire\Admin\Docentes::class)
+        Livewire::test(Docentes::class)
             ->call('delete', $docente->id);
 
         $this->assertSoftDeleted('docentes', ['id' => $docente->id]);
@@ -94,7 +105,7 @@ class AdminCrudTest extends TestCase
         $this->actingAs($this->admin);
 
         // 1. Test Create
-        $livewire = Livewire::test(\App\Livewire\Admin\Postulantes::class)
+        $livewire = Livewire::test(Postulantes::class)
             ->call('openCreate')
             ->set('name', 'Postulante Test')
             ->set('email', 'postulante@test.com')
@@ -126,14 +137,14 @@ class AdminCrudTest extends TestCase
         $this->assertNotNull($postulante);
         $this->assertEquals('9876543', $postulante->ci);
         $this->assertEquals($this->carrera->id, $postulante->carrera_primera_opcion_id);
-        $this->assertTrue((bool)$postulante->ci_vigente);
-        $this->assertTrue((bool)$postulante->titulo_bachiller);
-        $this->assertTrue((bool)$postulante->libreta_legalizada);
-        $this->assertTrue((bool)$postulante->pago_realizado);
-        $this->assertTrue((bool)$postulante->pago_matricula_realizado);
+        $this->assertTrue((bool) $postulante->ci_vigente);
+        $this->assertTrue((bool) $postulante->titulo_bachiller);
+        $this->assertTrue((bool) $postulante->libreta_legalizada);
+        $this->assertTrue((bool) $postulante->pago_realizado);
+        $this->assertTrue((bool) $postulante->pago_matricula_realizado);
 
         // 2. Test Edit
-        Livewire::test(\App\Livewire\Admin\Postulantes::class)
+        Livewire::test(Postulantes::class)
             ->call('openEdit', $postulante->id)
             ->assertSet('name', 'Postulante Test')
             ->assertSet('email', 'postulante@test.com')
@@ -153,10 +164,10 @@ class AdminCrudTest extends TestCase
         $this->assertEquals('postulante_edit@test.com', $user->email);
 
         $postulante->refresh();
-        $this->assertFalse((bool)$postulante->pago_realizado);
+        $this->assertFalse((bool) $postulante->pago_realizado);
 
         // 3. Test Delete
-        Livewire::test(\App\Livewire\Admin\Postulantes::class)
+        Livewire::test(Postulantes::class)
             ->call('delete', $postulante->id);
 
         $this->assertSoftDeleted('postulantes', ['id' => $postulante->id]);
@@ -171,7 +182,7 @@ class AdminCrudTest extends TestCase
         $this->actingAs($this->admin);
 
         // 1. Test reactive weight defaulting based on exam name
-        Livewire::test(\App\Livewire\Admin\Examenes::class)
+        Livewire::test(Examenes::class)
             ->set('nombre', 'Primer Parcial')
             ->assertSet('ponderacion', 30)
             ->set('nombre', 'Segundo Parcial')
@@ -180,7 +191,7 @@ class AdminCrudTest extends TestCase
             ->assertSet('ponderacion', 40);
 
         // 2. Test constraint: Valid name input
-        Livewire::test(\App\Livewire\Admin\Examenes::class)
+        Livewire::test(Examenes::class)
             ->set('nombre', 'Parcial Invalido')
             ->set('materia_id', $this->materia->id)
             ->set('gestion_id', $this->activeGestion->id)
@@ -198,7 +209,7 @@ class AdminCrudTest extends TestCase
             'fecha' => '2026-03-01',
         ]);
 
-        Livewire::test(\App\Livewire\Admin\Examenes::class)
+        Livewire::test(Examenes::class)
             ->set('nombre', 'Primer Parcial')
             ->set('materia_id', $this->materia->id)
             ->set('gestion_id', $this->activeGestion->id)
@@ -210,7 +221,7 @@ class AdminCrudTest extends TestCase
         // 4. Test weight sum limit (> 100%)
         // Current: Primer Parcial (30%) is already registered.
         // Let's try to add a Segundo Parcial but with 80% (total = 110%)
-        Livewire::test(\App\Livewire\Admin\Examenes::class)
+        Livewire::test(Examenes::class)
             ->set('nombre', 'Segundo Parcial')
             ->set('materia_id', $this->materia->id)
             ->set('gestion_id', $this->activeGestion->id)
@@ -264,7 +275,7 @@ class AdminCrudTest extends TestCase
         Nota::create(['postulante_id' => $postulante->id, 'examen_id' => $exam2->id, 'puntaje' => 100.00]);
 
         // Trigger manual recalculate (missing Examen Final, so it should be pending with 60 points)
-        $examService = new \App\Services\ExamService();
+        $examService = new ExamService;
         $examService->recalculatePostulanteScore($postulante->id, $this->activeGestion->id);
 
         $postulante->refresh();
@@ -272,7 +283,7 @@ class AdminCrudTest extends TestCase
         $this->assertEquals('pendiente', $postulante->estado_admision);
 
         // 1. Create the final exam using the controller
-        Livewire::test(\App\Livewire\Admin\Examenes::class)
+        Livewire::test(Examenes::class)
             ->set('nombre', 'Examen Final')
             ->set('materia_id', $this->materia->id)
             ->set('gestion_id', $this->activeGestion->id)
@@ -289,7 +300,7 @@ class AdminCrudTest extends TestCase
         Nota::create(['postulante_id' => $postulante->id, 'examen_id' => $examFinal->id, 'puntaje' => 50.00]);
 
         // Trigger update weight of Examen Final to 40 via controller (recalculates automatically)
-        Livewire::test(\App\Livewire\Admin\Examenes::class)
+        Livewire::test(Examenes::class)
             ->call('openEdit', $examFinal->id)
             ->set('ponderacion', 40)
             ->call('save')
@@ -302,7 +313,7 @@ class AdminCrudTest extends TestCase
         $this->assertEquals('admitido_primera_opcion', $postulante->estado_admision);
 
         // 2. Delete the exam final via controller (recalculates automatically back to pending / 60 points)
-        Livewire::test(\App\Livewire\Admin\Examenes::class)
+        Livewire::test(Examenes::class)
             ->call('delete', $examFinal->id);
 
         $postulante->refresh();
@@ -330,57 +341,57 @@ class AdminCrudTest extends TestCase
         ]);
 
         // 1. Test Career systems command
-        Livewire::test(\App\Livewire\Admin\Postulantes::class)
+        Livewire::test(Postulantes::class)
             ->call('processVoiceCommand', 'mostrar postulantes de sistemas')
             ->assertSet('filterCarrera', $this->carrera->id);
 
         // 2. Test Career informatica command
-        Livewire::test(\App\Livewire\Admin\Postulantes::class)
+        Livewire::test(Postulantes::class)
             ->call('processVoiceCommand', 'filtrar por informatica')
             ->assertSet('filterCarrera', $carreraInf->id);
 
         // 3. Test Estado command
-        Livewire::test(\App\Livewire\Admin\Postulantes::class)
+        Livewire::test(Postulantes::class)
             ->call('processVoiceCommand', 'mostrar reprobados')
             ->assertSet('filterEstado', 'reprobado');
 
         // 4. Test Note filter command
-        Livewire::test(\App\Livewire\Admin\Postulantes::class)
+        Livewire::test(Postulantes::class)
             ->call('processVoiceCommand', 'nota mayor a 75')
             ->assertSet('filterNotaMin', '75');
 
         // Test optional "final" keyword and number word translation in note filter
-        Livewire::test(\App\Livewire\Admin\Postulantes::class)
+        Livewire::test(Postulantes::class)
             ->call('processVoiceCommand', 'nota final 50')
             ->assertSet('filterNotaMin', '50');
 
-        Livewire::test(\App\Livewire\Admin\Postulantes::class)
+        Livewire::test(Postulantes::class)
             ->call('processVoiceCommand', 'nota final cincuenta')
             ->assertSet('filterNotaMin', '50');
 
-        Livewire::test(\App\Livewire\Admin\Postulantes::class)
+        Livewire::test(Postulantes::class)
             ->call('processVoiceCommand', 'nota final mayor a cincuenta')
             ->assertSet('filterNotaMin', '50');
 
         // 5. Complex Case: second option admission for networks
-        Livewire::test(\App\Livewire\Admin\Postulantes::class)
+        Livewire::test(Postulantes::class)
             ->call('processVoiceCommand', 'admitidos en segunda opción de redes')
             ->assertSet('filterCarrera', $carreraRed->id)
             ->assertSet('filterEstado', 'admitido_segunda_opcion');
 
         // 6. Complex Case: search by full name
-        Livewire::test(\App\Livewire\Admin\Postulantes::class)
+        Livewire::test(Postulantes::class)
             ->call('processVoiceCommand', 'buscar juan perez')
             ->assertSet('search', 'juan perez');
 
         // 7. Complex Case: absent (no presentado) for systems
-        Livewire::test(\App\Livewire\Admin\Postulantes::class)
+        Livewire::test(Postulantes::class)
             ->call('processVoiceCommand', 'no presentados de sistemas')
             ->assertSet('filterCarrera', $this->carrera->id)
             ->assertSet('filterEstado', 'no_presentado');
 
         // 8. Test Clear command
-        Livewire::test(\App\Livewire\Admin\Postulantes::class)
+        Livewire::test(Postulantes::class)
             ->call('processVoiceCommand', 'limpiar filtros')
             ->assertSet('filterCarrera', '')
             ->assertSet('filterEstado', '')
@@ -396,17 +407,17 @@ class AdminCrudTest extends TestCase
         $this->actingAs($this->admin);
 
         // 1. Search name/sigla
-        Livewire::test(\App\Livewire\Admin\Carreras::class)
+        Livewire::test(Carreras::class)
             ->call('processVoiceCommand', 'buscar sistemas')
             ->assertSet('search', 'sistemas');
 
         // 2. Direct query without prefix
-        Livewire::test(\App\Livewire\Admin\Carreras::class)
+        Livewire::test(Carreras::class)
             ->call('processVoiceCommand', 'SIS')
             ->assertSet('search', 'sis');
 
         // 3. Clear filters
-        Livewire::test(\App\Livewire\Admin\Carreras::class)
+        Livewire::test(Carreras::class)
             ->call('processVoiceCommand', 'limpiar filtros')
             ->assertSet('search', '');
     }
@@ -424,22 +435,22 @@ class AdminCrudTest extends TestCase
         ]);
 
         // 1. Filter by Systems career
-        Livewire::test(\App\Livewire\Admin\Materias::class)
+        Livewire::test(Materias::class)
             ->call('processVoiceCommand', 'filtrar por sistemas')
             ->assertSet('filterCarrera', $this->carrera->id);
 
         // 2. Filter by Informatics career
-        Livewire::test(\App\Livewire\Admin\Materias::class)
+        Livewire::test(Materias::class)
             ->call('processVoiceCommand', 'mostrar informatica')
             ->assertSet('filterCarrera', $carreraInf->id);
 
         // 3. Search text
-        Livewire::test(\App\Livewire\Admin\Materias::class)
+        Livewire::test(Materias::class)
             ->call('processVoiceCommand', 'buscar fisica')
             ->assertSet('search', 'fisica');
 
         // 4. Reset
-        Livewire::test(\App\Livewire\Admin\Materias::class)
+        Livewire::test(Materias::class)
             ->call('processVoiceCommand', 'limpiar')
             ->assertSet('filterCarrera', '')
             ->assertSet('search', '');
@@ -453,27 +464,27 @@ class AdminCrudTest extends TestCase
         $this->actingAs($this->admin);
 
         // 1. Search name
-        Livewire::test(\App\Livewire\Admin\Docentes::class)
+        Livewire::test(Docentes::class)
             ->call('processVoiceCommand', 'buscar pedro perez')
             ->assertSet('search', 'pedro perez');
 
         // 2. Search specialty
-        Livewire::test(\App\Livewire\Admin\Docentes::class)
+        Livewire::test(Docentes::class)
             ->call('processVoiceCommand', 'especialidad de matematicas')
             ->assertSet('search', 'matematicas');
 
         // 3. Search specialty with complex phrase
-        Livewire::test(\App\Livewire\Admin\Docentes::class)
+        Livewire::test(Docentes::class)
             ->call('processVoiceCommand', 'mostrar docentes con especialidad en fisica')
             ->assertSet('search', 'fisica');
 
         // 4. Search specialty with filter prefix
-        Livewire::test(\App\Livewire\Admin\Docentes::class)
+        Livewire::test(Docentes::class)
             ->call('processVoiceCommand', 'filtrar por especialidad computacion')
             ->assertSet('search', 'computacion');
 
         // 5. Clear
-        Livewire::test(\App\Livewire\Admin\Docentes::class)
+        Livewire::test(Docentes::class)
             ->call('processVoiceCommand', 'quitar filtros')
             ->assertSet('search', '');
     }
@@ -486,22 +497,22 @@ class AdminCrudTest extends TestCase
         $this->actingAs($this->admin);
 
         // 1. Filter by physics (matches default 'Física I' in database)
-        Livewire::test(\App\Livewire\Admin\Examenes::class)
+        Livewire::test(Examenes::class)
             ->call('processVoiceCommand', 'ver examenes de fisica')
             ->assertSet('filterMateria', $this->materia->id);
 
         // 2. Filter by gestion
-        Livewire::test(\App\Livewire\Admin\Examenes::class)
+        Livewire::test(Examenes::class)
             ->call('processVoiceCommand', 'gestion I-2026')
             ->assertSet('filterGestion', $this->activeGestion->id);
 
         // 3. Search specific exam
-        Livewire::test(\App\Livewire\Admin\Examenes::class)
+        Livewire::test(Examenes::class)
             ->call('processVoiceCommand', 'primer parcial')
             ->assertSet('search', 'Primer Parcial');
 
         // 4. Reset
-        Livewire::test(\App\Livewire\Admin\Examenes::class)
+        Livewire::test(Examenes::class)
             ->call('processVoiceCommand', 'restablecer')
             ->assertSet('filterMateria', '')
             ->assertSet('filterGestion', '')
@@ -516,7 +527,7 @@ class AdminCrudTest extends TestCase
         $this->actingAs($this->admin);
 
         // 1. Create a Postulante with incomplete documents
-        $livewire = Livewire::test(\App\Livewire\Admin\Postulantes::class)
+        $livewire = Livewire::test(Postulantes::class)
             ->call('openCreate')
             ->set('name', 'Postulante Incompleto')
             ->set('email', 'incompleto@test.com')
@@ -538,12 +549,12 @@ class AdminCrudTest extends TestCase
 
         $postulante = Postulante::where('ci', '1231231')->first();
         $this->assertNotNull($postulante);
-        $this->assertFalse((bool)$postulante->habilitado);
+        $this->assertFalse((bool) $postulante->habilitado);
         $this->assertStringContainsString('Título de Bachiller', $postulante->mensaje_documentos);
 
         // 2. Logging in as this student: payment is required
         $this->actingAs($postulante->user);
-        $portal = Livewire::test(\App\Livewire\DashboardPortal::class);
+        $portal = Livewire::test(DashboardPortal::class);
         $portal->assertSet('role', 'Postulante');
 
         // Verify they cannot self-enroll yet
@@ -553,38 +564,38 @@ class AdminCrudTest extends TestCase
         // 3. Simulate payment via Stripe checkout route
         $response = $this->get('/stripe/checkout');
         $response->assertRedirect();
-        
+
         $postulante->refresh();
-        $this->assertTrue((bool)$postulante->pago_realizado);
+        $this->assertTrue((bool) $postulante->pago_realizado);
 
         // 4. Try self-enrolling again, should fail because habilitado is false
-        $portal = Livewire::test(\App\Livewire\DashboardPortal::class);
+        $portal = Livewire::test(DashboardPortal::class);
         $portal->call('enroll');
         $portal->assertSet('errorMessage', 'Tu perfil debe ser habilitado por el administrador.');
 
         // 5. Admin enables the applicant by completing requirements
         $this->actingAs($this->admin);
-        Livewire::test(\App\Livewire\Admin\Postulantes::class)
+        Livewire::test(Postulantes::class)
             ->call('openEdit', $postulante->id)
             ->set('titulo_bachiller', true) // Completed!
             ->call('save');
 
         $postulante->refresh();
-        $this->assertTrue((bool)$postulante->habilitado);
+        $this->assertTrue((bool) $postulante->habilitado);
         $this->assertNull($postulante->mensaje_documentos);
 
         // 6. Student self-enrolls
         $this->actingAs($postulante->user);
-        
+
         // Create a group for our subject
-        $grupo = \App\Models\Grupo::create([
+        $grupo = Grupo::create([
             'nombre' => 'SIS-110 - G1',
             'materia_id' => $this->materia->id,
             'gestion_id' => $this->activeGestion->id,
             'cupo_maximo' => 60,
         ]);
 
-        $portal = Livewire::test(\App\Livewire\DashboardPortal::class)
+        $portal = Livewire::test(DashboardPortal::class)
             ->set('selectedGroups', [$this->materia->id => $grupo->id])
             ->call('enroll');
 
@@ -650,7 +661,7 @@ class AdminCrudTest extends TestCase
         Nota::create(['postulante_id' => $postulante->id, 'examen_id' => $exam3->id, 'puntaje' => 100.00]);
 
         // 1. Changing to a valid state: 'admitido_primera_opcion'
-        Livewire::test(\App\Livewire\Admin\Postulantes::class)
+        Livewire::test(Postulantes::class)
             ->call('cambiarEstado', $postulante->id, 'admitido_primera_opcion')
             ->assertHasNoErrors();
 
@@ -659,7 +670,7 @@ class AdminCrudTest extends TestCase
 
         // 2. Changing to an invalid state: 'aprobados' (virtual state)
         // This should return early and not update the database state, preventing the check violation
-        Livewire::test(\App\Livewire\Admin\Postulantes::class)
+        Livewire::test(Postulantes::class)
             ->call('cambiarEstado', $postulante->id, 'aprobados')
             ->assertHasNoErrors();
 

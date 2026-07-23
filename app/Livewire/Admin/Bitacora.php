@@ -11,8 +11,11 @@ class Bitacora extends Component
     use WithPagination;
 
     public $search = '';
+
     public $selectedAction = '';
+
     public $selectedLog = null;
+
     public $showDetailModal = false;
 
     protected $queryString = [
@@ -32,7 +35,7 @@ class Bitacora extends Component
 
     public function mount()
     {
-        if (!auth()->user()->hasRole('Administrador')) {
+        if (! auth()->user()->hasRole('Administrador')) {
             abort(403, 'No autorizado.');
         }
     }
@@ -51,10 +54,10 @@ class Bitacora extends Component
 
     public function clearLogs()
     {
-        if (!auth()->user()->hasRole('Administrador')) {
+        if (! auth()->user()->hasRole('Administrador')) {
             abort(403);
         }
-        
+
         BitacoraModel::truncate();
         session()->flash('message', 'Bitácora de actividades vaciada correctamente.');
         $this->resetPage();
@@ -62,7 +65,7 @@ class Bitacora extends Component
 
     public function render()
     {
-        if (!auth()->user()->hasRole('Administrador')) {
+        if (! auth()->user()->hasRole('Administrador')) {
             abort(403, 'No autorizado.');
         }
 
@@ -71,13 +74,13 @@ class Bitacora extends Component
 
         if ($this->search) {
             $query->where(function ($q) {
-                $q->where('descripcion', 'like', '%' . $this->search . '%')
-                  ->orWhere('objeto', 'like', '%' . $this->search . '%')
-                  ->orWhere('ip_address', 'like', '%' . $this->search . '%')
-                  ->orWhereHas('user', function ($uq) {
-                      $uq->where('name', 'like', '%' . $this->search . '%')
-                         ->orWhere('email', 'like', '%' . $this->search . '%');
-                  });
+                $q->where('descripcion', 'like', '%'.$this->search.'%')
+                    ->orWhere('objeto', 'like', '%'.$this->search.'%')
+                    ->orWhere('ip_address', 'like', '%'.$this->search.'%')
+                    ->orWhereHas('user', function ($uq) {
+                        $uq->where('name', 'like', '%'.$this->search.'%')
+                            ->orWhere('email', 'like', '%'.$this->search.'%');
+                    });
             });
         }
 
@@ -90,7 +93,7 @@ class Bitacora extends Component
 
         return view('livewire.admin.bitacora', [
             'logs' => $logs,
-            'actions' => $actions
+            'actions' => $actions,
         ])->layout('layouts.admin');
     }
 }

@@ -26,7 +26,7 @@ return new class extends Migration
                 'admitido_primera_opcion',
                 'admitido_segunda_opcion',
                 'no_admitido',
-                'reprobado'
+                'reprobado',
             ])->default('pendiente');
             $table->decimal('nota_final', 5, 2)->nullable();
             $table->boolean('ci_vigente')->default(false);

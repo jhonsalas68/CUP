@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
-use App\Models\Carrera;
+use App\Livewire\Admin\Dashboard;
 use App\Models\Bitacora;
+use App\Models\Carrera;
 use App\Models\Gestion;
+use App\Models\User;
+use App\Services\AdmissionSelectionService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -131,7 +133,7 @@ class BitacoraTest extends TestCase
             'activo' => true,
         ]);
 
-        $this->mock(\App\Services\AdmissionSelectionService::class, function ($mock) use ($gestion) {
+        $this->mock(AdmissionSelectionService::class, function ($mock) use ($gestion) {
             $mock->shouldReceive('processAdmissions')
                 ->with($gestion->id)
                 ->once()
@@ -148,11 +150,11 @@ class BitacoraTest extends TestCase
                         'reprobados' => 0,
                         'no_admitidos' => 0,
                     ],
-                    'carreras' => []
+                    'carreras' => [],
                 ]);
         });
 
-        Livewire::test(\App\Livewire\Admin\Dashboard::class)
+        Livewire::test(Dashboard::class)
             ->call('runAdmissionProcess');
 
         // Check Bitacora has the process_admision log

@@ -2,23 +2,25 @@
 
 namespace App\Services;
 
-use App\Models\Gestion;
-use App\Models\Carrera;
-use App\Models\Materia;
-use App\Models\Grupo;
-use App\Models\Docente;
-use App\Models\Horario;
-use App\Models\Postulante;
-use App\Models\Examen;
 use App\Exceptions\GroupGenerationException;
+use App\Models\Aula;
+use App\Models\Carrera;
+use App\Models\Docente;
+use App\Models\Examen;
+use App\Models\Gestion;
+use App\Models\Grupo;
+use App\Models\Horario;
+use App\Models\Materia;
+use App\Models\Postulante;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class GroupGenerationService
 {
     // Parámetros de capacidad y divisor para conformación de grupos (examen)
     public const ALUMNOS_DIVISOR = 70; // Divisor de la fórmula (CEIL(TotalInscritos / 70))
+
     public const CUPO_MAXIMO_GRUPO = 70; // Capacidad física máxima por grupo
+
     public const MAX_GRUPOS_POR_DOCENTE = 4; // Límite máximo de grupos asignados por docente en una gestión
 
     // Pool de slots horarios preestablecidos (8 slots)
@@ -77,22 +79,22 @@ class GroupGenerationService
     // Pool de aulas físicas disponibles
     public const AULAS = [
         'Aula 101', 'Aula 102', 'Aula 103', 'Aula 201', 'Aula 202', 'Aula 203',
-        'Lab de Computación A', 'Lab de Computación B', 'Auditorio Civil'
+        'Lab de Computación A', 'Lab de Computación B', 'Auditorio Civil',
     ];
 
     /**
      * Orquesta la generación automática de grupos para una gestión específica.
      *
-     * @param int $gestionId
      * @return array Reporte de resultados y advertencias
+     *
      * @throws GroupGenerationException
      */
     public function generate(int $gestionId): array
     {
         // 1. Validar la Gestión
         $gestion = Gestion::find($gestionId);
-        if (!$gestion) {
-            throw new GroupGenerationException("La gestión especificada no existe.");
+        if (! $gestion) {
+            throw new GroupGenerationException('La gestión especificada no existe.');
         }
 
         // 2. Ejecutar todo dentro de una transacción para consistencia total
@@ -109,17 +111,17 @@ class GroupGenerationService
 
             // 4. Obtener Carreras y Postulantes
             $carreras = Carrera::all();
-            
+
             // Seguimiento en memoria para evitar cruces durante esta ejecución
             // Estructura: $busyTeachers[$docenteId][$slotKey] = true
             $busyTeachers = [];
-            
+
             // Estructura: $occupiedClassrooms[$slotKey][] = $aulaName
             $occupiedClassrooms = [];
 
             // Cargar ocupación de docentes ya registrada en la base de datos para esta gestión
             $this->loadExistingTeacherOccupancy($gestion->id, $busyTeachers);
-            
+
             // Cargar ocupación de aulas ya registrada en la base de datos para esta gestión
             $this->loadExistingClassroomOccupancy($gestion->id, $occupiedClassrooms);
 
@@ -137,6 +139,7 @@ class GroupGenerationService
                 $materias = Materia::where('carrera_id', $carrera->id)->get();
                 if ($materias->isEmpty()) {
                     $warnings[] = "La carrera '{$carrera->nombre}' no tiene materias configuradas.";
+
                     continue;
                 }
 
@@ -155,7 +158,7 @@ class GroupGenerationService
 
                         // Selección de slot horario por rotación (materia + grupo) para evitar cruces en el docente
                         $slotIndex = ($index + $gIdx) % 8;
-                        $slotKey = 'slot_' . ($slotIndex + 1);
+                        $slotKey = 'slot_'.($slotIndex + 1);
                         $slot = self::SLOTS[$slotKey];
 
                         // Crear el grupo
@@ -182,7 +185,7 @@ class GroupGenerationService
                             $grupo
                         );
 
-                        if (!$docenteAsignado) {
+                        if (! $docenteAsignado) {
                             $warnings[] = "Grupo '{$grupoNombre}' ({$materia->nombre}): No se encontró docente disponible calificado para el slot '{$slot['nombre']}'.";
                         }
 
@@ -196,7 +199,7 @@ class GroupGenerationService
                             $warnings
                         );
 
-                        if (!$aulaAsignada) {
+                        if (! $aulaAsignada) {
                             $warnings[] = "Grupo '{$grupoNombre}' ({$materia->nombre}): No hay aulas disponibles libres en el slot '{$slot['nombre']}'.";
                         }
                     }
@@ -206,7 +209,7 @@ class GroupGenerationService
             }
 
             if ($stats['grupos_creados'] === 0) {
-                throw new GroupGenerationException("No se generó ningún grupo. Verifique que existan postulantes inscritos y materias para esta gestión.");
+                throw new GroupGenerationException('No se generó ningún grupo. Verifique que existan postulantes inscritos y materias para esta gestión.');
             }
 
             return [
@@ -230,14 +233,14 @@ class GroupGenerationService
         // Si ya existen exámenes registrados en este semestre, bloqueamos la regeneración
         $hasExams = Examen::where('gestion_id', $gestionId)->exists();
         if ($hasExams) {
-            throw new GroupGenerationException("No se pueden regenerar los grupos. Ya existen exámenes registrados en esta gestión.");
+            throw new GroupGenerationException('No se pueden regenerar los grupos. Ya existen exámenes registrados en esta gestión.');
         }
 
         // Limpieza segura en cascada
         DB::table('postulante_grupo')->whereIn('grupo_id', $groupIds)->delete();
         DB::table('asignaciones_docente')->whereIn('grupo_id', $groupIds)->delete();
         DB::table('horarios')->whereIn('grupo_id', $groupIds)->delete();
-        
+
         // Eliminación física o lógica
         Grupo::whereIn('id', $groupIds)->forceDelete();
     }
@@ -253,7 +256,9 @@ class GroupGenerationService
 
         foreach ($horarios as $horario) {
             $grupo = $horario->grupo;
-            if (!$grupo) continue;
+            if (! $grupo) {
+                continue;
+            }
 
             $docentes = $grupo->docentes;
             foreach ($docentes as $docente) {
@@ -298,6 +303,7 @@ class GroupGenerationService
                 }
             }
         }
+
         return null;
     }
 
@@ -341,13 +347,13 @@ class GroupGenerationService
         foreach ($candidatos as $docente) {
             // Verificar disponibilidad horaria del docente
             $disponibilidad = $docente->disponibilidad_horaria ?? [];
-            if (!in_array($slotKey, $disponibilidad)) {
+            if (! in_array($slotKey, $disponibilidad)) {
                 continue; // No está disponible en este slot
             }
 
             // Verificar si cumple los requisitos académicos de la facultad:
             // Profesional en el área, maestría y diplomado en educación superior
-            if (!$docente->profesional_area || !$docente->tiene_maestria || !$docente->tiene_diplomado) {
+            if (! $docente->profesional_area || ! $docente->tiene_maestria || ! $docente->tiene_diplomado) {
                 continue; // No cumple con los requisitos de contratación
             }
 
@@ -402,25 +408,25 @@ class GroupGenerationService
         $aulaElegida = null;
 
         // Cargar aulas de la BD (con fallback automático si está vacío)
-        $aulas = \App\Models\Aula::all();
+        $aulas = Aula::all();
         if ($aulas->isEmpty()) {
             foreach (self::AULAS as $aulaName) {
-                \App\Models\Aula::create([
+                Aula::create([
                     'nombre' => $aulaName,
                     'capacidad' => 70,
-                    'ubicacion' => 'Pabellón Central'
+                    'ubicacion' => 'Pabellón Central',
                 ]);
             }
-            $aulas = \App\Models\Aula::all();
+            $aulas = Aula::all();
         }
 
         // Buscar la primera aula libre
         foreach ($aulas as $aula) {
             $ocupada = isset($occupiedClassrooms[$slotKey]) && (
-                in_array($aula->id, $occupiedClassrooms[$slotKey]) || 
+                in_array($aula->id, $occupiedClassrooms[$slotKey]) ||
                 in_array($aula->nombre, $occupiedClassrooms[$slotKey])
             );
-            if (!$ocupada) {
+            if (! $ocupada) {
                 $aulaElegida = $aula;
                 break;
             }
@@ -448,6 +454,7 @@ class GroupGenerationService
             // Marcar el aula como ocupada en este slot (guardamos tanto ID como nombre)
             $occupiedClassrooms[$slotKey][] = $aulaElegida->id;
             $occupiedClassrooms[$slotKey][] = $aulaElegida->nombre;
+
             return true;
         }
 

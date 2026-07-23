@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Postulante;
-use App\Models\Gestion;
 use App\Models\Carrera;
 use App\Models\Docente;
 use App\Models\Examen;
+use App\Models\Gestion;
+use App\Models\Grupo;
 use App\Models\Materia;
+use App\Models\Postulante;
+use App\Services\AdmissionSelectionService;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -21,10 +23,10 @@ class ReportExportController extends Controller
 
         $response = new StreamedResponse(function () use ($gestionId) {
             $handle = fopen('php://output', 'w');
-            
+
             // Add UTF-8 BOM for Excel compatibility
             fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
-            
+
             // Header
             fputcsv($handle, [
                 'ID',
@@ -39,7 +41,7 @@ class ReportExportController extends Controller
                 'Carrera 2da Opción',
                 'Semestre / Gestión',
                 'Nota Final',
-                'Estado de Admisión'
+                'Estado de Admisión',
             ], ';');
 
             $query = Postulante::with(['user', 'carreraPrimeraOpn', 'carreraSegundaOpn', 'gestion']);
@@ -62,7 +64,7 @@ class ReportExportController extends Controller
                         $p->carreraSegundaOpn?->nombre ?? '—',
                         $p->gestion?->nombre ?? '—',
                         $p->nota_final !== null ? number_format($p->nota_final, 2) : '—',
-                        ucfirst(str_replace('_', ' ', $p->estado_admision))
+                        ucfirst(str_replace('_', ' ', $p->estado_admision)),
                     ], ';');
                 }
             });
@@ -71,7 +73,7 @@ class ReportExportController extends Controller
         });
 
         $response->headers->set('Content-Type', 'text/csv; charset=UTF-8');
-        $response->headers->set('Content-Disposition', 'attachment; filename="postulantes_' . $gestionName . '.csv"');
+        $response->headers->set('Content-Disposition', 'attachment; filename="postulantes_'.$gestionName.'.csv"');
 
         return $response;
     }
@@ -84,10 +86,10 @@ class ReportExportController extends Controller
 
         $response = new StreamedResponse(function () use ($gestionId) {
             $handle = fopen('php://output', 'w');
-            
+
             // Add UTF-8 BOM for Excel compatibility
             fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
-            
+
             // Header
             fputcsv($handle, [
                 'ID',
@@ -98,12 +100,12 @@ class ReportExportController extends Controller
                 'Carrera Asignada',
                 'Semestre / Gestión',
                 'Nota Final',
-                'Estado de Admisión'
+                'Estado de Admisión',
             ], ';');
 
             $query = Postulante::with(['user', 'carreraPrimeraOpn', 'carreraSegundaOpn', 'gestion'])
                 ->whereIn('estado_admision', ['admitido_primera_opcion', 'admitido_segunda_opcion']);
-                
+
             if ($gestionId) {
                 $query->where('gestion_id', $gestionId);
             }
@@ -126,7 +128,7 @@ class ReportExportController extends Controller
                         $carreraAsignada,
                         $p->gestion?->nombre ?? '—',
                         $p->nota_final !== null ? number_format($p->nota_final, 2) : '—',
-                        $p->estado_admision === 'admitido_primera_opcion' ? 'Admitido (1ra opción)' : 'Admitido (2da opción)'
+                        $p->estado_admision === 'admitido_primera_opcion' ? 'Admitido (1ra opción)' : 'Admitido (2da opción)',
                     ], ';');
                 }
             });
@@ -135,7 +137,7 @@ class ReportExportController extends Controller
         });
 
         $response->headers->set('Content-Type', 'text/csv; charset=UTF-8');
-        $response->headers->set('Content-Disposition', 'attachment; filename="admitidos_' . $gestionName . '.csv"');
+        $response->headers->set('Content-Disposition', 'attachment; filename="admitidos_'.$gestionName.'.csv"');
 
         return $response;
     }
@@ -149,7 +151,7 @@ class ReportExportController extends Controller
         $response = new StreamedResponse(function () use ($gestionId) {
             $handle = fopen('php://output', 'w');
             fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
-            
+
             // Header
             fputcsv($handle, [
                 'ID',
@@ -161,12 +163,12 @@ class ReportExportController extends Controller
                 'Carrera Postulada (2da Opción)',
                 'Semestre / Gestión',
                 'Nota Final',
-                'Estado de Admisión'
+                'Estado de Admisión',
             ], ';');
 
             $query = Postulante::with(['user', 'carreraPrimeraOpn', 'carreraSegundaOpn', 'gestion'])
                 ->whereIn('estado_admision', ['no_admitido', 'reprobado']);
-                
+
             if ($gestionId) {
                 $query->where('gestion_id', $gestionId);
             }
@@ -183,7 +185,7 @@ class ReportExportController extends Controller
                         $p->carreraSegundaOpn?->nombre ?? '—',
                         $p->gestion?->nombre ?? '—',
                         $p->nota_final !== null ? number_format($p->nota_final, 2) : '—',
-                        ucfirst(str_replace('_', ' ', $p->estado_admision))
+                        ucfirst(str_replace('_', ' ', $p->estado_admision)),
                     ], ';');
                 }
             });
@@ -192,17 +194,17 @@ class ReportExportController extends Controller
         });
 
         $response->headers->set('Content-Type', 'text/csv; charset=UTF-8');
-        $response->headers->set('Content-Disposition', 'attachment; filename="no_admitidos_y_reprobados_' . $gestionName . '.csv"');
+        $response->headers->set('Content-Disposition', 'attachment; filename="no_admitidos_y_reprobados_'.$gestionName.'.csv"');
 
         return $response;
     }
 
-    public function imprimirReporteAdmision(Request $request, \App\Services\AdmissionSelectionService $service)
+    public function imprimirReporteAdmision(Request $request, AdmissionSelectionService $service)
     {
         $gestionId = $request->query('gestion_id');
         $gestion = Gestion::find($gestionId);
-        
-        if (!$gestion) {
+
+        if (! $gestion) {
             abort(404, 'Gestión no encontrada.');
         }
 
@@ -217,17 +219,17 @@ class ReportExportController extends Controller
 
         $carreras = Carrera::all();
         $admitidosPorCarrera = [];
-        
+
         foreach ($carreras as $carrera) {
             $carreraAdmitidos = $admitidos->filter(function ($p) use ($carrera) {
                 return ($p->estado_admision === 'admitido_primera_opcion' && $p->carrera_primera_opcion_id === $carrera->id)
                     || ($p->estado_admision === 'admitido_segunda_opcion' && $p->carrera_segunda_opcion_id === $carrera->id);
             });
-            
+
             if ($carreraAdmitidos->isNotEmpty()) {
                 $admitidosPorCarrera[$carrera->sigla] = [
                     'carrera' => $carrera,
-                    'alumnos' => $carreraAdmitidos
+                    'alumnos' => $carreraAdmitidos,
                 ];
             }
         }
@@ -235,7 +237,7 @@ class ReportExportController extends Controller
         return view('reports.print-admisiones', [
             'gestion' => $gestion,
             'stats' => $stats,
-            'admitidosPorCarrera' => $admitidosPorCarrera
+            'admitidosPorCarrera' => $admitidosPorCarrera,
         ]);
     }
 
@@ -255,7 +257,7 @@ class ReportExportController extends Controller
             'docentes' => ['id', 'nombre', 'email', 'ci', 'telefono', 'especialidad', 'profesional_area', 'tiene_maestria', 'tiene_diplomado'],
             'examenes' => ['id', 'nombre', 'materia', 'carrera', 'gestion', 'docente', 'alumnos', 'ponderacion', 'fecha'],
             'postulantes' => ['id', 'nombre', 'email', 'ci', 'telefono', 'carrera_primera_opcion', 'carrera_segunda_opcion', 'gestion', 'nota_final', 'estado_admision'],
-            'materias' => ['id', 'sigla', 'nombre', 'carrera', 'docente', 'alumnos']
+            'materias' => ['id', 'sigla', 'nombre', 'carrera', 'docente', 'alumnos'],
         ];
 
         if (empty($columnas) || count($columnas) === 1 && empty($columnas[0])) {
@@ -272,7 +274,7 @@ class ReportExportController extends Controller
             'sigla' => 'Sigla',
             'nombre' => 'Nombre',
             'materias_count' => 'Materias Habilitadas',
-            
+
             'email' => 'Correo electrónico',
             'ci' => 'CI',
             'telefono' => 'Teléfono',
@@ -281,7 +283,7 @@ class ReportExportController extends Controller
             'profesional_area' => 'Profesional en Área',
             'tiene_maestria' => 'Tiene Maestría',
             'tiene_diplomado' => 'Tiene Diplomado',
-            
+
             'materia' => 'Materia',
             'carrera' => 'Carrera',
             'gestion' => 'Gestión',
@@ -289,14 +291,14 @@ class ReportExportController extends Controller
             'alumnos' => 'Alumnos / Postulantes',
             'ponderacion' => 'Ponderación',
             'fecha' => 'Fecha',
-            
+
             'sexo' => 'Sexo',
             'colegio_procedencia' => 'Colegio de Procedencia',
             'ciudad' => 'Ciudad',
             'carrera_primera_opcion' => 'Carrera 1ra Opción',
             'carrera_segunda_opcion' => 'Carrera 2da Opción',
             'nota_final' => 'Nota Final',
-            'estado_admision' => 'Estado de Admisión'
+            'estado_admision' => 'Estado de Admisión',
         ];
 
         if ($formato === 'excel') {
@@ -314,6 +316,7 @@ class ReportExportController extends Controller
                 if ($carreraId) {
                     $query->where('id', $carreraId);
                 }
+
                 return $query->orderBy('nombre')->get();
 
             case 'docentes':
@@ -328,6 +331,7 @@ class ReportExportController extends Controller
                         $q->where('gestion_id', $gestionId);
                     });
                 }
+
                 return $query->orderBy('id', 'desc')->get();
 
             case 'examenes':
@@ -340,6 +344,7 @@ class ReportExportController extends Controller
                         $q->where('carrera_id', $carreraId);
                     });
                 }
+
                 return $query->orderBy('fecha', 'desc')->get();
 
             case 'materias':
@@ -347,6 +352,7 @@ class ReportExportController extends Controller
                 if ($carreraId) {
                     $query->where('carrera_id', $carreraId);
                 }
+
                 return $query->orderBy('nombre')->get();
 
             case 'postulantes':
@@ -358,9 +364,10 @@ class ReportExportController extends Controller
                 if ($carreraId) {
                     $query->where(function ($q) use ($carreraId) {
                         $q->where('carrera_primera_opcion_id', $carreraId)
-                          ->orWhere('carrera_segunda_opcion_id', $carreraId);
+                            ->orWhere('carrera_segunda_opcion_id', $carreraId);
                     });
                 }
+
                 return $query->orderBy('id', 'desc')->get();
         }
     }
@@ -407,12 +414,13 @@ class ReportExportController extends Controller
             case 'sigla':
                 return $item->sigla ?? '—';
             case 'nombre':
-                 if ($tabla === 'docentes') {
-                     return $item->nombre ?? $item->user?->name ?? '—';
-                 }
-                 if ($tabla === 'postulantes') {
-                     return $item->nombres_apellidos ?? $item->user?->name ?? '—';
-                 }
+                if ($tabla === 'docentes') {
+                    return $item->nombre ?? $item->user?->name ?? '—';
+                }
+                if ($tabla === 'postulantes') {
+                    return $item->nombres_apellidos ?? $item->user?->name ?? '—';
+                }
+
                 return $item->nombre ?? '—';
             case 'materias_count':
                 return $item->materias_count ?? 0;
@@ -438,14 +446,16 @@ class ReportExportController extends Controller
                 if ($tabla === 'materias') {
                     return $item->carrera?->nombre ?? '—';
                 }
+
                 return $item->materia?->carrera?->nombre ?? '—';
             case 'gestion':
                 if ($tabla === 'examenes') {
                     return $item->gestion?->nombre ?? '—';
                 }
+
                 return $item->gestion?->nombre ?? '—';
             case 'ponderacion':
-                return ($item->ponderacion ?? 0) . '%';
+                return ($item->ponderacion ?? 0).'%';
             case 'fecha':
                 return $item->fecha ? $item->fecha->format('d/m/Y') : '—';
             case 'docente':
@@ -454,19 +464,23 @@ class ReportExportController extends Controller
                 }
                 if ($tabla === 'materias') {
                     $gId = request()->query('gestion_id');
-                    if (!$gId) {
-                        $activeG = \App\Models\Gestion::where('activo', true)->first();
+                    if (! $gId) {
+                        $activeG = Gestion::where('activo', true)->first();
                         $gId = $activeG ? $activeG->id : null;
                     }
-                    $groupIds = \App\Models\Grupo::where('materia_id', $item->id)
-                        ->when($gId, fn($q) => $q->where('gestion_id', $gId))
+                    $groupIds = Grupo::where('materia_id', $item->id)
+                        ->when($gId, fn ($q) => $q->where('gestion_id', $gId))
                         ->pluck('id');
-                    if ($groupIds->isEmpty()) return 'No asignado';
-                    $docenteNames = \App\Models\Docente::whereHas('grupos', function($q) use ($groupIds) {
+                    if ($groupIds->isEmpty()) {
+                        return 'No asignado';
+                    }
+                    $docenteNames = Docente::whereHas('grupos', function ($q) use ($groupIds) {
                         $q->whereIn('grupos.id', $groupIds);
                     })->pluck('nombre')->unique();
+
                     return $docenteNames->isNotEmpty() ? $docenteNames->implode(', ') : 'No asignado';
                 }
+
                 return '—';
             case 'alumnos':
                 if ($tabla === 'examenes') {
@@ -474,19 +488,23 @@ class ReportExportController extends Controller
                 }
                 if ($tabla === 'materias') {
                     $gId = request()->query('gestion_id');
-                    if (!$gId) {
-                        $activeG = \App\Models\Gestion::where('activo', true)->first();
+                    if (! $gId) {
+                        $activeG = Gestion::where('activo', true)->first();
                         $gId = $activeG ? $activeG->id : null;
                     }
-                    $groupIds = \App\Models\Grupo::where('materia_id', $item->id)
-                        ->when($gId, fn($q) => $q->where('gestion_id', $gId))
+                    $groupIds = Grupo::where('materia_id', $item->id)
+                        ->when($gId, fn ($q) => $q->where('gestion_id', $gId))
                         ->pluck('id');
-                    if ($groupIds->isEmpty()) return 'Ninguno';
-                    $alumnoNames = \App\Models\Postulante::whereHas('grupos', function($q) use ($groupIds) {
+                    if ($groupIds->isEmpty()) {
+                        return 'Ninguno';
+                    }
+                    $alumnoNames = Postulante::whereHas('grupos', function ($q) use ($groupIds) {
                         $q->whereIn('grupos.id', $groupIds);
                     })->pluck('nombres_apellidos')->unique();
+
                     return $alumnoNames->isNotEmpty() ? $alumnoNames->implode(', ') : 'Ninguno';
                 }
+
                 return '—';
             case 'sexo':
                 return $item->sexo ?? '—';
@@ -515,7 +533,7 @@ class ReportExportController extends Controller
             'gestion' => $gestion,
             'carrera' => $carrera,
             'columnas' => $columnas,
-            'headersMap' => $headersMap
+            'headersMap' => $headersMap,
         ]);
     }
 }

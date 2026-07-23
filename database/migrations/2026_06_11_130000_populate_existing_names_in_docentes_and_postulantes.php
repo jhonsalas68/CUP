@@ -1,8 +1,8 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
 use App\Models\Docente;
 use App\Models\Postulante;
+use Illuminate\Database\Migrations\Migration;
 
 return new class extends Migration
 {

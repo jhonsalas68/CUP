@@ -10,6 +10,7 @@ use Livewire\Component;
 class CommandPalette extends Component
 {
     public $isOpen = false;
+
     public $search = '';
 
     protected $listeners = [
@@ -31,7 +32,7 @@ class CommandPalette extends Component
 
     public function toggle()
     {
-        $this->isOpen = !$this->isOpen;
+        $this->isOpen = ! $this->isOpen;
         if ($this->isOpen) {
             $this->search = '';
         }

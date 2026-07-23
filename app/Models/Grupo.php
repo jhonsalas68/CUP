@@ -2,13 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Traits\LogsActivity;
 
 class Grupo extends Model
 {
-    use SoftDeletes, LogsActivity;
+    use LogsActivity, SoftDeletes;
 
     protected $table = 'grupos';
 
@@ -36,14 +36,14 @@ class Grupo extends Model
     public function postulantes()
     {
         return $this->belongsToMany(Postulante::class, 'postulante_grupo', 'grupo_id', 'postulante_id')
-                    ->withPivot('nro_asiento')
-                    ->withTimestamps();
+            ->withPivot('nro_asiento')
+            ->withTimestamps();
     }
 
     public function docentes()
     {
         return $this->belongsToMany(Docente::class, 'asignaciones_docente', 'grupo_id', 'docente_id')
-                    ->withTimestamps();
+            ->withTimestamps();
     }
 
     public function horarios()

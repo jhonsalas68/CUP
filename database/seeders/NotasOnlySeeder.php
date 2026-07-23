@@ -16,13 +16,14 @@ class NotasOnlySeeder extends Seeder
     {
         $gestion = Gestion::where('activo', true)->first() ?? Gestion::latest()->first();
 
-        if (!$gestion) {
+        if (! $gestion) {
             $this->command->error('No existe ninguna gestión académica registrada.');
+
             return;
         }
 
         $this->command->info("Generando y asignando notas para la gestión {$gestion->nombre}...");
-        $examService = new ExamService();
+        $examService = new ExamService;
 
         DB::transaction(function () use ($gestion, $examService) {
             $postulantes = Postulante::with('carreraPrimeraOpn.materias')->get();

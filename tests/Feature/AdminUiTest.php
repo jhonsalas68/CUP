@@ -2,10 +2,22 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
+use App\Livewire\Admin\Dashboard;
+use App\Livewire\Admin\Examenes;
+use App\Mail\AdmissionResultMail;
+use App\Models\Carrera;
+use App\Models\Docente;
+use App\Models\Examen;
 use App\Models\Gestion;
+use App\Models\Grupo;
+use App\Models\Materia;
+use App\Models\Nota;
+use App\Models\Postulante;
+use App\Models\User;
+use App\Services\AdmissionSelectionService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -81,7 +93,7 @@ class AdminUiTest extends TestCase
 
         $this->actingAs($admin);
 
-        Livewire::test(\App\Livewire\Admin\Dashboard::class)
+        Livewire::test(Dashboard::class)
             ->assertSet('selectedGestionId', $gestion->id)
             ->assertSee('Dashboard Administrativo')
             ->assertSee('Total Postulantes');
@@ -101,7 +113,7 @@ class AdminUiTest extends TestCase
 
         $this->actingAs($admin);
 
-        Livewire::test(\App\Livewire\Admin\Dashboard::class)
+        Livewire::test(Dashboard::class)
             ->assertSet('showAdmissionModal', false)
             ->call('openAdmissionProcess')
             ->assertSet('showAdmissionModal', true);
@@ -121,7 +133,7 @@ class AdminUiTest extends TestCase
 
         $this->actingAs($admin);
 
-        $this->mock(\App\Services\AdmissionSelectionService::class, function ($mock) use ($gestion) {
+        $this->mock(AdmissionSelectionService::class, function ($mock) use ($gestion) {
             $mock->shouldReceive('processAdmissions')
                 ->with($gestion->id)
                 ->once()
@@ -148,12 +160,12 @@ class AdminUiTest extends TestCase
                             'admitidos_segunda_opcion' => 1,
                             'no_admitidos' => 2,
                             'nota_minima_ingreso' => 61.50,
-                        ]
-                    ]
+                        ],
+                    ],
                 ]);
         });
 
-        Livewire::test(\App\Livewire\Admin\Dashboard::class)
+        Livewire::test(Dashboard::class)
             ->call('runAdmissionProcess')
             ->assertSet('isProcessing', false)
             ->assertSet('admissionError', null)
@@ -172,18 +184,18 @@ class AdminUiTest extends TestCase
             'activo' => true,
         ]);
 
-        $carrera = \App\Models\Carrera::create([
+        $carrera = Carrera::create([
             'nombre' => 'Ingeniería de Sistemas',
             'sigla' => 'SIS',
         ]);
 
-        $materia = \App\Models\Materia::create([
+        $materia = Materia::create([
             'nombre' => 'Programación I',
             'sigla' => 'SIS-110',
             'carrera_id' => $carrera->id,
         ]);
 
-        $grupo = \App\Models\Grupo::create([
+        $grupo = Grupo::create([
             'nombre' => 'SIS-110 - G1',
             'materia_id' => $materia->id,
             'gestion_id' => $gestion->id,
@@ -195,7 +207,7 @@ class AdminUiTest extends TestCase
             'email' => 'docente1@example.com',
             'password' => bcrypt('password'),
         ]);
-        $docente = \App\Models\Docente::create([
+        $docente = Docente::create([
             'user_id' => $userDocente->id,
             'ci' => '8888881',
             'especialidad' => 'Programación',
@@ -209,7 +221,7 @@ class AdminUiTest extends TestCase
             'email' => 'postulanteA@example.com',
             'password' => bcrypt('password'),
         ]);
-        $postulante = \App\Models\Postulante::create([
+        $postulante = Postulante::create([
             'user_id' => $userPost->id,
             'ci' => '123456',
             'telefono' => '700000',
@@ -222,7 +234,7 @@ class AdminUiTest extends TestCase
 
         $this->actingAs($admin);
 
-        Livewire::test(\App\Livewire\Admin\Dashboard::class)
+        Livewire::test(Dashboard::class)
             ->call('showGroupDetails', $grupo->id)
             ->assertSet('showGroupDetailsModal', true)
             ->assertSet('selectedGroupInfo.nombre', 'SIS-110 - G1')
@@ -246,18 +258,18 @@ class AdminUiTest extends TestCase
             'activo' => true,
         ]);
 
-        $carrera = \App\Models\Carrera::create([
+        $carrera = Carrera::create([
             'nombre' => 'SIS',
             'sigla' => 'SIS',
         ]);
 
-        $materia = \App\Models\Materia::create([
+        $materia = Materia::create([
             'nombre' => 'Programación',
             'sigla' => 'SIS-110',
             'carrera_id' => $carrera->id,
         ]);
 
-        $grupo = \App\Models\Grupo::create([
+        $grupo = Grupo::create([
             'nombre' => 'SIS-110 - G1',
             'materia_id' => $materia->id,
             'gestion_id' => $gestion->id,
@@ -270,7 +282,7 @@ class AdminUiTest extends TestCase
             'password' => bcrypt('password'),
         ]);
 
-        $postulante = \App\Models\Postulante::create([
+        $postulante = Postulante::create([
             'user_id' => $userPost->id,
             'ci' => '123456',
             'telefono' => '700000',
@@ -285,7 +297,7 @@ class AdminUiTest extends TestCase
 
         $this->actingAs($admin);
 
-        Livewire::test(\App\Livewire\Admin\Examenes::class)
+        Livewire::test(Examenes::class)
             ->assertSet('activeTab', 'calificaciones')
             ->assertSee('Calificaciones por Postulante')
             ->assertSee('Postulante B')
@@ -331,18 +343,18 @@ class AdminUiTest extends TestCase
             'activo' => true,
         ]);
 
-        $carrera = \App\Models\Carrera::create([
+        $carrera = Carrera::create([
             'nombre' => 'SIS',
             'sigla' => 'SIS',
         ]);
 
-        $materia = \App\Models\Materia::create([
+        $materia = Materia::create([
             'nombre' => 'Programación',
             'sigla' => 'SIS-110',
             'carrera_id' => $carrera->id,
         ]);
 
-        $grupo = \App\Models\Grupo::create([
+        $grupo = Grupo::create([
             'nombre' => 'SIS-110 - G1',
             'materia_id' => $materia->id,
             'gestion_id' => $gestion->id,
@@ -351,22 +363,22 @@ class AdminUiTest extends TestCase
 
         // Student 1 (Admitted - score 80)
         $user1 = User::create(['name' => 'Student High', 'email' => 'high@example.com', 'password' => 'password']);
-        $post1 = \App\Models\Postulante::create([
+        $post1 = Postulante::create([
             'user_id' => $user1->id, 'ci' => '1', 'telefono' => '1', 'fecha_nacimiento' => '2005-01-01',
-            'carrera_primera_opcion_id' => $carrera->id, 'gestion_id' => $gestion->id, 'estado_admision' => 'pendiente'
+            'carrera_primera_opcion_id' => $carrera->id, 'gestion_id' => $gestion->id, 'estado_admision' => 'pendiente',
         ]);
         $grupo->postulantes()->attach($post1->id);
 
         // Student 2 (Failed - score 40)
         $user2 = User::create(['name' => 'Student Low', 'email' => 'low@example.com', 'password' => 'password']);
-        $post2 = \App\Models\Postulante::create([
+        $post2 = Postulante::create([
             'user_id' => $user2->id, 'ci' => '2', 'telefono' => '2', 'fecha_nacimiento' => '2005-01-01',
-            'carrera_primera_opcion_id' => $carrera->id, 'gestion_id' => $gestion->id, 'estado_admision' => 'pendiente'
+            'carrera_primera_opcion_id' => $carrera->id, 'gestion_id' => $gestion->id, 'estado_admision' => 'pendiente',
         ]);
         $grupo->postulantes()->attach($post2->id);
 
         // Create exam definitions
-        $exam = \App\Models\Examen::create([
+        $exam = Examen::create([
             'nombre' => 'Examen Final',
             'materia_id' => $materia->id,
             'gestion_id' => $gestion->id,
@@ -375,13 +387,13 @@ class AdminUiTest extends TestCase
         ]);
 
         // Grades
-        \App\Models\Nota::create(['postulante_id' => $post1->id, 'examen_id' => $exam->id, 'puntaje' => 80]);
-        \App\Models\Nota::create(['postulante_id' => $post2->id, 'examen_id' => $exam->id, 'puntaje' => 40]);
+        Nota::create(['postulante_id' => $post1->id, 'examen_id' => $exam->id, 'puntaje' => 80]);
+        Nota::create(['postulante_id' => $post2->id, 'examen_id' => $exam->id, 'puntaje' => 40]);
 
         $this->actingAs($admin);
 
         // Test filtering by voice command "nota ponderada mayor de setenta"
-        Livewire::test(\App\Livewire\Admin\Examenes::class)
+        Livewire::test(Examenes::class)
             ->assertSet('activeTab', 'calificaciones')
             ->assertSee('Student High')
             ->assertSee('Student Low')
@@ -391,7 +403,7 @@ class AdminUiTest extends TestCase
             ->assertDontSee('Student Low');
 
         // Test filtering by voice command "nota menor de sesenta"
-        Livewire::test(\App\Livewire\Admin\Examenes::class)
+        Livewire::test(Examenes::class)
             ->assertSet('activeTab', 'calificaciones')
             ->assertSee('Student High')
             ->assertSee('Student Low')
@@ -414,18 +426,18 @@ class AdminUiTest extends TestCase
             'activo' => true,
         ]);
 
-        $carreraSIS = \App\Models\Carrera::create([
+        $carreraSIS = Carrera::create([
             'sigla' => 'SIS',
             'nombre' => 'Ingeniería de Sistemas',
         ]);
 
-        $carreraINF = \App\Models\Carrera::create([
+        $carreraINF = Carrera::create([
             'sigla' => 'INF',
             'nombre' => 'Ingeniería Informática',
         ]);
 
         $user1 = User::factory()->create(['name' => 'Admitido Uno']);
-        $postulante1 = \App\Models\Postulante::create([
+        $postulante1 = Postulante::create([
             'user_id' => $user1->id,
             'nombres_apellidos' => 'Admitido Uno',
             'ci' => '123456',
@@ -443,7 +455,7 @@ class AdminUiTest extends TestCase
         ]);
 
         $user2 = User::factory()->create(['name' => 'Admitido Dos']);
-        $postulante2 = \App\Models\Postulante::create([
+        $postulante2 = Postulante::create([
             'user_id' => $user2->id,
             'nombres_apellidos' => 'Admitido Dos',
             'ci' => '789012',
@@ -461,7 +473,7 @@ class AdminUiTest extends TestCase
         ]);
 
         // Test checking systems career (SIS) shows only Admitido Uno (1ra opción)
-        Livewire::test(\App\Livewire\Admin\Dashboard::class)
+        Livewire::test(Dashboard::class)
             ->set('selectedGestionId', $gestion->id)
             ->set('selectedDetailCarreraId', $carreraSIS->id)
             ->call('loadStats')
@@ -472,7 +484,7 @@ class AdminUiTest extends TestCase
             ->assertSee('1ra Opción');
 
         // Test checking informatics career (INF) shows only Admitido Dos (2da opción)
-        Livewire::test(\App\Livewire\Admin\Dashboard::class)
+        Livewire::test(Dashboard::class)
             ->set('selectedGestionId', $gestion->id)
             ->set('selectedDetailCarreraId', $carreraINF->id)
             ->call('loadStats')
@@ -485,7 +497,7 @@ class AdminUiTest extends TestCase
 
     public function test_admin_dashboard_can_send_email_notifications()
     {
-        \Illuminate\Support\Facades\Mail::fake();
+        Mail::fake();
 
         $admin = User::factory()->create();
         $admin->assignRole('Administrador');
@@ -497,7 +509,7 @@ class AdminUiTest extends TestCase
             'activo' => true,
         ]);
 
-        $carrera = \App\Models\Carrera::create([
+        $carrera = Carrera::create([
             'nombre' => 'SIS',
             'sigla' => 'SIS',
         ]);
@@ -508,7 +520,7 @@ class AdminUiTest extends TestCase
             'email' => 'notif@example.com',
             'password' => bcrypt('password'),
         ]);
-        $postulante = \App\Models\Postulante::create([
+        $postulante = Postulante::create([
             'user_id' => $userPost->id,
             'nombres_apellidos' => 'Postulante Notif',
             'ci' => '1234567',
@@ -521,14 +533,14 @@ class AdminUiTest extends TestCase
 
         $this->actingAs($admin);
 
-        Livewire::test(\App\Livewire\Admin\Dashboard::class)
+        Livewire::test(Dashboard::class)
             ->set('selectedGestionId', $gestion->id)
             ->call('sendEmailNotifications')
             ->assertHasNoErrors()
             ->assertStatus(200);
 
         // Assert mail was queued
-        \Illuminate\Support\Facades\Mail::assertQueued(\App\Mail\AdmissionResultMail::class, function ($mail) use ($postulante) {
+        Mail::assertQueued(AdmissionResultMail::class, function ($mail) use ($postulante) {
             return $mail->postulante->id === $postulante->id && $mail->hasTo('notif@example.com');
         });
 
@@ -542,20 +554,20 @@ class AdminUiTest extends TestCase
 
     public function test_admin_dashboard_can_send_test_email()
     {
-        \Illuminate\Support\Facades\Mail::fake();
+        Mail::fake();
 
         $admin = User::factory()->create();
         $admin->assignRole('Administrador');
 
         $this->actingAs($admin);
 
-        Livewire::test(\App\Livewire\Admin\Dashboard::class)
+        Livewire::test(Dashboard::class)
             ->call('sendTestEmail')
             ->assertHasNoErrors()
             ->assertStatus(200);
 
         // Assert test email was sent
-        \Illuminate\Support\Facades\Mail::assertSent(\App\Mail\AdmissionResultMail::class, function ($mail) use ($admin) {
+        Mail::assertSent(AdmissionResultMail::class, function ($mail) use ($admin) {
             return $mail->hasTo($admin->email);
         });
 
@@ -567,6 +579,3 @@ class AdminUiTest extends TestCase
         ]);
     }
 }
-
-
-

@@ -2,13 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Traits\LogsActivity;
 
 class Examen extends Model
 {
-    use SoftDeletes, LogsActivity;
+    use LogsActivity, SoftDeletes;
 
     protected $table = 'examenes';
 
@@ -43,14 +43,16 @@ class Examen extends Model
     public function getDocentesNamesAttribute()
     {
         $groups = $this->materia?->grupos?->where('gestion_id', $this->gestion_id) ?? collect();
-        $docenteNames = $groups->flatMap(fn($g) => $g->docentes)->pluck('nombre')->unique();
+        $docenteNames = $groups->flatMap(fn ($g) => $g->docentes)->pluck('nombre')->unique();
+
         return $docenteNames->isNotEmpty() ? $docenteNames->implode(', ') : 'No asignado';
     }
 
     public function getAlumnosNamesAttribute()
     {
         $groups = $this->materia?->grupos?->where('gestion_id', $this->gestion_id) ?? collect();
-        $alumnoNames = $groups->flatMap(fn($g) => $g->postulantes)->pluck('nombres_apellidos')->unique();
+        $alumnoNames = $groups->flatMap(fn ($g) => $g->postulantes)->pluck('nombres_apellidos')->unique();
+
         return $alumnoNames->isNotEmpty() ? $alumnoNames->implode(', ') : 'Ninguno';
     }
 }

@@ -24,7 +24,7 @@ trait LogsActivity
 
     protected static function logActivity(string $action, $model)
     {
-        if (app()->runningInConsole() && !app()->runningUnitTests()) {
+        if (app()->runningInConsole() && ! app()->runningUnitTests()) {
             return;
         }
 
@@ -41,7 +41,7 @@ trait LogsActivity
         if ($user) {
             $desc .= " por el usuario '{$user->name}'";
         } else {
-            $desc .= " por el sistema";
+            $desc .= ' por el sistema';
         }
 
         // Capture changed attributes for updates
@@ -51,15 +51,17 @@ trait LogsActivity
             unset($changes['updated_at']);
             $payload = [
                 'dirty' => $changes,
-                'original' => array_intersect_key($model->getOriginal(), $changes)
+                'original' => array_intersect_key($model->getOriginal(), $changes),
             ];
-            
+
             // Customize description for common attributes
             if ($modelName === 'Postulante' && isset($changes['estado_admision'])) {
                 $old = $payload['original']['estado_admision'] ?? 'ninguno';
                 $new = $changes['estado_admision'];
                 $desc = "Se actualizó el estado de admisión del postulante '{$model->nombres_apellidos}' de '{$old}' a '{$new}'";
-                if ($user) $desc .= " por el usuario '{$user->name}'";
+                if ($user) {
+                    $desc .= " por el usuario '{$user->name}'";
+                }
             }
         } elseif ($action === 'crear') {
             $payload = $model->getAttributes();

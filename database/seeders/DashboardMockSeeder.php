@@ -2,15 +2,12 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use App\Models\Carrera;
-use App\Models\Materia;
+use App\Models\Cupo;
 use App\Models\Docente;
 use App\Models\Gestion;
-use App\Models\Cupo;
-use App\Models\Postulante;
-use App\Models\Examen;
-use App\Models\Nota;
+use App\Models\Materia;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -28,10 +25,10 @@ class DashboardMockSeeder extends Seeder
             DB::statement('TRUNCATE TABLE asignaciones_docente RESTART IDENTITY CASCADE;');
             DB::statement('TRUNCATE TABLE grupos RESTART IDENTITY CASCADE;');
             DB::statement('TRUNCATE TABLE docente_materia RESTART IDENTITY CASCADE;');
-            
+
             // Eliminar usuarios que no sean admin o coordinador
             User::whereNotIn('email', ['admin@cup.edu.bo', 'coordinador@cup.edu.bo'])->forceDelete();
-            
+
             DB::statement('TRUNCATE TABLE postulantes RESTART IDENTITY CASCADE;');
             DB::statement('TRUNCATE TABLE docentes RESTART IDENTITY CASCADE;');
             DB::statement('TRUNCATE TABLE cupos RESTART IDENTITY CASCADE;');
@@ -74,14 +71,14 @@ class DashboardMockSeeder extends Seeder
             // 4. Configurar Cupos por gestión
             $cuposData = [
                 'I-2025' => [
-                    'SIS' => [30, 15], 'INF' => [20, 10], 'RED' => [15, 5], 'ROB' => [12, 6]
+                    'SIS' => [30, 15], 'INF' => [20, 10], 'RED' => [15, 5], 'ROB' => [12, 6],
                 ],
                 'II-2025' => [
-                    'SIS' => [35, 15], 'INF' => [25, 10], 'RED' => [18, 5], 'ROB' => [15, 7]
+                    'SIS' => [35, 15], 'INF' => [25, 10], 'RED' => [18, 5], 'ROB' => [15, 7],
                 ],
                 'I-2026' => [
-                    'SIS' => [40, 20], 'INF' => [30, 15], 'RED' => [20, 8], 'ROB' => [18, 8]
-                ]
+                    'SIS' => [40, 20], 'INF' => [30, 15], 'RED' => [20, 8], 'ROB' => [18, 8],
+                ],
             ];
 
             foreach ([$g1, $g2, $gActive] as $g) {
@@ -145,25 +142,25 @@ class DashboardMockSeeder extends Seeder
                 ['name' => 'Jorge Vaca', 'email' => 'jorge@cup.edu.bo', 'esp' => 'Física General', 'materias' => ['FIS-SIS', 'FIS-INF', 'FIS-RED', 'FIS-ROB']],
                 ['name' => 'Dra. Elena Prado', 'email' => 'elena@cup.edu.bo', 'esp' => 'Inglés Técnico', 'materias' => ['ING-SIS', 'ING-INF', 'ING-RED', 'ING-ROB']],
                 ['name' => 'Dr. René Justiniano', 'email' => 'rene@cup.edu.bo', 'esp' => 'Computación e Inglés', 'materias' => ['COM-SIS', 'COM-INF', 'ING-SIS', 'ING-INF', 'COM-ROB', 'ING-ROB']],
-                
+
                 // Computación adicionales
                 ['name' => 'Ing. Ana Colque', 'email' => 'ana.colque@cup.edu.bo', 'esp' => 'Computación y Sistemas', 'materias' => ['COM-SIS', 'COM-INF', 'COM-RED', 'COM-ROB']],
                 ['name' => 'Lic. Roberto Mamani', 'email' => 'roberto.mamani@cup.edu.bo', 'esp' => 'Desarrollo de Software', 'materias' => ['COM-SIS', 'COM-INF', 'COM-RED', 'COM-ROB']],
                 ['name' => 'Ing. Luis Choque', 'email' => 'luis.choque@cup.edu.bo', 'esp' => 'Ingeniería de Sistemas', 'materias' => ['COM-SIS', 'COM-INF', 'COM-RED', 'COM-ROB']],
                 ['name' => 'Ing. Gabriel Flores', 'email' => 'gabriel.flores@cup.edu.bo', 'esp' => 'Sistemas y Redes', 'materias' => ['COM-SIS', 'COM-INF', 'COM-RED', 'COM-ROB']],
-                
+
                 // Matemáticas adicionales
                 ['name' => 'Lic. Silvia Flores', 'email' => 'silvia.flores@cup.edu.bo', 'esp' => 'Álgebra y Cálculo', 'materias' => ['MAT-SIS', 'MAT-INF', 'MAT-RED', 'MAT-ROB']],
                 ['name' => 'Dr. Hugo Flores', 'email' => 'hugo.flores@cup.edu.bo', 'esp' => 'Matemáticas Puras', 'materias' => ['MAT-SIS', 'MAT-INF', 'MAT-RED', 'MAT-ROB']],
                 ['name' => 'Msc. Ramiro Quispe', 'email' => 'ramiro.quispe@cup.edu.bo', 'esp' => 'Estadística y Probabilidades', 'materias' => ['MAT-SIS', 'MAT-INF', 'MAT-RED', 'MAT-ROB']],
                 ['name' => 'Msc. Carlos Rojas', 'email' => 'carlos.rojas@cup.edu.bo', 'esp' => 'Matemáticas Aplicadas', 'materias' => ['MAT-SIS', 'MAT-INF', 'MAT-RED', 'MAT-ROB']],
-                
+
                 // Física adicionales
                 ['name' => 'Lic. Patricia Aguilar', 'email' => 'patricia.aguilar@cup.edu.bo', 'esp' => 'Física General y Mecánica', 'materias' => ['FIS-SIS', 'FIS-INF', 'FIS-RED', 'FIS-ROB']],
                 ['name' => 'Ing. Marcos Pinto', 'email' => 'marcos.pinto@cup.edu.bo', 'esp' => 'Física Aplicada', 'materias' => ['FIS-SIS', 'FIS-INF', 'FIS-RED', 'FIS-ROB']],
                 ['name' => 'Dr. Fernando Vargas', 'email' => 'fernando.vargas@cup.edu.bo', 'esp' => 'Mecánica Cuántica y Ondas', 'materias' => ['FIS-SIS', 'FIS-INF', 'FIS-RED', 'FIS-ROB']],
                 ['name' => 'Lic. Jorge Ortiz', 'email' => 'jorge.ortiz@cup.edu.bo', 'esp' => 'Física e Ingeniería', 'materias' => ['FIS-SIS', 'FIS-INF', 'FIS-RED', 'FIS-ROB']],
-                
+
                 // Inglés adicionales
                 ['name' => 'Msc. Claudia Justiniano', 'email' => 'claudia.justiniano@cup.edu.bo', 'esp' => 'Inglés Técnico', 'materias' => ['ING-SIS', 'ING-INF', 'ING-RED', 'ING-ROB']],
                 ['name' => 'Lic. Gabriela Cortez', 'email' => 'gabriela.cortez@cup.edu.bo', 'esp' => 'Idiomas y Lingüística', 'materias' => ['ING-SIS', 'ING-INF', 'ING-RED', 'ING-ROB']],
@@ -184,8 +181,8 @@ class DashboardMockSeeder extends Seeder
                 $doc = Docente::create([
                     'user_id' => $u->id,
                     'nombre' => $d['name'],
-                    'ci' => '777888' . $dIdx,
-                    'telefono' => '7891234' . $dIdx,
+                    'ci' => '777888'.$dIdx,
+                    'telefono' => '7891234'.$dIdx,
                     'especialidad' => $d['esp'],
                     'disponibilidad_horaria' => ['slot_1', 'slot_2', 'slot_3', 'slot_4', 'slot_5', 'slot_6', 'slot_7', 'slot_8'],
                     'formacion_academica' => 'Maestría en Educación Superior y Licenciatura en la Especialidad.',
@@ -301,8 +298,8 @@ class DashboardMockSeeder extends Seeder
                 'telefono' => 60000000 + ($g->id * 100000) + $i,
                 'fecha_nacimiento' => today()->subYears(rand(17, 22))->format('Y-m-d'),
                 'sexo' => rand(1, 100) > 50 ? 'Masculino' : 'Femenino',
-                'direccion' => 'Barrio Lindo Calle ' . rand(1, 20),
-                'colegio_procedencia' => 'Colegio Nacional ' . ($i % 3 === 0 ? 'A' : 'B'),
+                'direccion' => 'Barrio Lindo Calle '.rand(1, 20),
+                'colegio_procedencia' => 'Colegio Nacional '.($i % 3 === 0 ? 'A' : 'B'),
                 'ciudad' => 'Santa Cruz',
                 'carrera_primera_opcion_id' => $primera->id,
                 'carrera_segunda_opcion_id' => $segunda->id,
@@ -324,7 +321,9 @@ class DashboardMockSeeder extends Seeder
 
         // Crear exámenes en esta gestión en memoria e insertarlos
         $startExamenId = DB::table('examenes')->max('id') + 1;
-        if (!$startExamenId) $startExamenId = 1;
+        if (! $startExamenId) {
+            $startExamenId = 1;
+        }
 
         $examIndex = 0;
         $examenesData = [];
@@ -406,7 +405,7 @@ class DashboardMockSeeder extends Seeder
             }
 
             $p['nota_final'] = round($sumMaterias / $mats->count(), 2);
-            
+
             if ($aprobadoTodas) {
                 $aprobadosMap[$cId][] = &$p;
             } else {
@@ -429,11 +428,12 @@ class DashboardMockSeeder extends Seeder
                 if ($b['nota_final'] === $a['nota_final']) {
                     return $a['id'] <=> $b['id'];
                 }
+
                 return $b['nota_final'] <=> $a['nota_final'];
             });
 
             $limit1ra = $cupos->get($cId)?->cantidad_primera_opcion ?? 20;
-            
+
             foreach ($candidatos as $idx => &$cand) {
                 if ($idx < $limit1ra) {
                     $cand['estado_admision'] = 'admitido_primera_opcion';
@@ -463,6 +463,7 @@ class DashboardMockSeeder extends Seeder
                 if ($b['nota_final'] === $a['nota_final']) {
                     return $a['id'] <=> $b['id'];
                 }
+
                 return $b['nota_final'] <=> $a['nota_final'];
             });
 
@@ -502,7 +503,9 @@ class DashboardMockSeeder extends Seeder
 
         // Generar grupos y horarios en memoria
         $startGrupoId = DB::table('grupos')->max('id') + 1;
-        if (!$startGrupoId) $startGrupoId = 1;
+        if (! $startGrupoId) {
+            $startGrupoId = 1;
+        }
 
         $gruposData = [];
         $postulanteGrupoData = [];
@@ -529,17 +532,19 @@ class DashboardMockSeeder extends Seeder
             $cPostulantes = array_values($cPostulantes);
             $totalInscritos = count($cPostulantes);
 
-            if ($totalInscritos === 0) continue;
+            if ($totalInscritos === 0) {
+                continue;
+            }
 
             $mats = Materia::where('carrera_id', $c->id)->get();
 
             foreach ($mats as $mIdx => $materia) {
                 $numGrupos = (int) ceil($totalInscritos / 70);
-                
+
                 // Distribuir equitativamente
                 $baseSize = (int) floor($totalInscritos / $numGrupos);
                 $remainder = $totalInscritos % $numGrupos;
-                
+
                 $offset = 0;
                 for ($gIdx = 0; $gIdx < $numGrupos; $gIdx++) {
                     $take = $baseSize + ($gIdx < $remainder ? 1 : 0);
@@ -547,7 +552,7 @@ class DashboardMockSeeder extends Seeder
                     $offset += $take;
 
                     $grupoId = $startGrupoId + $grupoIndex;
-                    $grupoNombre = "{$materia->sigla} - G" . ($gIdx + 1);
+                    $grupoNombre = "{$materia->sigla} - G".($gIdx + 1);
 
                     $gruposData[] = [
                         'id' => $grupoId,
@@ -572,7 +577,7 @@ class DashboardMockSeeder extends Seeder
                     // Docente calificado
                     $mDocentes = $docenteMateriaMap[$materia->id] ?? [1];
                     $docenteElegido = $mDocentes[$gIdx % count($mDocentes)];
-                    
+
                     $asignacionesDocenteData[] = [
                         'docente_id' => $docenteElegido,
                         'grupo_id' => $grupoId,
@@ -582,7 +587,7 @@ class DashboardMockSeeder extends Seeder
 
                     // Horario
                     $slotIndex = ($mIdx + $gIdx) % 8;
-                    $slotKey = 'slot_' . ($slotIndex + 1);
+                    $slotKey = 'slot_'.($slotIndex + 1);
                     $slotsPool = [
                         'slot_1' => ['dias' => ['lunes', 'miercoles'], 'inicio' => '07:30:00', 'fin' => '09:00:00'],
                         'slot_2' => ['dias' => ['lunes', 'miercoles'], 'inicio' => '09:15:00', 'fin' => '10:45:00'],
@@ -616,20 +621,20 @@ class DashboardMockSeeder extends Seeder
         }
 
         // Insertar grupos, horarios y asignaciones
-        if (!empty($gruposData)) {
+        if (! empty($gruposData)) {
             DB::table('grupos')->insert($gruposData);
             DB::statement("SELECT setval('grupos_id_seq', ?)", [DB::table('grupos')->max('id')]);
         }
-        if (!empty($postulanteGrupoData)) {
+        if (! empty($postulanteGrupoData)) {
             $chunkSize = 1000;
             foreach (array_chunk($postulanteGrupoData, $chunkSize) as $chunk) {
                 DB::table('postulante_grupo')->insert($chunk);
             }
         }
-        if (!empty($asignacionesDocenteData)) {
+        if (! empty($asignacionesDocenteData)) {
             DB::table('asignaciones_docente')->insert($asignacionesDocenteData);
         }
-        if (!empty($horariosData)) {
+        if (! empty($horariosData)) {
             $chunkSize = 1000;
             foreach (array_chunk($horariosData, $chunkSize) as $chunk) {
                 DB::table('horarios')->insert($chunk);

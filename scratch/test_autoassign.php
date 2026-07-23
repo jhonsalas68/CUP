@@ -2,20 +2,20 @@
 
 require 'vendor/autoload.php';
 $app = require_once 'bootstrap/app.php';
-$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+$kernel = $app->make(Kernel::class);
 $kernel->bootstrap();
 
 use App\Models\Grupo;
-use App\Models\Postulante;
+use Illuminate\Contracts\Console\Kernel;
 
 echo "Testing auto-assign on Postgres...\n";
 try {
     $grupo = Grupo::with('postulantes')->first();
-    if (!$grupo) {
+    if (! $grupo) {
         echo "No groups found.\n";
         exit;
     }
-    echo "Using Group: " . $grupo->nombre . " (Materia: " . $grupo->materia->nombre . ")\n";
+    echo 'Using Group: '.$grupo->nombre.' (Materia: '.$grupo->materia->nombre.")\n";
 
     $unassigned = [];
     foreach ($grupo->postulantes as $postulante) {
@@ -24,7 +24,7 @@ try {
         }
     }
 
-    echo "Total unassigned students: " . count($unassigned) . "\n";
+    echo 'Total unassigned students: '.count($unassigned)."\n";
     if (count($unassigned) === 0) {
         // Reset some seats first to test
         echo "Seeding some null seats to test...\n";
@@ -39,19 +39,19 @@ try {
                 $unassigned[] = $postulante;
             }
         }
-        echo "Now unassigned: " . count($unassigned) . "\n";
+        echo 'Now unassigned: '.count($unassigned)."\n";
     }
 
     // Try updating one
     $student = $unassigned[0];
-    echo "Updating student " . $student->nombres_apellidos . " (ID: " . $student->id . ") to seat 1...\n";
+    echo 'Updating student '.$student->nombres_apellidos.' (ID: '.$student->id.") to seat 1...\n";
     $result = $grupo->postulantes()->updateExistingPivot($student->id, ['nro_asiento' => 1]);
-    echo "Result (affected rows): " . ($result !== false ? "SUCCESS ($result)" : "FAILED") . "\n";
+    echo 'Result (affected rows): '.($result !== false ? "SUCCESS ($result)" : 'FAILED')."\n";
 
     // Verify
     $verify = $grupo->fresh()->postulantes()->find($student->id);
-    echo "Verified seat: " . ($verify->pivot->nro_asiento ?? 'NULL') . "\n";
+    echo 'Verified seat: '.($verify->pivot->nro_asiento ?? 'NULL')."\n";
 
 } catch (Exception $e) {
-    echo "Error: " . $e->getMessage() . "\n";
+    echo 'Error: '.$e->getMessage()."\n";
 }

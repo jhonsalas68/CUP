@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Livewire\Admin\VisualizadorAula;
 use App\Models\Aula;
 use App\Models\Carrera;
-use App\Models\Docente;
 use App\Models\Gestion;
 use App\Models\Grupo;
 use App\Models\Horario;
@@ -22,9 +21,13 @@ class VisualizadorAulaTest extends TestCase
     use RefreshDatabase;
 
     private $admin;
+
     private $postulanteUser;
+
     private $aula;
+
     private $grupo;
+
     private $postulante;
 
     protected function setUp(): void

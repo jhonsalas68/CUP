@@ -2,13 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Traits\LogsActivity;
 
 class Materia extends Model
 {
-    use SoftDeletes, LogsActivity;
+    use LogsActivity, SoftDeletes;
 
     protected $table = 'materias';
 
@@ -36,26 +36,32 @@ class Materia extends Model
     public function docentes()
     {
         return $this->belongsToMany(Docente::class, 'docente_materia', 'materia_id', 'docente_id')
-                    ->withTimestamps();
+            ->withTimestamps();
     }
 
     public function getActiveGestionDocentesNamesAttribute()
     {
-        $activeGestion = \App\Models\Gestion::where('activo', true)->first();
-        if (!$activeGestion) return 'No asignado';
-        
+        $activeGestion = Gestion::where('activo', true)->first();
+        if (! $activeGestion) {
+            return 'No asignado';
+        }
+
         $groups = $this->grupos->where('gestion_id', $activeGestion->id);
-        $docenteNames = $groups->flatMap(fn($g) => $g->docentes)->pluck('nombre')->unique();
+        $docenteNames = $groups->flatMap(fn ($g) => $g->docentes)->pluck('nombre')->unique();
+
         return $docenteNames->isNotEmpty() ? $docenteNames->implode(', ') : 'No asignado';
     }
 
     public function getActiveGestionAlumnosNamesAttribute()
     {
-        $activeGestion = \App\Models\Gestion::where('activo', true)->first();
-        if (!$activeGestion) return 'Ninguno';
-        
+        $activeGestion = Gestion::where('activo', true)->first();
+        if (! $activeGestion) {
+            return 'Ninguno';
+        }
+
         $groups = $this->grupos->where('gestion_id', $activeGestion->id);
-        $alumnoNames = $groups->flatMap(fn($g) => $g->postulantes)->pluck('nombres_apellidos')->unique();
+        $alumnoNames = $groups->flatMap(fn ($g) => $g->postulantes)->pluck('nombres_apellidos')->unique();
+
         return $alumnoNames->isNotEmpty() ? $alumnoNames->implode(', ') : 'Ninguno';
     }
 }

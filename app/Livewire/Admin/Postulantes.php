@@ -3,11 +3,13 @@
 namespace App\Livewire\Admin;
 
 use App\Models\Carrera;
+use App\Models\Examen;
 use App\Models\Gestion;
 use App\Models\Materia;
 use App\Models\Postulante;
 use App\Models\User;
-use App\Models\Examen;
+use App\Services\ExamService;
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -16,92 +18,118 @@ class Postulantes extends Component
     use WithPagination;
 
     public $search = '';
+
     public $filterCarrera = '';
+
     public $filterGestion = '';
+
     public $filterEstado = '';
+
     public $filterMateria = '';
+
     public $filterNotaMin = '';
+
     public $filterNotaMax = '';
 
     // Static dropdown collections
     public $carreras = [];
+
     public $gestiones = [];
+
     public $materias = [];
 
     // Requisitos de inscripción
     public $ci_vigente = false;
+
     public $titulo_bachiller = false;
+
     public $libreta_legalizada = false;
 
     // Estado de pagos
     public $pago_realizado = false;
+
     public $pago_matricula_realizado = false;
 
     public $estadosOptions = [
-        'pendiente'                => 'Pendiente',
-        'admitido_primera_opcion'  => 'Admitido (1ra opción)',
-        'admitido_segunda_opcion'  => 'Admitido (2da opción)',
-        'aprobados'                => 'Aprobados (1ra y 2da opción)',
-        'reprobado'                => 'Reprobado',
-        'no_admitido'              => 'No admitido',
-        'no_presentado'            => 'No presentado',
+        'pendiente' => 'Pendiente',
+        'admitido_primera_opcion' => 'Admitido (1ra opción)',
+        'admitido_segunda_opcion' => 'Admitido (2da opción)',
+        'aprobados' => 'Aprobados (1ra y 2da opción)',
+        'reprobado' => 'Reprobado',
+        'no_admitido' => 'No admitido',
+        'no_presentado' => 'No presentado',
     ];
 
     public $estadosUpdateOptions = [
-        'pendiente'                => 'Pendiente',
-        'admitido_primera_opcion'  => 'Admitido (1ra opción)',
-        'admitido_segunda_opcion'  => 'Admitido (2da opción)',
-        'no_admitido'              => 'No admitido',
-        'reprobado'                => 'Reprobado',
+        'pendiente' => 'Pendiente',
+        'admitido_primera_opcion' => 'Admitido (1ra opción)',
+        'admitido_segunda_opcion' => 'Admitido (2da opción)',
+        'no_admitido' => 'No admitido',
+        'reprobado' => 'Reprobado',
     ];
 
     // CRUD properties
     public $showModal = false;
+
     public $isEditing = false;
+
     public $postulanteId = null;
 
     // View Grades modal properties
     public $showNotasModal = false;
+
     public $selectedPostulante = null;
+
     public $postulanteNotas = [];
 
     // Form fields
     public $name = '';
+
     public $email = '';
+
     public $ci = '';
+
     public $telefono = '';
+
     public $fecha_nacimiento = '';
+
     public $sexo = '';
+
     public $direccion = '';
+
     public $colegio_procedencia = '';
+
     public $ciudad = '';
+
     public $carrera_primera_opcion_id = '';
+
     public $carrera_segunda_opcion_id = '';
+
     public $gestion_id = '';
 
     protected $rules = [
-        'name'                       => 'required|string|max:255',
-        'email'                      => 'required|email|max:255',
-        'ci'                         => 'required|string|max:20',
-        'telefono'                   => 'required|string|max:20',
-        'fecha_nacimiento'           => 'required|date',
-        'sexo'                       => 'required|string|in:M,F',
-        'direccion'                  => 'required|string|max:255',
-        'colegio_procedencia'        => 'required|string|max:255',
-        'ciudad'                     => 'required|string|max:100',
-        'carrera_primera_opcion_id'  => 'required|exists:carreras,id',
-        'carrera_segunda_opcion_id'  => 'nullable|exists:carreras,id|different:carrera_primera_opcion_id',
-        'gestion_id'                 => 'required|exists:gestiones,id',
-        'ci_vigente'                 => 'boolean',
-        'titulo_bachiller'           => 'boolean',
-        'libreta_legalizada'         => 'boolean',
-        'pago_realizado'             => 'boolean',
-        'pago_matricula_realizado'   => 'boolean',
+        'name' => 'required|string|max:255',
+        'email' => 'required|email|max:255',
+        'ci' => 'required|string|max:20',
+        'telefono' => 'required|string|max:20',
+        'fecha_nacimiento' => 'required|date',
+        'sexo' => 'required|string|in:M,F',
+        'direccion' => 'required|string|max:255',
+        'colegio_procedencia' => 'required|string|max:255',
+        'ciudad' => 'required|string|max:100',
+        'carrera_primera_opcion_id' => 'required|exists:carreras,id',
+        'carrera_segunda_opcion_id' => 'nullable|exists:carreras,id|different:carrera_primera_opcion_id',
+        'gestion_id' => 'required|exists:gestiones,id',
+        'ci_vigente' => 'boolean',
+        'titulo_bachiller' => 'boolean',
+        'libreta_legalizada' => 'boolean',
+        'pago_realizado' => 'boolean',
+        'pago_matricula_realizado' => 'boolean',
     ];
 
     public function mount()
     {
-        if (!auth()->user()->hasAnyRole(['Administrador', 'Coordinador'])) {
+        if (! auth()->user()->hasAnyRole(['Administrador', 'Coordinador'])) {
             abort(403, 'No autorizado.');
         }
 
@@ -117,26 +145,54 @@ class Postulantes extends Component
         $this->materias = Materia::with('carrera')->orderBy('carrera_id')->orderBy('nombre')->get();
     }
 
-    public function updatingSearch()    { $this->resetPage(); }
-    public function updatingFilterCarrera() { $this->resetPage(); }
-    public function updatingFilterGestion() { $this->resetPage(); }
-    public function updatingFilterEstado()  { $this->resetPage(); }
-    public function updatingFilterMateria() { $this->resetPage(); }
-    public function updatingFilterNotaMin() { $this->resetPage(); }
-    public function updatingFilterNotaMax() { $this->resetPage(); }
+    public function updatingSearch()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingFilterCarrera()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingFilterGestion()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingFilterEstado()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingFilterMateria()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingFilterNotaMin()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingFilterNotaMax()
+    {
+        $this->resetPage();
+    }
 
     public function cambiarEstado($id, $estado)
     {
-        if (!array_key_exists($estado, $this->estadosUpdateOptions)) {
+        if (! array_key_exists($estado, $this->estadosUpdateOptions)) {
             session()->flash('error', 'Estado de admisión no válido para actualizar.');
+
             return;
         }
 
         $postulante = Postulante::findOrFail($id);
         $postulante->update(['estado_admision' => $estado]);
-        
+
         // Recalculate score/admission state if state changes or has notes
-        $examService = new \App\Services\ExamService();
+        $examService = new ExamService;
         $examService->recalculatePostulanteScore($postulante->id, $postulante->gestion_id);
 
         session()->flash('message', 'Estado de postulante actualizado.');
@@ -188,91 +244,97 @@ class Postulantes extends Component
     public function save()
     {
         $emailRule = $this->isEditing
-            ? 'required|email|max:255|unique:users,email,' . Postulante::findOrFail($this->postulanteId)->user_id
+            ? 'required|email|max:255|unique:users,email,'.Postulante::findOrFail($this->postulanteId)->user_id
             : 'required|email|max:255|unique:users,email';
 
         $ciRule = $this->isEditing
-            ? 'required|string|max:20|unique:postulantes,ci,' . $this->postulanteId
+            ? 'required|string|max:20|unique:postulantes,ci,'.$this->postulanteId
             : 'required|string|max:20|unique:postulantes,ci';
 
         $this->validate(array_merge($this->rules, [
             'email' => $emailRule,
-            'ci' => $ciRule
+            'ci' => $ciRule,
         ]));
 
         $missingDocs = [];
-        if (!$this->ci_vigente) $missingDocs[] = 'Cédula de Identidad Vigente';
-        if (!$this->titulo_bachiller) $missingDocs[] = 'Título de Bachiller';
-        if (!$this->libreta_legalizada) $missingDocs[] = 'Libreta Legalizada';
+        if (! $this->ci_vigente) {
+            $missingDocs[] = 'Cédula de Identidad Vigente';
+        }
+        if (! $this->titulo_bachiller) {
+            $missingDocs[] = 'Título de Bachiller';
+        }
+        if (! $this->libreta_legalizada) {
+            $missingDocs[] = 'Libreta Legalizada';
+        }
 
         $habilitado = empty($missingDocs);
-        $mensaje_documentos = $habilitado ? null : 'Falta presentar: ' . implode(', ', $missingDocs);
+        $mensaje_documentos = $habilitado ? null : 'Falta presentar: '.implode(', ', $missingDocs);
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($habilitado, $mensaje_documentos) {
+        DB::transaction(function () use ($habilitado, $mensaje_documentos) {
             if ($this->isEditing) {
                 $postulante = Postulante::findOrFail($this->postulanteId);
                 $postulante->user->update([
-                    'name'  => $this->name,
+                    'name' => $this->name,
                     'email' => $this->email,
                 ]);
                 $postulante->update([
-                    'nombres_apellidos'         => $this->name,
-                    'ci'                        => $this->ci,
-                    'telefono'                  => $this->telefono,
-                    'fecha_nacimiento'          => $this->fecha_nacimiento,
-                    'sexo'                      => $this->sexo,
-                    'direccion'                 => $this->direccion,
-                    'colegio_procedencia'       => $this->colegio_procedencia,
-                    'ciudad'                    => $this->ciudad,
+                    'nombres_apellidos' => $this->name,
+                    'ci' => $this->ci,
+                    'telefono' => $this->telefono,
+                    'fecha_nacimiento' => $this->fecha_nacimiento,
+                    'sexo' => $this->sexo,
+                    'direccion' => $this->direccion,
+                    'colegio_procedencia' => $this->colegio_procedencia,
+                    'ciudad' => $this->ciudad,
                     'carrera_primera_opcion_id' => $this->carrera_primera_opcion_id,
                     'carrera_segunda_opcion_id' => $this->carrera_segunda_opcion_id ?: null,
-                    'gestion_id'                => $this->gestion_id,
-                    'ci_vigente'                => (bool) $this->ci_vigente,
-                    'titulo_bachiller'          => (bool) $this->titulo_bachiller,
-                    'libreta_legalizada'        => (bool) $this->libreta_legalizada,
-                    'pago_realizado'            => (bool) $this->pago_realizado,
-                    'pago_matricula_realizado'  => (bool) $this->pago_matricula_realizado,
-                    'habilitado'                => $habilitado,
-                    'mensaje_documentos'        => $mensaje_documentos,
+                    'gestion_id' => $this->gestion_id,
+                    'ci_vigente' => (bool) $this->ci_vigente,
+                    'titulo_bachiller' => (bool) $this->titulo_bachiller,
+                    'libreta_legalizada' => (bool) $this->libreta_legalizada,
+                    'pago_realizado' => (bool) $this->pago_realizado,
+                    'pago_matricula_realizado' => (bool) $this->pago_matricula_realizado,
+                    'habilitado' => $habilitado,
+                    'mensaje_documentos' => $mensaje_documentos,
                 ]);
 
                 session()->flash('message', 'Postulante actualizado correctamente.');
             } else {
                 $user = User::create([
-                    'name'     => $this->name,
-                    'email'    => $this->email,
+                    'name' => $this->name,
+                    'email' => $this->email,
                     'password' => bcrypt('password'),
                 ]);
                 $user->assignRole('Postulante');
 
                 $postulante = Postulante::create([
-                    'user_id'                   => $user->id,
-                    'nombres_apellidos'         => $this->name,
-                    'ci'                        => $this->ci,
-                    'telefono'                  => $this->telefono,
-                    'fecha_nacimiento'          => $this->fecha_nacimiento,
-                    'sexo'                      => $this->sexo,
-                    'direccion'                 => $this->direccion,
-                    'colegio_procedencia'       => $this->colegio_procedencia,
-                    'ciudad'                    => $this->ciudad,
+                    'user_id' => $user->id,
+                    'nombres_apellidos' => $this->name,
+                    'ci' => $this->ci,
+                    'telefono' => $this->telefono,
+                    'fecha_nacimiento' => $this->fecha_nacimiento,
+                    'sexo' => $this->sexo,
+                    'direccion' => $this->direccion,
+                    'colegio_procedencia' => $this->colegio_procedencia,
+                    'ciudad' => $this->ciudad,
                     'carrera_primera_opcion_id' => $this->carrera_primera_opcion_id,
                     'carrera_segunda_opcion_id' => $this->carrera_segunda_opcion_id ?: null,
-                    'gestion_id'                => $this->gestion_id,
-                    'estado_admision'           => 'pendiente',
-                    'ci_vigente'                => (bool) $this->ci_vigente,
-                    'titulo_bachiller'          => (bool) $this->titulo_bachiller,
-                    'libreta_legalizada'        => (bool) $this->libreta_legalizada,
-                    'pago_realizado'            => (bool) $this->pago_realizado,
-                    'pago_matricula_realizado'  => (bool) $this->pago_matricula_realizado,
-                    'habilitado'                => $habilitado,
-                    'mensaje_documentos'        => $mensaje_documentos,
+                    'gestion_id' => $this->gestion_id,
+                    'estado_admision' => 'pendiente',
+                    'ci_vigente' => (bool) $this->ci_vigente,
+                    'titulo_bachiller' => (bool) $this->titulo_bachiller,
+                    'libreta_legalizada' => (bool) $this->libreta_legalizada,
+                    'pago_realizado' => (bool) $this->pago_realizado,
+                    'pago_matricula_realizado' => (bool) $this->pago_matricula_realizado,
+                    'habilitado' => $habilitado,
+                    'mensaje_documentos' => $mensaje_documentos,
                 ]);
 
                 session()->flash('message', 'Postulante creado correctamente. Contraseña inicial: password');
             }
 
             // Recalculate score immediately
-            $examService = new \App\Services\ExamService();
+            $examService = new ExamService;
             $examService->recalculatePostulanteScore($postulante->id, $postulante->gestion_id);
         });
 
@@ -282,7 +344,7 @@ class Postulantes extends Component
 
     public function delete($id)
     {
-        \Illuminate\Support\Facades\DB::transaction(function () use ($id) {
+        DB::transaction(function () use ($id) {
             $postulante = Postulante::findOrFail($id);
             if ($postulante->user) {
                 $postulante->user->delete();
@@ -302,12 +364,13 @@ class Postulantes extends Component
     {
         $transcript = mb_strtolower($transcript, 'UTF-8');
         $transcript = $this->normalizeNumbers($transcript);
-        
+
         // Limpieza / reinicio de filtros
         if (str_contains($transcript, 'limpiar') || str_contains($transcript, 'restablecer') || str_contains($transcript, 'todos') || str_contains($transcript, 'reiniciar') || str_contains($transcript, 'quitar')) {
             $this->reset(['search', 'filterCarrera', 'filterGestion', 'filterEstado', 'filterMateria', 'filterNotaMin', 'filterNotaMax']);
             session()->flash('voice_feedback', 'Filtros restablecidos.');
             $this->resetPage();
+
             return;
         }
 
@@ -343,17 +406,17 @@ class Postulantes extends Component
         // Parsear Gestión
         if (preg_match('/gestión\s+([a-z0-9\-]+)/', $transcript, $matches) || preg_match('/gestion\s+([a-z0-9\-]+)/', $transcript, $matches)) {
             $gestName = strtoupper($matches[1]);
-            $g = Gestion::where('nombre', 'like', '%' . $gestName . '%')->first();
+            $g = Gestion::where('nombre', 'like', '%'.$gestName.'%')->first();
             if ($g) {
                 $this->filterGestion = $g->id;
-                $feedback[] = 'Gestión: ' . $g->nombre;
+                $feedback[] = 'Gestión: '.$g->nombre;
             }
         } elseif (preg_match('/(2025|2026)/', $transcript, $matches)) {
             $year = $matches[1];
-            $g = Gestion::where('nombre', 'like', '%' . $year . '%')->first();
+            $g = Gestion::where('nombre', 'like', '%'.$year.'%')->first();
             if ($g) {
                 $this->filterGestion = $g->id;
-                $feedback[] = 'Gestión: ' . $g->nombre;
+                $feedback[] = 'Gestión: '.$g->nombre;
             }
         }
 
@@ -381,64 +444,64 @@ class Postulantes extends Component
         // Parsear Materia
         if (str_contains($transcript, 'matemática') || str_contains($transcript, 'matematica')) {
             $m = Materia::where('nombre', 'like', '%Matemáticas%')
-                ->when($this->filterCarrera, fn($query) => $query->where('carrera_id', $this->filterCarrera))
+                ->when($this->filterCarrera, fn ($query) => $query->where('carrera_id', $this->filterCarrera))
                 ->first();
             if ($m) {
                 $this->filterMateria = $m->id;
-                $feedback[] = 'Materia: ' . $m->nombre;
+                $feedback[] = 'Materia: '.$m->nombre;
             }
         } elseif (str_contains($transcript, 'física') || str_contains($transcript, 'fisica')) {
             $m = Materia::where('nombre', 'like', '%Física%')
-                ->when($this->filterCarrera, fn($query) => $query->where('carrera_id', $this->filterCarrera))
+                ->when($this->filterCarrera, fn ($query) => $query->where('carrera_id', $this->filterCarrera))
                 ->first();
             if ($m) {
                 $this->filterMateria = $m->id;
-                $feedback[] = 'Materia: ' . $m->nombre;
+                $feedback[] = 'Materia: '.$m->nombre;
             }
         } elseif (str_contains($transcript, 'inglés') || str_contains($transcript, 'ingles')) {
             $m = Materia::where('nombre', 'like', '%Inglés%')
-                ->when($this->filterCarrera, fn($query) => $query->where('carrera_id', $this->filterCarrera))
+                ->when($this->filterCarrera, fn ($query) => $query->where('carrera_id', $this->filterCarrera))
                 ->first();
             if ($m) {
                 $this->filterMateria = $m->id;
-                $feedback[] = 'Materia: ' . $m->nombre;
+                $feedback[] = 'Materia: '.$m->nombre;
             }
         } elseif (str_contains($transcript, 'computación') || str_contains($transcript, 'computacion')) {
             $m = Materia::where('nombre', 'like', '%Computación%')
-                ->when($this->filterCarrera, fn($query) => $query->where('carrera_id', $this->filterCarrera))
+                ->when($this->filterCarrera, fn ($query) => $query->where('carrera_id', $this->filterCarrera))
                 ->first();
             if ($m) {
                 $this->filterMateria = $m->id;
-                $feedback[] = 'Materia: ' . $m->nombre;
+                $feedback[] = 'Materia: '.$m->nombre;
             }
         }
 
         // Parsear Notas
         if (preg_match('/nota\s+(?:final\s+)?(?:mayor|superior|más\s+de|mas\s+de)\s+(?:a\s+)?(\d+)/', $transcript, $matches)) {
             $this->filterNotaMin = $matches[1];
-            $feedback[] = 'Nota >= ' . $matches[1];
+            $feedback[] = 'Nota >= '.$matches[1];
         } elseif (preg_match('/nota\s+(?:final\s+)?(?:menor|inferior|menos\s+de)\s+(?:a\s+)?(\d+)/', $transcript, $matches)) {
             $this->filterNotaMax = $matches[1];
-            $feedback[] = 'Nota <= ' . $matches[1];
+            $feedback[] = 'Nota <= '.$matches[1];
         } elseif (preg_match('/nota\s+(?:final\s+)?entre\s+(\d+)\s+y\s+(\d+)/', $transcript, $matches)) {
             $this->filterNotaMin = $matches[1];
             $this->filterNotaMax = $matches[2];
             $feedback[] = "Nota entre {$matches[1]} y {$matches[2]}";
         } elseif (preg_match('/nota\s+(?:final\s+)?(?:de\s+)?(\d+)/', $transcript, $matches)) {
             $this->filterNotaMin = $matches[1];
-            $feedback[] = 'Nota >= ' . $matches[1];
+            $feedback[] = 'Nota >= '.$matches[1];
         }
 
         // Búsqueda general (nombre o CI)
         if (preg_match('/(?:buscar|busca|nombre|ci|identidad)\s+([a-záéíóúñ0-9\s\-\.]+)/', $transcript, $matches)) {
             $this->search = trim($matches[1]);
-            $feedback[] = 'Buscar: "' . $this->search . '"';
+            $feedback[] = 'Buscar: "'.$this->search.'"';
         }
 
         if (empty($feedback)) {
-            session()->flash('voice_error', 'No se reconoció ningún criterio en: "' . $transcript . '"');
+            session()->flash('voice_error', 'No se reconoció ningún criterio en: "'.$transcript.'"');
         } else {
-            session()->flash('voice_feedback', 'Filtros aplicados: ' . implode(', ', $feedback));
+            session()->flash('voice_feedback', 'Filtros aplicados: '.implode(', ', $feedback));
         }
 
         $this->resetPage();
@@ -454,9 +517,9 @@ class Postulantes extends Component
             'veinte' => 20, 'veintiuno' => 21, 'veintidós' => 22, 'veintidos' => 22, 'veintitres' => 23, 'veintitrés' => 23,
             'veinticuatro' => 24, 'veinticinco' => 25, 'veintiséis' => 26, 'veintiseis' => 26, 'veintisiete' => 27,
             'veintiocho' => 28, 'veintinueve' => 29, 'treinta' => 30, 'cuarenta' => 40, 'cincuenta' => 50,
-            'sesenta' => 60, 'setenta' => 70, 'ochenta' => 80, 'noventa' => 90, 'cien' => 100
+            'sesenta' => 60, 'setenta' => 70, 'ochenta' => 80, 'noventa' => 90, 'cien' => 100,
         ];
-        
+
         $tens = [
             'treinta' => 30,
             'cuarenta' => 40,
@@ -464,23 +527,23 @@ class Postulantes extends Component
             'sesenta' => 60,
             'setenta' => 70,
             'ochenta' => 80,
-            'noventa' => 90
+            'noventa' => 90,
         ];
         $units = [
             'uno' => 1, 'dos' => 2, 'tres' => 3, 'cuatro' => 4, 'cinco' => 5,
-            'seis' => 6, 'siete' => 7, 'ocho' => 8, 'nueve' => 9
+            'seis' => 6, 'siete' => 7, 'ocho' => 8, 'nueve' => 9,
         ];
-        
+
         foreach ($tens as $tenWord => $tenVal) {
             foreach ($units as $unitWord => $unitVal) {
-                $text = preg_replace('/\b' . $tenWord . '\s+y\s+' . $unitWord . '\b/u', $tenVal + $unitVal, $text);
+                $text = preg_replace('/\b'.$tenWord.'\s+y\s+'.$unitWord.'\b/u', $tenVal + $unitVal, $text);
             }
         }
-        
+
         foreach ($words as $word => $num) {
-            $text = preg_replace('/\b' . $word . '\b/u', $num, $text);
+            $text = preg_replace('/\b'.$word.'\b/u', $num, $text);
         }
-        
+
         return $text;
     }
 
@@ -490,21 +553,19 @@ class Postulantes extends Component
             ->with(['user', 'carreraPrimeraOpn', 'carreraSegundaOpn', 'gestion'])
             ->when($this->search, function ($q) {
                 $q->where(function ($inner) {
-                    $inner->whereHas('user', fn($u) =>
-                        $u->where('name', 'like', '%' . $this->search . '%')
-                          ->orWhere('email', 'like', '%' . $this->search . '%')
+                    $inner->whereHas('user', fn ($u) => $u->where('name', 'like', '%'.$this->search.'%')
+                        ->orWhere('email', 'like', '%'.$this->search.'%')
                     )
-                    ->orWhere('nombres_apellidos', 'like', '%' . $this->search . '%')
-                    ->orWhere('ci', 'like', '%' . $this->search . '%');
+                        ->orWhere('nombres_apellidos', 'like', '%'.$this->search.'%')
+                        ->orWhere('ci', 'like', '%'.$this->search.'%');
                 });
             })
-            ->when($this->filterCarrera, fn($q) =>
-                $q->where(function ($inner) {
-                    $inner->where('carrera_primera_opcion_id', $this->filterCarrera)
-                          ->orWhere('carrera_segunda_opcion_id', $this->filterCarrera);
-                })
+            ->when($this->filterCarrera, fn ($q) => $q->where(function ($inner) {
+                $inner->where('carrera_primera_opcion_id', $this->filterCarrera)
+                    ->orWhere('carrera_segunda_opcion_id', $this->filterCarrera);
+            })
             )
-            ->when($this->filterGestion, fn($q) => $q->where('gestion_id', $this->filterGestion))
+            ->when($this->filterGestion, fn ($q) => $q->where('gestion_id', $this->filterGestion))
             ->when($this->filterEstado, function ($q) {
                 if ($this->filterEstado === 'aprobados') {
                     $q->whereIn('estado_admision', ['admitido_primera_opcion', 'admitido_segunda_opcion']);
@@ -516,31 +577,31 @@ class Postulantes extends Component
                 $q->whereHas('notas.examen', function ($sub) {
                     $sub->where('materia_id', $this->filterMateria);
                 });
-                
+
                 if ($this->filterNotaMin !== '') {
                     $q->where(function ($query) {
                         $query->selectRaw('COALESCE(SUM(notas.puntaje * examenes.ponderacion / 100), 0)')
-                              ->from('notas')
-                              ->join('examenes', 'notas.examen_id', '=', 'examenes.id')
-                              ->whereColumn('notas.postulante_id', 'postulantes.id')
-                              ->where('examenes.materia_id', $this->filterMateria);
+                            ->from('notas')
+                            ->join('examenes', 'notas.examen_id', '=', 'examenes.id')
+                            ->whereColumn('notas.postulante_id', 'postulantes.id')
+                            ->where('examenes.materia_id', $this->filterMateria);
                     }, '>=', $this->filterNotaMin);
                 }
-                
+
                 if ($this->filterNotaMax !== '') {
                     $q->where(function ($query) {
                         $query->selectRaw('COALESCE(SUM(notas.puntaje * examenes.ponderacion / 100), 0)')
-                              ->from('notas')
-                              ->join('examenes', 'notas.examen_id', '=', 'examenes.id')
-                              ->whereColumn('notas.postulante_id', 'postulantes.id')
-                              ->where('examenes.materia_id', $this->filterMateria);
+                            ->from('notas')
+                            ->join('examenes', 'notas.examen_id', '=', 'examenes.id')
+                            ->whereColumn('notas.postulante_id', 'postulantes.id')
+                            ->where('examenes.materia_id', $this->filterMateria);
                     }, '<=', $this->filterNotaMax);
                 }
             })
-            ->when(!$this->filterMateria && $this->filterNotaMin !== '', function ($q) {
+            ->when(! $this->filterMateria && $this->filterNotaMin !== '', function ($q) {
                 $q->where('nota_final', '>=', $this->filterNotaMin);
             })
-            ->when(!$this->filterMateria && $this->filterNotaMax !== '', function ($q) {
+            ->when(! $this->filterMateria && $this->filterNotaMax !== '', function ($q) {
                 $q->where('nota_final', '<=', $this->filterNotaMax);
             })
             ->orderBy('id', 'desc')
@@ -550,7 +611,7 @@ class Postulantes extends Component
             'postulantes' => $postulantes,
             'carreras' => $this->carreras,
             'gestiones' => $this->gestiones,
-            'materias' => $this->materias
+            'materias' => $this->materias,
         ])->layout('layouts.admin');
     }
 
@@ -558,7 +619,7 @@ class Postulantes extends Component
     {
         $this->selectedPostulante = Postulante::with([
             'carreraPrimeraOpn',
-            'notas.examen.materia'
+            'notas.examen.materia',
         ])->findOrFail($id);
 
         $carreraId = $this->selectedPostulante->carrera_primera_opcion_id;
@@ -592,7 +653,7 @@ class Postulantes extends Component
                 'primer_parcial' => $notasMateria['Primer Parcial'],
                 'segundo_parcial' => $notasMateria['Segundo Parcial'],
                 'examen_final' => $notasMateria['Examen Final'],
-                'total_materia' => round($notaMateriaAcumulada, 2)
+                'total_materia' => round($notaMateriaAcumulada, 2),
             ];
         }
 

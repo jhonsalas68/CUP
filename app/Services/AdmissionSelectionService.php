@@ -2,14 +2,14 @@
 
 namespace App\Services;
 
-use App\Models\Gestion;
+use App\Exceptions\AdmissionSelectionException;
 use App\Models\Carrera;
 use App\Models\Cupo;
-use App\Models\Postulante;
-use App\Models\Materia;
 use App\Models\Examen;
+use App\Models\Gestion;
+use App\Models\Materia;
 use App\Models\Nota;
-use App\Exceptions\AdmissionSelectionException;
+use App\Models\Postulante;
 use Illuminate\Support\Facades\DB;
 
 class AdmissionSelectionService
@@ -17,15 +17,15 @@ class AdmissionSelectionService
     /**
      * Procesa la selección por ranking y la reasignación a segunda opción para toda la gestión.
      *
-     * @param int $gestionId
      * @return array Reporte simplificado de la ejecución
+     *
      * @throws AdmissionSelectionException
      */
     public function processAdmissions(int $gestionId): array
     {
         $gestion = Gestion::find($gestionId);
-        if (!$gestion) {
-            throw new AdmissionSelectionException("La gestión especificada no existe.");
+        if (! $gestion) {
+            throw new AdmissionSelectionException('La gestión especificada no existe.');
         }
 
         return DB::transaction(function () use ($gestion) {
@@ -36,7 +36,7 @@ class AdmissionSelectionService
                 $cupo = Cupo::where('carrera_id', $carrera->id)
                     ->where('gestion_id', $gestion->id)
                     ->first();
-                if (!$cupo) {
+                if (! $cupo) {
                     throw new AdmissionSelectionException("No se han configurado los cupos para la carrera '{$carrera->nombre}' en esta gestión.");
                 }
             }
@@ -44,15 +44,15 @@ class AdmissionSelectionService
             // 2. Evaluar y actualizar notas finales de todos los postulantes de la gestión
             $postulantes = Postulante::where('gestion_id', $gestion->id)->get();
             if ($postulantes->isEmpty()) {
-                throw new AdmissionSelectionException("No existen postulantes registrados para esta gestión.");
+                throw new AdmissionSelectionException('No existen postulantes registrados para esta gestión.');
             }
 
             // Preload all data in memory to solve the N+1 query problem (5000x speedup)
             $preloadedMaterias = Materia::all()->groupBy('carrera_id');
-            
+
             $allExams = Examen::where('gestion_id', $gestion->id)->get();
             $preloadedExams = $allExams->groupBy('materia_id');
-            
+
             $allNotas = Nota::whereIn('examen_id', $allExams->pluck('id'))->get();
             $preloadedNotas = [];
             foreach ($allNotas as $n) {
@@ -103,6 +103,7 @@ class AdmissionSelectionService
                     if ($b->nota_final === $a->nota_final) {
                         return $a->id <=> $b->id;
                     }
+
                     return $b->nota_final <=> $a->nota_final;
                 });
 
@@ -145,6 +146,7 @@ class AdmissionSelectionService
                     if ($b->nota_final === $a->nota_final) {
                         return $a->id <=> $b->id;
                     }
+
                     return $b->nota_final <=> $a->nota_final;
                 });
 
@@ -172,13 +174,9 @@ class AdmissionSelectionService
 
     /**
      * Evalúa académicamente a un postulante.
-     *
-     * @param Postulante $postulante
-     * @param int $gestionId
-     * @return array
      */
     public function evaluatePostulante(
-        Postulante $postulante, 
+        Postulante $postulante,
         int $gestionId,
         $preloadedMaterias = null,
         $preloadedExams = null,
@@ -186,7 +184,7 @@ class AdmissionSelectionService
         float $minNota = 60.00
     ): array {
         $carreraId = $postulante->carrera_primera_opcion_id;
-        $materias = $preloadedMaterias 
+        $materias = $preloadedMaterias
             ? ($preloadedMaterias[$carreraId] ?? collect())
             : Materia::where('carrera_id', $carreraId)->get();
 
@@ -205,7 +203,7 @@ class AdmissionSelectionService
         $hasUncheckedExams = false;
 
         foreach ($materias as $materia) {
-            $examenes = $preloadedExams 
+            $examenes = $preloadedExams
                 ? ($preloadedExams[$materia->id] ?? collect())
                 : Examen::where('materia_id', $materia->id)->where('gestion_id', $gestionId)->get();
 
@@ -250,22 +248,19 @@ class AdmissionSelectionService
 
         return [
             'nota_final' => round($promedioFinal, 2),
-            'aprobado_academico' => $aprobadoTodasMaterias && !$hasUncheckedExams,
-            'reprobado' => !$aprobadoTodasMaterias && !$hasUncheckedExams,
+            'aprobado_academico' => $aprobadoTodasMaterias && ! $hasUncheckedExams,
+            'reprobado' => ! $aprobadoTodasMaterias && ! $hasUncheckedExams,
             'has_pending_exams' => $hasUncheckedExams,
         ];
     }
 
     /**
      * Genera estadísticas detalladas de admisión para una gestión.
-     *
-     * @param int $gestionId
-     * @return array
      */
     public function getStats(int $gestionId): array
     {
         $gestion = Gestion::find($gestionId);
-        if (!$gestion) {
+        if (! $gestion) {
             return [];
         }
 
@@ -314,9 +309,9 @@ class AdmissionSelectionService
 
             // Notas de ingresantes
             $notasAdmitidos = Postulante::where('gestion_id', $gestionId)
-                ->where(function($q) use ($carrera) {
-                    $q->where(fn($q1) => $q1->where('carrera_primera_opcion_id', $carrera->id)->where('estado_admision', 'admitido_primera_opcion'))
-                      ->orWhere(fn($q2) => $q2->where('carrera_segunda_opcion_id', $carrera->id)->where('estado_admision', 'admitido_segunda_opcion'));
+                ->where(function ($q) use ($carrera) {
+                    $q->where(fn ($q1) => $q1->where('carrera_primera_opcion_id', $carrera->id)->where('estado_admision', 'admitido_primera_opcion'))
+                        ->orWhere(fn ($q2) => $q2->where('carrera_segunda_opcion_id', $carrera->id)->where('estado_admision', 'admitido_segunda_opcion'));
                 })
                 ->pluck('nota_final');
 

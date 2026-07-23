@@ -3,6 +3,7 @@
 namespace App\Livewire\Admin;
 
 use App\Models\Carrera;
+use App\Models\Docente;
 use App\Models\Gestion;
 use App\Models\Grupo;
 use App\Models\Materia;
@@ -14,27 +15,38 @@ class Grupos extends Component
     use WithPagination;
 
     public $search = '';
+
     public $filterGestion = '';
+
     public $filterCarrera = '';
+
     public $filterMateria = '';
 
     // Static dropdown collections
     public $gestiones = [];
+
     public $carreras = [];
+
     public $docentesList = [];
 
     public $showModal = false;
+
     public $isEditing = false;
+
     public $grupoId = null;
 
     public $nombre = '';
+
     public $materia_id = '';
+
     public $gestion_id = '';
+
     public $cupo_maximo = 40;
+
     public $docente_id = '';
 
     protected $rules = [
-        'nombre'     => 'required|string|max:255',
+        'nombre' => 'required|string|max:255',
         'materia_id' => 'required|exists:materias,id',
         'gestion_id' => 'required|exists:gestiones,id',
         'cupo_maximo' => 'required|integer|min:1',
@@ -54,14 +66,14 @@ class Grupos extends Component
 
     public function mount()
     {
-        if (!auth()->user()->hasAnyRole(['Administrador', 'Coordinador'])) {
+        if (! auth()->user()->hasAnyRole(['Administrador', 'Coordinador'])) {
             abort(403, 'No autorizado.');
         }
 
         // Load static dropdowns once
         $this->gestiones = Gestion::orderBy('fecha_inicio', 'desc')->get();
         $this->carreras = Carrera::orderBy('nombre')->get();
-        $this->docentesList = \App\Models\Docente::orderBy('nombre')->get();
+        $this->docentesList = Docente::orderBy('nombre')->get();
     }
 
     public function updatingSearch()
@@ -155,7 +167,7 @@ class Grupos extends Component
 
     public function getMateriasProperty()
     {
-        return Materia::when($this->filterCarrera, fn($query) => $query->where('carrera_id', $this->filterCarrera))
+        return Materia::when($this->filterCarrera, fn ($query) => $query->where('carrera_id', $this->filterCarrera))
             ->orderBy('nombre')
             ->get();
     }
@@ -164,14 +176,14 @@ class Grupos extends Component
     {
         $grupos = Grupo::with(['materia.carrera', 'gestion', 'postulantes', 'docentes'])
             ->when($this->search, function ($query) {
-                $query->where('nombre', 'like', '%' . $this->search . '%')
-                    ->orWhereHas('materia', fn($q) => $q->where('nombre', 'like', '%' . $this->search . '%'))
-                    ->orWhereHas('materia', fn($q) => $q->where('sigla', 'like', '%' . $this->search . '%'))
-                    ->orWhereHas('gestion', fn($q) => $q->where('nombre', 'like', '%' . $this->search . '%'));
+                $query->where('nombre', 'like', '%'.$this->search.'%')
+                    ->orWhereHas('materia', fn ($q) => $q->where('nombre', 'like', '%'.$this->search.'%'))
+                    ->orWhereHas('materia', fn ($q) => $q->where('sigla', 'like', '%'.$this->search.'%'))
+                    ->orWhereHas('gestion', fn ($q) => $q->where('nombre', 'like', '%'.$this->search.'%'));
             })
-            ->when($this->filterGestion, fn($query) => $query->where('gestion_id', $this->filterGestion))
-            ->when($this->filterCarrera, fn($query) => $query->whereHas('materia', fn($q) => $q->where('carrera_id', $this->filterCarrera)))
-            ->when($this->filterMateria, fn($query) => $query->where('materia_id', $this->filterMateria))
+            ->when($this->filterGestion, fn ($query) => $query->where('gestion_id', $this->filterGestion))
+            ->when($this->filterCarrera, fn ($query) => $query->whereHas('materia', fn ($q) => $q->where('carrera_id', $this->filterCarrera)))
+            ->when($this->filterMateria, fn ($query) => $query->where('materia_id', $this->filterMateria))
             ->orderBy('nombre')
             ->paginate(10);
 

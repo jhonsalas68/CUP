@@ -2,8 +2,8 @@
 
 namespace App\Livewire\Shared;
 
-use Livewire\Component;
 use App\Models\Notificacion;
+use Livewire\Component;
 
 class NotificationBell extends Component
 {
@@ -13,7 +13,7 @@ class NotificationBell extends Component
     {
         $notif = Notificacion::where('user_id', auth()->id())->findOrFail($id);
         $notif->update(['leido' => true]);
-        
+
         $this->dispatch('notificationMarkedRead');
     }
 
@@ -22,7 +22,7 @@ class NotificationBell extends Component
         Notificacion::where('user_id', auth()->id())
             ->where('leido', false)
             ->update(['leido' => true]);
-            
+
         $this->dispatch('notificationMarkedRead');
     }
 

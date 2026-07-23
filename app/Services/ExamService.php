@@ -2,11 +2,11 @@
 
 namespace App\Services;
 
+use App\Exceptions\ExamValidationException;
 use App\Models\Examen;
+use App\Models\Materia;
 use App\Models\Nota;
 use App\Models\Postulante;
-use App\Models\Materia;
-use App\Exceptions\ExamValidationException;
 use Illuminate\Support\Facades\DB;
 
 class ExamService
@@ -21,17 +21,15 @@ class ExamService
     /**
      * Registra un nuevo examen validando que no sea duplicado y que cumpla la regla 30/30/40.
      *
-     * @param int $materiaId
-     * @param int $gestionId
-     * @param string $nombre Must be one of: 'Primer Parcial', 'Segundo Parcial', 'Examen Final'
-     * @param string $fecha Format: Y-m-d
-     * @return Examen
+     * @param  string  $nombre  Must be one of: 'Primer Parcial', 'Segundo Parcial', 'Examen Final'
+     * @param  string  $fecha  Format: Y-m-d
+     *
      * @throws ExamValidationException
      */
     public function createExam(int $materiaId, int $gestionId, string $nombre, string $fecha): Examen
     {
         // 1. Validar nombre del examen y obtener ponderación correspondiente
-        if (!array_key_exists($nombre, self::PONDERACIONES_VALIDAS)) {
+        if (! array_key_exists($nombre, self::PONDERACIONES_VALIDAS)) {
             throw new ExamValidationException("El nombre del examen debe ser uno de: 'Primer Parcial', 'Segundo Parcial' o 'Examen Final'.");
         }
 
@@ -69,21 +67,21 @@ class ExamService
     /**
      * Registra las notas de los postulantes para un examen y recalcula nota final de admisión.
      *
-     * @param int $examenId
-     * @param array $grades Array asociativo de [postulante_id => puntaje]
-     * @param int|null $registradoPorId ID del usuario que registra las notas
+     * @param  array  $grades  Array asociativo de [postulante_id => puntaje]
+     * @param  int|null  $registradoPorId  ID del usuario que registra las notas
+     *
      * @throws ExamValidationException
      */
     public function registerGrades(int $examenId, array $grades, ?int $registradoPorId = null): void
     {
         $examen = Examen::find($examenId);
-        if (!$examen) {
-            throw new ExamValidationException("El examen especificado no existe.");
+        if (! $examen) {
+            throw new ExamValidationException('El examen especificado no existe.');
         }
 
         // 1. Validar todas las notas primero
         foreach ($grades as $postulanteId => $puntaje) {
-            if (!is_numeric($puntaje) || $puntaje < 0.00 || $puntaje > 100.00) {
+            if (! is_numeric($puntaje) || $puntaje < 0.00 || $puntaje > 100.00) {
                 throw new ExamValidationException("El puntaje para el postulante ID {$postulanteId} debe estar en el rango de 0.00 a 100.00.");
             }
         }
@@ -111,14 +109,11 @@ class ExamService
 
     /**
      * Recalcula la nota final y el estado de admisión del postulante basándose en sus notas.
-     *
-     * @param int $postulanteId
-     * @param int $gestionId
      */
     public function recalculatePostulanteScore(int $postulanteId, int $gestionId): void
     {
         $postulante = Postulante::find($postulanteId);
-        if (!$postulante) {
+        if (! $postulante) {
             return;
         }
 
@@ -131,6 +126,7 @@ class ExamService
                 'nota_final' => 0.00,
                 'estado_admision' => 'pendiente',
             ]);
+
             return;
         }
 

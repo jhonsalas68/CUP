@@ -7,14 +7,13 @@ use App\Models\Cupo;
 use App\Models\Docente;
 use App\Models\Examen;
 use App\Models\Gestion;
-use App\Models\Grupo;
 use App\Models\Materia;
 use App\Models\Nota;
 use App\Models\Postulante;
 use App\Models\User;
-use App\Services\GroupGenerationService;
 use App\Services\ExamService;
-use App\Services\AdmissionSelectionService;
+use App\Services\GroupGenerationService;
+use Faker\Factory;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -30,7 +29,7 @@ class ComprehensiveDataSeeder extends Seeder
     {
         // 1. Obtener o crear gestión activa
         $gestion = Gestion::where('activo', true)->first();
-        if (!$gestion) {
+        if (! $gestion) {
             $gestion = Gestion::create([
                 'nombre' => 'I-2026',
                 'fecha_inicio' => '2026-02-01',
@@ -71,30 +70,33 @@ class ComprehensiveDataSeeder extends Seeder
         // 5. Crear usuarios docentes calificados
         $this->command->info('Creando docentes calificados...');
 
-        $hasFaker = class_exists(\Faker\Factory::class);
-        $faker = $hasFaker ? \Faker\Factory::create('es_ES') : null;
+        $hasFaker = class_exists(Factory::class);
+        $faker = $hasFaker ? Factory::create('es_ES') : null;
 
         $firstNames = ['Carlos', 'Juan', 'María', 'Ana', 'Pedro', 'Luis', 'Sofía', 'Lucía', 'Diego', 'Mateo', 'Gabriel', 'Valentina', 'Camila', 'Santiago', 'Daniel'];
         $lastNames = ['Pérez', 'Gómez', 'Rojas', 'López', 'Flores', 'Vargas', 'Quispe', 'Mamani', 'Ramos', 'Gutiérrez', 'Castillo', 'Sanchez', 'Ortiz', 'Aguilar'];
 
         $getRandomName = function () use ($hasFaker, $faker, $firstNames, $lastNames) {
             if ($hasFaker) {
-                return $faker->firstName() . ' ' . $faker->lastName() . ' ' . $faker->lastName();
+                return $faker->firstName().' '.$faker->lastName().' '.$faker->lastName();
             }
-            return $firstNames[array_rand($firstNames)] . ' ' . $lastNames[array_rand($lastNames)] . ' ' . $lastNames[array_rand($lastNames)];
+
+            return $firstNames[array_rand($firstNames)].' '.$lastNames[array_rand($lastNames)].' '.$lastNames[array_rand($lastNames)];
         };
 
         $getNumerify = function ($pattern) use ($hasFaker, $faker) {
             if ($hasFaker) {
                 return $faker->numerify($pattern);
             }
-            return preg_replace_callback('/#/', fn() => rand(1, 9), $pattern);
+
+            return preg_replace_callback('/#/', fn () => rand(1, 9), $pattern);
         };
 
         $getRandomElement = function ($arr) use ($hasFaker, $faker) {
             if ($hasFaker) {
                 return $faker->randomElement($arr);
             }
+
             return $arr[array_rand($arr)];
         };
 
@@ -103,7 +105,7 @@ class ComprehensiveDataSeeder extends Seeder
 
         for ($i = 1; $i <= 20; $i++) {
             $nombre = $getRandomName();
-            $email = 'docente' . $i . '@cup.edu.bo';
+            $email = 'docente'.$i.'@cup.edu.bo';
 
             $user = User::firstOrCreate(
                 ['email' => $email],
@@ -125,7 +127,7 @@ class ComprehensiveDataSeeder extends Seeder
                         'Física e Ingeniería',
                         'Programación y Algoritmos',
                         'Sistemas y Redes',
-                        'Idiomas y Comunicación'
+                        'Idiomas y Comunicación',
                     ]),
                     'disponibilidad_horaria' => ['slot_1', 'slot_2', 'slot_3', 'slot_4', 'slot_5', 'slot_6', 'slot_7', 'slot_8'],
                     'formacion_academica' => 'Maestría en Educación Superior y Licenciatura en la Especialidad.',
@@ -145,11 +147,11 @@ class ComprehensiveDataSeeder extends Seeder
 
         for ($i = 1; $i <= self::POSTULANTES_COUNT; $i++) {
             $carreraPrimera = $carreras[$i % $carreras->count()];
-            $carrerasFiltradas = $carreras->filter(fn($c) => $c->id !== $carreraPrimera->id)->values();
+            $carrerasFiltradas = $carreras->filter(fn ($c) => $c->id !== $carreraPrimera->id)->values();
             $carreraSegunda = $carrerasFiltradas[$i % $carrerasFiltradas->count()];
 
             $nombre = $getRandomName();
-            $email = 'postulante' . $i . '@cup.edu.bo';
+            $email = 'postulante'.$i.'@cup.edu.bo';
 
             $user = User::firstOrCreate(
                 ['email' => $email],
@@ -168,13 +170,13 @@ class ComprehensiveDataSeeder extends Seeder
                     'telefono' => $getNumerify('6#######'),
                     'fecha_nacimiento' => '2004-05-15',
                     'sexo' => $getRandomElement(['M', 'F']),
-                    'direccion' => 'Av. Busch # ' . $i,
+                    'direccion' => 'Av. Busch # '.$i,
                     'colegio_procedencia' => $getRandomElement([
                         'Colegio Nacional Florida',
                         'Colegio La Salle',
                         'U.E. Marista',
                         'U.E. Fe y Alegría',
-                        'U.E. Don Bosco'
+                        'U.E. Don Bosco',
                     ]),
                     'ciudad' => $getRandomElement(['Santa Cruz', 'La Paz', 'Cochabamba', 'Oruro', 'Sucre']),
                     'carrera_primera_opcion_id' => $carreraPrimera->id,
@@ -194,10 +196,10 @@ class ComprehensiveDataSeeder extends Seeder
         // 7. Ejecutar generación automática de grupos (si no existen exámenes previos)
         $this->command->info('Generando grupos automáticos...');
         try {
-            $groupService = new GroupGenerationService();
+            $groupService = new GroupGenerationService;
             $groupService->generate($gestion->id);
         } catch (\Throwable $e) {
-            $this->command->warn('Grupos ya configurados previamente: ' . $e->getMessage());
+            $this->command->warn('Grupos ya configurados previamente: '.$e->getMessage());
         }
 
         // 8. Crear exámenes para cada materia y gestión
@@ -242,7 +244,7 @@ class ComprehensiveDataSeeder extends Seeder
 
         // 9. Asignar notas a los postulantes (optimizado con transacción)
         $this->command->info('Asignando notas (optimizado)...');
-        $examService = new ExamService();
+        $examService = new ExamService;
 
         DB::transaction(function () use ($gestion, $examService) {
             $postulantes = Postulante::with('carreraPrimeraOpn.materias')->get();

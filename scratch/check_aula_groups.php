@@ -2,11 +2,12 @@
 
 require 'vendor/autoload.php';
 $app = require_once 'bootstrap/app.php';
-$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+$kernel = $app->make(Kernel::class);
 $kernel->bootstrap();
 
 use App\Models\Aula;
 use App\Models\Grupo;
+use Illuminate\Contracts\Console\Kernel;
 
 try {
     $aulas = Aula::all();
@@ -18,5 +19,5 @@ try {
         echo "Aula ID: {$aula->id} | Name: {$aula->nombre} | Groups: {$groupCount}\n";
     }
 } catch (Exception $e) {
-    echo "Error: " . $e->getMessage() . "\n";
+    echo 'Error: '.$e->getMessage()."\n";
 }

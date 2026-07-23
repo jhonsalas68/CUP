@@ -13,10 +13,13 @@ use Livewire\Component;
 class CalculadoraAdmision extends Component
 {
     public $postulanteId = null;
+
     public $postulante = null;
 
     public $gestionActiva = null;
+
     public $carreraPrimera = null;
+
     public $carreraSegunda = null;
 
     // Array de materias con sus exámenes y notas (reales o simuladas)
@@ -27,9 +30,13 @@ class CalculadoraAdmision extends Component
 
     // Admin/Docente selector & Filters
     public $carrerasLista = [];
+
     public $selectedCarreraId = '';
+
     public $searchPostulante = '';
+
     public $postulantesLista = [];
+
     public $selectedPostulanteId = null;
 
     public function mount($postulanteId = null)
@@ -37,7 +44,7 @@ class CalculadoraAdmision extends Component
         $this->carrerasLista = Carrera::orderBy('nombre')->get();
         $user = auth()->user();
 
-        if ($user && $user->hasRole('Postulante') && $user->postulante && !$postulanteId) {
+        if ($user && $user->hasRole('Postulante') && $user->postulante && ! $postulanteId) {
             $this->postulante = $user->postulante;
             $this->selectedPostulanteId = $this->postulante->id;
             $this->selectedCarreraId = $this->postulante->carrera_primera_opcion_id ?? '';
@@ -52,7 +59,7 @@ class CalculadoraAdmision extends Component
 
             $this->actualizarListaPostulantes();
 
-            if (!$this->postulante && !empty($this->postulantesLista)) {
+            if (! $this->postulante && ! empty($this->postulantesLista)) {
                 $this->postulante = Postulante::find($this->postulantesLista[0]['id']);
                 $this->selectedPostulanteId = $this->postulante?->id;
                 $this->selectedCarreraId = $this->postulante?->carrera_primera_opcion_id ?? '';
@@ -65,7 +72,7 @@ class CalculadoraAdmision extends Component
     public function updatedSelectedCarreraId()
     {
         $this->actualizarListaPostulantes();
-        if (!empty($this->postulantesLista)) {
+        if (! empty($this->postulantesLista)) {
             $this->selectedPostulanteId = $this->postulantesLista[0]['id'];
             $this->postulante = Postulante::find($this->selectedPostulanteId);
         } else {
@@ -104,7 +111,7 @@ class CalculadoraAdmision extends Component
             $s = trim($this->searchPostulante);
             $query->where(function ($q) use ($s) {
                 $q->where('nombres_apellidos', 'like', "%{$s}%")
-                  ->orWhere('ci', 'like', "%{$s}%");
+                    ->orWhere('ci', 'like', "%{$s}%");
             });
         }
 
@@ -122,8 +129,9 @@ class CalculadoraAdmision extends Component
     {
         $this->gestionActiva = Gestion::where('activo', true)->first() ?? Gestion::latest()->first();
 
-        if (!$this->postulante || !$this->gestionActiva) {
+        if (! $this->postulante || ! $this->gestionActiva) {
             $this->materiasData = [];
+
             return;
         }
 
@@ -147,12 +155,12 @@ class CalculadoraAdmision extends Component
                     ->where('examen_id', $exam->id)
                     ->first();
 
-                $notaReal = $notaRealObj ? (float)$notaRealObj->puntaje : null;
+                $notaReal = $notaRealObj ? (float) $notaRealObj->puntaje : null;
 
                 $examenesData[] = [
                     'id' => $exam->id,
                     'nombre' => $exam->nombre,
-                    'ponderacion' => (float)$exam->ponderacion,
+                    'ponderacion' => (float) $exam->ponderacion,
                     'nota_real' => $notaReal,
                     'nota_simulada' => $notaReal !== null ? $notaReal : 0.00,
                     'es_real' => $notaReal !== null,
@@ -183,7 +191,7 @@ class CalculadoraAdmision extends Component
         foreach ($this->materiasData as $materia) {
             $notaMateria = 0.00;
             foreach ($materia['examenes'] as $exam) {
-                $nota = (float)($exam['nota_simulada'] ?? 0);
+                $nota = (float) ($exam['nota_simulada'] ?? 0);
                 $notaMateria += ($nota * ($exam['ponderacion'] / 100.00));
             }
             $sumMaterias += $notaMateria;
@@ -209,7 +217,7 @@ class CalculadoraAdmision extends Component
      */
     public function calcularObjetivo()
     {
-        $target = (float)$this->targetScore;
+        $target = (float) $this->targetScore;
         if (empty($this->materiasData)) {
             return;
         }
@@ -222,7 +230,7 @@ class CalculadoraAdmision extends Component
 
         foreach ($this->materiasData as $mIndex => $materia) {
             foreach ($materia['examenes'] as $eIndex => $exam) {
-                if (!empty($exam['es_real'])) {
+                if (! empty($exam['es_real'])) {
                     $fixedSum += ($exam['nota_simulada'] * ($exam['ponderacion'] / 100.00));
                 } else {
                     $pendingPonderacionTotal += ($exam['ponderacion'] / 100.00);
@@ -238,6 +246,7 @@ class CalculadoraAdmision extends Component
                     $this->materiasData[$mIndex]['examenes'][$eIndex]['nota_simulada'] = $scoreNeeded;
                 }
             }
+
             return;
         }
 

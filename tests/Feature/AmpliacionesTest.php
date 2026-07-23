@@ -2,25 +2,19 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use App\Models\User;
-use App\Models\Carrera;
-use App\Models\Materia;
-use App\Models\Docente;
-use App\Models\Postulante;
-use App\Models\Gestion;
-use App\Models\Grupo;
-use App\Models\Examen;
-use App\Models\Nota;
 use App\Models\Aula;
-use App\Models\ReclamoNota;
+use App\Models\Carrera;
+use App\Models\Docente;
+use App\Models\Examen;
+use App\Models\Gestion;
+use App\Models\Materia;
 use App\Models\Notificacion;
-use App\Models\Asistencia;
-use App\Models\ControlTema;
+use App\Models\Postulante;
+use App\Models\ReclamoNota;
+use App\Models\User;
 use App\Services\GroupGenerationService;
-use App\Services\AdmissionSelectionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Livewire\Livewire;
+use Tests\TestCase;
 
 class AmpliacionesTest extends TestCase
 {
@@ -48,7 +42,7 @@ class AmpliacionesTest extends TestCase
      */
     public function test_group_generation_schedule_overlap_and_capacity(): void
     {
-        $service = new GroupGenerationService();
+        $service = new GroupGenerationService;
 
         $gestion = Gestion::create([
             'nombre' => 'I-2026',
@@ -109,7 +103,7 @@ class AmpliacionesTest extends TestCase
         $result = $service->generate($gestion->id);
 
         $this->assertTrue($result['success']);
-        
+
         // Assert that capacity warning was emitted since 70 postulants > 30 capacity
         $warningFound = false;
         foreach ($result['warnings'] as $warning) {

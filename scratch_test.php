@@ -10,9 +10,9 @@ function normalizeNumbers($text)
         'veinte' => 20, 'veintiuno' => 21, 'veintidós' => 22, 'veintidos' => 22, 'veintitres' => 23, 'veintitrés' => 23,
         'veinticuatro' => 24, 'veinticinco' => 25, 'veintiséis' => 26, 'veintiseis' => 26, 'veintisiete' => 27,
         'veintiocho' => 28, 'veintinueve' => 29, 'treinta' => 30, 'cuarenta' => 40, 'cincuenta' => 50,
-        'sesenta' => 60, 'setenta' => 70, 'ochenta' => 80, 'noventa' => 90, 'cien' => 100
+        'sesenta' => 60, 'setenta' => 70, 'ochenta' => 80, 'noventa' => 90, 'cien' => 100,
     ];
-    
+
     $tens = [
         'treinta' => 30,
         'cuarenta' => 40,
@@ -20,33 +20,33 @@ function normalizeNumbers($text)
         'sesenta' => 60,
         'setenta' => 70,
         'ochenta' => 80,
-        'noventa' => 90
+        'noventa' => 90,
     ];
     $units = [
         'uno' => 1, 'dos' => 2, 'tres' => 3, 'cuatro' => 4, 'cinco' => 5,
-        'seis' => 6, 'siete' => 7, 'ocho' => 8, 'nueve' => 9
+        'seis' => 6, 'siete' => 7, 'ocho' => 8, 'nueve' => 9,
     ];
-    
+
     foreach ($tens as $tenWord => $tenVal) {
         foreach ($units as $unitWord => $unitVal) {
-            $text = preg_replace('/\b' . $tenWord . '\s+y\s+' . $unitWord . '\b/u', $tenVal + $unitVal, $text);
+            $text = preg_replace('/\b'.$tenWord.'\s+y\s+'.$unitWord.'\b/u', $tenVal + $unitVal, $text);
         }
     }
-    
+
     foreach ($words as $word => $num) {
-        $text = preg_replace('/\b' . $word . '\b/u', $num, $text);
+        $text = preg_replace('/\b'.$word.'\b/u', $num, $text);
     }
-    
+
     return $text;
 }
 
 $transcript = 'nota ponderada mayor de setenta';
 $transcript = mb_strtolower($transcript, 'UTF-8');
 $normalized = normalizeNumbers($transcript);
-echo "Normalized: '" . $normalized . "'\n";
+echo "Normalized: '".$normalized."'\n";
 
 $matched = preg_match('/nota\s+(?:ponderada\s+)?(?:mayor|superior|más\s+de|mas\s+de)\s+(?:a\s+|de\s+)?(\d+)/', $normalized, $matches);
-echo "Matched: " . ($matched ? "YES" : "NO") . "\n";
+echo 'Matched: '.($matched ? 'YES' : 'NO')."\n";
 if ($matched) {
-    echo "Value: " . $matches[1] . "\n";
+    echo 'Value: '.$matches[1]."\n";
 }

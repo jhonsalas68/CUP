@@ -3,28 +3,33 @@
 namespace App\Livewire\Admin;
 
 use App\Models\Aula;
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Livewire\WithPagination;
-use Illuminate\Validation\Rule;
 
 class Aulas extends Component
 {
     use WithPagination;
 
     public $search = '';
+
     public $showModal = false;
+
     public $isEditing = false;
+
     public $aulaId = null;
 
     // Form fields
     public $nombre = '';
+
     public $capacidad = '';
+
     public $ubicacion = '';
 
     protected function rules()
     {
         return [
-            'nombre'    => [
+            'nombre' => [
                 'required',
                 'string',
                 'max:255',
@@ -36,16 +41,16 @@ class Aulas extends Component
     }
 
     protected $messages = [
-        'nombre.required'    => 'El nombre del aula es obligatorio.',
-        'nombre.unique'      => 'Ya existe un aula con este nombre.',
+        'nombre.required' => 'El nombre del aula es obligatorio.',
+        'nombre.unique' => 'Ya existe un aula con este nombre.',
         'capacidad.required' => 'La capacidad es obligatoria.',
-        'capacidad.integer'  => 'La capacidad debe ser un número entero.',
-        'capacidad.min'      => 'La capacidad debe ser de al menos 1 persona.',
+        'capacidad.integer' => 'La capacidad debe ser un número entero.',
+        'capacidad.min' => 'La capacidad debe ser de al menos 1 persona.',
     ];
 
     public function mount()
     {
-        if (!auth()->user()->hasAnyRole(['Administrador', 'Coordinador'])) {
+        if (! auth()->user()->hasAnyRole(['Administrador', 'Coordinador'])) {
             abort(403, 'No autorizado.');
         }
     }
@@ -81,14 +86,14 @@ class Aulas extends Component
         if ($this->isEditing) {
             $aula = Aula::findOrFail($this->aulaId);
             $aula->update([
-                'nombre'    => $this->nombre,
+                'nombre' => $this->nombre,
                 'capacidad' => $this->capacidad,
                 'ubicacion' => $this->ubicacion,
             ]);
             session()->flash('message', 'Aula actualizada correctamente.');
         } else {
             Aula::create([
-                'nombre'    => $this->nombre,
+                'nombre' => $this->nombre,
                 'capacidad' => $this->capacidad,
                 'ubicacion' => $this->ubicacion,
             ]);
@@ -114,11 +119,12 @@ class Aulas extends Component
     public function processVoiceCommand($transcript)
     {
         $transcript = mb_strtolower($transcript, 'UTF-8');
-        
+
         if (str_contains($transcript, 'limpiar') || str_contains($transcript, 'restablecer') || str_contains($transcript, 'todos') || str_contains($transcript, 'reiniciar') || str_contains($transcript, 'quitar')) {
             $this->reset(['search']);
             session()->flash('voice_feedback', 'Filtros restablecidos.');
             $this->resetPage();
+
             return;
         }
 
@@ -126,13 +132,13 @@ class Aulas extends Component
 
         if (preg_match('/(?:buscar|busca|aula|nombre|ubicación|ubicacion)\s+([a-záéíóúñ0-9\s\-]+)/', $transcript, $matches)) {
             $this->search = trim($matches[1]);
-            $feedback[] = 'Buscar: "' . $this->search . '"';
+            $feedback[] = 'Buscar: "'.$this->search.'"';
         } else {
             $this->search = trim($transcript);
-            $feedback[] = 'Buscar: "' . $this->search . '"';
+            $feedback[] = 'Buscar: "'.$this->search.'"';
         }
 
-        session()->flash('voice_feedback', 'Filtros aplicados: ' . implode(', ', $feedback));
+        session()->flash('voice_feedback', 'Filtros aplicados: '.implode(', ', $feedback));
         $this->resetPage();
     }
 
@@ -140,8 +146,8 @@ class Aulas extends Component
     {
         $aulas = Aula::query()
             ->where(function ($q) {
-                $q->where('nombre', 'like', '%' . $this->search . '%')
-                  ->orWhere('ubicacion', 'like', '%' . $this->search . '%');
+                $q->where('nombre', 'like', '%'.$this->search.'%')
+                    ->orWhere('ubicacion', 'like', '%'.$this->search.'%');
             })
             ->orderBy('nombre')
             ->paginate(10);

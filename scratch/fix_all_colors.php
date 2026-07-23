@@ -1,6 +1,6 @@
 <?php
 
-$dir = __DIR__ . '/../resources/views/livewire';
+$dir = __DIR__.'/../resources/views/livewire';
 $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir));
 
 $mapping = [
@@ -33,14 +33,14 @@ foreach ($iterator as $file) {
         $path = $file->getRealPath();
         $content = file_get_contents($path);
         $original = $content;
-        
+
         foreach ($mapping as $search => $replace) {
             $content = str_replace($search, $replace, $content);
         }
-        
+
         if ($content !== $original) {
             file_put_contents($path, $content);
-            echo "Updated colors in: " . basename($path) . "\n";
+            echo 'Updated colors in: '.basename($path)."\n";
         }
     }
 }

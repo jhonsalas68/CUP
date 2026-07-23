@@ -2,88 +2,119 @@
 
 namespace App\Livewire\Admin;
 
+use App\Exceptions\AdmissionSelectionException;
+use App\Mail\AdmissionResultMail;
+use App\Models\Bitacora;
 use App\Models\Carrera;
 use App\Models\Cupo;
 use App\Models\Docente;
 use App\Models\Examen;
 use App\Models\Gestion;
 use App\Models\Grupo;
+use App\Models\Materia;
 use App\Models\Nota;
 use App\Models\Postulante;
-use Livewire\Component;
+use App\Services\AdmissionSelectionService;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Mail;
 use Livewire\Attributes\Computed;
+use Livewire\Component;
 
 class Dashboard extends Component
 {
     public $selectedGestionId;
+
     public $gestiones = [];
-    
+
     // comparison stats
     public $compareGestionId;
+
     public $currentAprobados = 0;
+
     public $comparePostulantes = 0;
+
     public $compareAdmitidos = 0;
+
     public $compareAprobados = 0;
+
     public $compareGestionNombre = '';
-    
+
     // stats
     public $totalPostulantes = 0;
+
     public $totalAdmitidos = 0;
+
     public $totalReprobados = 0;
+
     public $totalCuposDisponibles = 0;
+
     public $totalCuposOcupados = 0;
+
     public $totalGrupos = 0;
-    
+
     // charts data
     public $carrerasLabels = [];
+
     public $carrerasValues = [];
-    
+
     public $historicoLabels = [];
+
     public $historicoPostulantes = [];
+
     public $historicoAdmitidos = [];
-    
+
     public $gruposRendimiento = [];
 
     // admission execution properties
     public $showAdmissionModal = false;
+
     public $isProcessing = false;
+
     public $admissionError = null;
+
     public $admissionStats = null;
 
     // group detail properties
     public $showGroupDetailsModal = false;
+
     public $selectedGroupInfo = null;
+
     public $groupAlumnos = [];
 
     // custom export properties
     public $exportTabla = 'postulantes';
+
     public $exportGestionId = '';
+
     public $exportCarreraId = '';
+
     public $exportFormato = 'excel';
+
     public $carrerasList = [];
 
     // detailed admitted candidates properties
     public $selectedDetailCarreraId;
+
     public $admitidosDetalle = [];
 
     public function mount()
     {
-        if (!auth()->user()->hasAnyRole(['Administrador', 'Coordinador'])) {
+        if (! auth()->user()->hasAnyRole(['Administrador', 'Coordinador'])) {
             abort(403, 'No autorizado.');
         }
 
         // Cache static list catalogs for 10 minutes to save roundtrips
-        $this->gestiones = \Illuminate\Support\Facades\Cache::remember('dashboard_gestiones_list', 600, function () {
+        $this->gestiones = Cache::remember('dashboard_gestiones_list', 600, function () {
             return Gestion::orderBy('fecha_inicio', 'desc')->get();
         });
-        
+
         $active = $this->gestiones->where('activo', true)->first() ?? $this->gestiones->first();
         $this->selectedGestionId = $active ? $active->id : null;
-        
-        $this->carrerasList = \Illuminate\Support\Facades\Cache::remember('dashboard_carreras_list', 600, function () {
+
+        $this->carrerasList = Cache::remember('dashboard_carreras_list', 600, function () {
             return Carrera::orderBy('nombre')->get();
         });
-        
+
         $this->exportGestionId = $this->selectedGestionId;
 
         $compare = $this->gestiones->where('id', '!=', $this->selectedGestionId)->first();
@@ -105,14 +136,14 @@ class Dashboard extends Component
 
     public function loadStats()
     {
-        if (!$this->selectedGestionId) {
+        if (! $this->selectedGestionId) {
             return;
         }
 
-        $cacheKey = 'dashboard_stats_' . $this->selectedGestionId;
+        $cacheKey = 'dashboard_stats_'.$this->selectedGestionId;
 
         // Cache main stats for 2 minutes
-        $stats = \Illuminate\Support\Facades\Cache::remember($cacheKey, 120, function () {
+        $stats = Cache::remember($cacheKey, 120, function () {
             // 1. KPIs (7 queries combined into 1)
             $kpiStats = \DB::selectOne("
                 SELECT 
@@ -184,7 +215,7 @@ class Dashboard extends Component
             foreach ($statsRaw as $row) {
                 $total = (int) $row->total_alumnos;
                 $aprobados = (int) $row->aprobados;
-                
+
                 $promedioGrupo = round((float) $row->promedio_grupo, 2);
                 $porcentajeAprobacion = $total > 0 ? round(($aprobados / $total) * 100, 2) : 0.00;
 
@@ -214,7 +245,7 @@ class Dashboard extends Component
             $historicoLabels = [];
             $historicoPostulantes = [];
             $historicoAdmitidos = [];
-            
+
             foreach ($historico as $row) {
                 $historicoLabels[] = $row->gestion_nombre;
                 $historicoPostulantes[] = (int) $row->total_postulantes;
@@ -252,7 +283,7 @@ class Dashboard extends Component
         $this->historicoPostulantes = $stats['historicoPostulantes'];
         $this->historicoAdmitidos = $stats['historicoAdmitidos'];
 
-        if (!$this->selectedDetailCarreraId && count($this->carrerasList) > 0) {
+        if (! $this->selectedDetailCarreraId && count($this->carrerasList) > 0) {
             $this->selectedDetailCarreraId = $this->carrerasList->first()->id;
         }
         $this->loadAdmitidosDetalle();
@@ -265,7 +296,7 @@ class Dashboard extends Component
         $this->showAdmissionModal = true;
     }
 
-    public function runAdmissionProcess(\App\Services\AdmissionSelectionService $service)
+    public function runAdmissionProcess(AdmissionSelectionService $service)
     {
         $this->isProcessing = true;
         $this->admissionError = null;
@@ -273,43 +304,43 @@ class Dashboard extends Component
 
         try {
             $res = $service->processAdmissions($this->selectedGestionId);
-            
+
             if ($res['success']) {
                 // Load fresh stats for summary
                 $this->admissionStats = $service->getStats($this->selectedGestionId);
-                
+
                 // Clear the cache keys so stats refresh
-                \Illuminate\Support\Facades\Cache::forget('dashboard_stats_' . $this->selectedGestionId);
-                \Illuminate\Support\Facades\Cache::forget('dashboard_compare_' . $this->selectedGestionId);
+                Cache::forget('dashboard_stats_'.$this->selectedGestionId);
+                Cache::forget('dashboard_compare_'.$this->selectedGestionId);
                 foreach ($this->carrerasList as $c) {
-                    \Illuminate\Support\Facades\Cache::forget('dashboard_admitidos_' . $this->selectedGestionId . '_' . $c->id);
+                    Cache::forget('dashboard_admitidos_'.$this->selectedGestionId.'_'.$c->id);
                 }
 
                 // Log activity
                 $gestionNombre = $this->gestiones->where('id', $this->selectedGestionId)->first()?->nombre ?? $this->selectedGestionId;
-                \App\Models\Bitacora::create([
+                Bitacora::create([
                     'user_id' => auth()->id(),
                     'action' => 'proceso_admision',
                     'objeto' => 'Proceso Admisión',
                     'descripcion' => "Se ejecutó el proceso de admisión y asignación de cupos para la gestión '{$gestionNombre}'",
                     'payload' => [
-                        'stats' => $this->admissionStats['general'] ?? []
+                        'stats' => $this->admissionStats['general'] ?? [],
                     ],
                     'ip_address' => request()->ip(),
                 ]);
 
                 // Reload parent dashboard numbers
                 $this->loadStats();
-                
+
                 // Dispatch event to refresh charts
                 $this->dispatch('stats-updated', current: $this->currentStats(), compare: $this->compareStats());
             } else {
-                $this->admissionError = "El proceso no pudo completarse correctamente.";
+                $this->admissionError = 'El proceso no pudo completarse correctamente.';
             }
-        } catch (\App\Exceptions\AdmissionSelectionException $e) {
+        } catch (AdmissionSelectionException $e) {
             $this->admissionError = $e->getMessage();
         } catch (\Exception $e) {
-            $this->admissionError = "Ocurrió un error inesperado al procesar las admisiones: " . $e->getMessage();
+            $this->admissionError = 'Ocurrió un error inesperado al procesar las admisiones: '.$e->getMessage();
         } finally {
             $this->isProcessing = false;
         }
@@ -318,12 +349,12 @@ class Dashboard extends Component
     public function showGroupDetails($groupId)
     {
         $this->reset(['selectedGroupInfo', 'groupAlumnos']);
-        
-        $grupo = \App\Models\Grupo::with(['materia', 'docentes.user', 'postulantes.user'])
+
+        $grupo = Grupo::with(['materia', 'docentes.user', 'postulantes.user'])
             ->findOrFail($groupId);
-            
+
         $docenteNombre = $grupo->docentes->first() ? ($grupo->docentes->first()->nombre ?? $grupo->docentes->first()->user->name) : 'No asignado';
-        
+
         $this->selectedGroupInfo = [
             'id' => $grupo->id,
             'nombre' => $grupo->nombre,
@@ -332,31 +363,31 @@ class Dashboard extends Component
         ];
 
         // Optimized 3-query calculation of student grades in that group's subject
-        $exams = \App\Models\Examen::where('materia_id', $grupo->materia_id)
+        $exams = Examen::where('materia_id', $grupo->materia_id)
             ->where('gestion_id', $this->selectedGestionId)
             ->get();
 
-        $notas = \App\Models\Nota::whereIn('examen_id', $exams->pluck('id'))
+        $notas = Nota::whereIn('examen_id', $exams->pluck('id'))
             ->whereIn('postulante_id', $grupo->postulantes->pluck('id'))
             ->get()
             ->groupBy('postulante_id');
 
         $this->groupAlumnos = [];
         foreach ($grupo->postulantes as $p) {
-             $notaFinal = 0.00;
-             $postulanteNotas = $notas->get($p->id, collect())->keyBy('examen_id');
-             foreach ($exams as $exam) {
-                 $n = $postulanteNotas->get($exam->id);
-                 if ($n) {
-                     $notaFinal += $n->puntaje * ($exam->ponderacion / 100);
-                 }
-             }
-             $this->groupAlumnos[] = [
-                 'nombre' => $p->nombres_apellidos ?? $p->user->name,
-                 'email' => $p->user->email,
-                 'ci' => $p->ci,
-                 'nota_materia' => round($notaFinal, 2),
-             ];
+            $notaFinal = 0.00;
+            $postulanteNotas = $notas->get($p->id, collect())->keyBy('examen_id');
+            foreach ($exams as $exam) {
+                $n = $postulanteNotas->get($exam->id);
+                if ($n) {
+                    $notaFinal += $n->puntaje * ($exam->ponderacion / 100);
+                }
+            }
+            $this->groupAlumnos[] = [
+                'nombre' => $p->nombres_apellidos ?? $p->user->name,
+                'email' => $p->user->email,
+                'ci' => $p->ci,
+                'nota_materia' => round($notaFinal, 2),
+            ];
         }
 
         $this->showGroupDetailsModal = true;
@@ -370,22 +401,23 @@ class Dashboard extends Component
 
     public function loadAdmitidosDetalle()
     {
-        if (!$this->selectedGestionId || !$this->selectedDetailCarreraId) {
+        if (! $this->selectedGestionId || ! $this->selectedDetailCarreraId) {
             $this->admitidosDetalle = [];
+
             return;
         }
 
-        $cacheKey = 'dashboard_admitidos_' . $this->selectedGestionId . '_' . $this->selectedDetailCarreraId;
-        
-        $this->admitidosDetalle = \Illuminate\Support\Facades\Cache::remember($cacheKey, 120, function () {
+        $cacheKey = 'dashboard_admitidos_'.$this->selectedGestionId.'_'.$this->selectedDetailCarreraId;
+
+        $this->admitidosDetalle = Cache::remember($cacheKey, 120, function () {
             return Postulante::where('gestion_id', $this->selectedGestionId)
                 ->where(function ($query) {
                     $query->where(function ($q) {
                         $q->where('carrera_primera_opcion_id', $this->selectedDetailCarreraId)
-                          ->where('estado_admision', 'admitido_primera_opcion');
+                            ->where('estado_admision', 'admitido_primera_opcion');
                     })->orWhere(function ($q) {
                         $q->where('carrera_segunda_opcion_id', $this->selectedDetailCarreraId)
-                          ->where('estado_admision', 'admitido_segunda_opcion');
+                            ->where('estado_admision', 'admitido_segunda_opcion');
                     });
                 })
                 ->orderByDesc('nota_final')
@@ -411,7 +443,7 @@ class Dashboard extends Component
 
     public function sendEmailNotifications()
     {
-        if (!auth()->user()->hasRole('Administrador')) {
+        if (! auth()->user()->hasRole('Administrador')) {
             abort(403);
         }
 
@@ -422,21 +454,22 @@ class Dashboard extends Component
 
         if ($postulantes->isEmpty()) {
             session()->flash('error', 'No hay postulantes con resultados para notificar en esta gestión.');
+
             return;
         }
 
         $count = 0;
         foreach ($postulantes as $postulante) {
             if ($postulante->user && $postulante->user->email) {
-                \Illuminate\Support\Facades\Mail::to($postulante->user->email)
-                    ->queue(new \App\Mail\AdmissionResultMail($postulante));
+                Mail::to($postulante->user->email)
+                    ->queue(new AdmissionResultMail($postulante));
                 $count++;
             }
         }
 
         // Log this action to Bitacora
         $gestionNombre = $this->gestiones->where('id', $this->selectedGestionId)->first()?->nombre ?? $this->selectedGestionId;
-        \App\Models\Bitacora::create([
+        Bitacora::create([
             'user_id' => auth()->id(),
             'action' => 'proceso_admision',
             'objeto' => 'Notificaciones Gmail',
@@ -453,18 +486,18 @@ class Dashboard extends Component
 
     public function sendTestEmail()
     {
-        if (!auth()->user()->hasRole('Administrador')) {
+        if (! auth()->user()->hasRole('Administrador')) {
             abort(403);
         }
 
         $adminEmail = auth()->user()->email;
-        if (!$adminEmail) {
+        if (! $adminEmail) {
             $adminEmail = 'jssalasr126@ficct.uagrm.edu.bo';
         }
 
         // Get first postulante to populate template or create a mock
         $postulante = Postulante::first();
-        if (!$postulante) {
+        if (! $postulante) {
             $postulante = new Postulante([
                 'nombres_apellidos' => 'Usuario de Prueba',
                 'ci' => '1234567',
@@ -474,11 +507,11 @@ class Dashboard extends Component
         }
 
         try {
-            \Illuminate\Support\Facades\Mail::to($adminEmail)
-                ->send(new \App\Mail\AdmissionResultMail($postulante));
+            Mail::to($adminEmail)
+                ->send(new AdmissionResultMail($postulante));
 
             // Log test email
-            \App\Models\Bitacora::create([
+            Bitacora::create([
                 'user_id' => auth()->id(),
                 'action' => 'proceso_admision',
                 'objeto' => 'Correo de Prueba',
@@ -488,7 +521,7 @@ class Dashboard extends Component
 
             session()->flash('message', "¡Conexión SMTP de Gmail exitosa! Se envió un correo de prueba correctamente a {$adminEmail}. Verifica tu bandeja de entrada.");
         } catch (\Exception $e) {
-            session()->flash('error', "Fallo en la conexión SMTP de Gmail. Razón: " . $e->getMessage());
+            session()->flash('error', 'Fallo en la conexión SMTP de Gmail. Razón: '.$e->getMessage());
         }
     }
 
@@ -500,19 +533,20 @@ class Dashboard extends Component
 
     public function loadCompareStats()
     {
-        if (!$this->compareGestionId) {
+        if (! $this->compareGestionId) {
             $this->comparePostulantes = 0;
             $this->compareAdmitidos = 0;
             $this->compareAprobados = 0;
             $this->compareGestionNombre = 'N/A';
+
             return;
         }
 
         $compareGestion = $this->gestiones->where('id', $this->compareGestionId)->first();
         $this->compareGestionNombre = $compareGestion ? $compareGestion->nombre : 'N/A';
 
-        $cacheKey = 'dashboard_compare_' . $this->compareGestionId;
-        $compareStats = \Illuminate\Support\Facades\Cache::remember($cacheKey, 120, function () {
+        $cacheKey = 'dashboard_compare_'.$this->compareGestionId;
+        $compareStats = Cache::remember($cacheKey, 120, function () {
             return Postulante::where('gestion_id', $this->compareGestionId)
                 ->selectRaw("
                     COUNT(*) as total,
@@ -531,6 +565,7 @@ class Dashboard extends Component
     public function currentStats()
     {
         $currentGestion = $this->gestiones->where('id', $this->selectedGestionId)->first();
+
         return [
             'nombre' => $currentGestion ? $currentGestion->nombre : 'Gestión Seleccionada',
             'postulantes' => $this->totalPostulantes,
@@ -552,16 +587,20 @@ class Dashboard extends Component
 
     // What-if simulator properties
     public $showSimulationModal = false;
+
     public $simNotaMinima = 60.00;
+
     public $simCupos = [];
+
     public $simulationStats = null;
+
     public $isSimulating = false;
 
     public function openSimulation()
     {
         $this->reset(['simulationStats', 'isSimulating']);
         $this->simNotaMinima = 60.00;
-        
+
         $this->simCupos = [];
         $carreras = Carrera::all();
         foreach ($carreras as $carrera) {
@@ -575,7 +614,7 @@ class Dashboard extends Component
                 'segunda' => $cupo ? $cupo->cantidad_segunda_opcion : 5,
             ];
         }
-        
+
         $this->showSimulationModal = true;
     }
 
@@ -583,28 +622,29 @@ class Dashboard extends Component
     {
         $this->isSimulating = true;
         $this->simulationStats = null;
-        
+
         try {
             $carreras = Carrera::all();
             $postulantes = Postulante::where('gestion_id', $this->selectedGestionId)->get();
-            
+
             if ($postulantes->isEmpty()) {
                 $this->simulationStats = [
-                    'error' => 'No existen postulantes registrados para esta gestión.'
+                    'error' => 'No existen postulantes registrados para esta gestión.',
                 ];
                 $this->isSimulating = false;
+
                 return;
             }
 
-            $service = new \App\Services\AdmissionSelectionService();
-            
+            $service = new AdmissionSelectionService;
+
             // Preload all data in simulation to prevent N+1 queries (5000x speedup)
-            $preloadedMaterias = \App\Models\Materia::all()->groupBy('carrera_id');
-            
-            $allExams = \App\Models\Examen::where('gestion_id', $this->selectedGestionId)->get();
+            $preloadedMaterias = Materia::all()->groupBy('carrera_id');
+
+            $allExams = Examen::where('gestion_id', $this->selectedGestionId)->get();
             $preloadedExams = $allExams->groupBy('materia_id');
-            
-            $allNotas = \App\Models\Nota::whereIn('examen_id', $allExams->pluck('id'))->get();
+
+            $allNotas = Nota::whereIn('examen_id', $allExams->pluck('id'))->get();
             $preloadedNotas = [];
             foreach ($allNotas as $n) {
                 $preloadedNotas[$n->postulante_id][$n->examen_id] = $n;
@@ -617,14 +657,14 @@ class Dashboard extends Component
 
             foreach ($postulantes as $postulante) {
                 $eval = $service->evaluatePostulante($postulante, $this->selectedGestionId, $preloadedMaterias, $preloadedExams, $preloadedNotas, $this->simNotaMinima);
-                
+
                 if ($eval['has_pending_exams']) {
                     $pendientesCount++;
                 }
-                
+
                 $notaFinal = $eval['nota_final'];
-                $aprobado = ($notaFinal >= $this->simNotaMinima) && !$eval['has_pending_exams'];
-                
+                $aprobado = ($notaFinal >= $this->simNotaMinima) && ! $eval['has_pending_exams'];
+
                 $evaluados[] = [
                     'id' => $postulante->id,
                     'nombres_apellidos' => $postulante->nombres_apellidos,
@@ -638,7 +678,7 @@ class Dashboard extends Component
 
                 if ($eval['has_pending_exams']) {
                     // omit from rankings
-                } elseif (!$aprobado) {
+                } elseif (! $aprobado) {
                     $reprobadosCount++;
                 } else {
                     $aprobadosMap[$postulante->carrera_primera_opcion_id][] = [
@@ -664,6 +704,7 @@ class Dashboard extends Component
                     if ($b['nota_final'] === $a['nota_final']) {
                         return $a['id'] <=> $b['id'];
                     }
+
                     return $b['nota_final'] <=> $a['nota_final'];
                 });
 
@@ -695,6 +736,7 @@ class Dashboard extends Component
                     if ($b['nota_final'] === $a['nota_final']) {
                         return $a['id'] <=> $b['id'];
                     }
+
                     return $b['nota_final'] <=> $a['nota_final'];
                 });
 
@@ -718,7 +760,7 @@ class Dashboard extends Component
 
                 $noOptRegisteredApprovedCount = 0;
                 foreach ($noAdmitidos1ra as $na) {
-                    if (!$na['carrera_segunda_opcion_id'] && $na['carrera_primera_opcion_id'] == $carrera->id) {
+                    if (! $na['carrera_segunda_opcion_id'] && $na['carrera_primera_opcion_id'] == $carrera->id) {
                         $noOptRegisteredApprovedCount++;
                     }
                 }
@@ -775,7 +817,7 @@ class Dashboard extends Component
 
             // Registrar en bitácora la simulación
             $gestionNombre = $this->gestiones->where('id', $this->selectedGestionId)->first()?->nombre ?? $this->selectedGestionId;
-            \App\Models\Bitacora::create([
+            Bitacora::create([
                 'user_id' => auth()->id(),
                 'action' => 'simulacion_admision',
                 'objeto' => 'Simulador CUP',
@@ -783,14 +825,14 @@ class Dashboard extends Component
                 'payload' => [
                     'sim_nota_minima' => $this->simNotaMinima,
                     'sim_cupos' => $this->simCupos,
-                    'stats' => $this->simulationStats['general']
+                    'stats' => $this->simulationStats['general'],
                 ],
                 'ip_address' => request()->ip(),
             ]);
 
         } catch (\Exception $e) {
             $this->simulationStats = [
-                'error' => 'Ocurrió un error al procesar la simulación: ' . $e->getMessage()
+                'error' => 'Ocurrió un error al procesar la simulación: '.$e->getMessage(),
             ];
         } finally {
             $this->isSimulating = false;

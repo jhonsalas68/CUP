@@ -2,39 +2,35 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use App\Models\User;
+use App\Exceptions\ExamValidationException;
 use App\Models\Carrera;
-use App\Models\Materia;
+use App\Models\Cupo;
 use App\Models\Docente;
-use App\Models\Postulante;
+use App\Models\Examen;
 use App\Models\Gestion;
 use App\Models\Grupo;
-use App\Models\Examen;
-use App\Models\Nota;
-use App\Models\Horario;
-use App\Models\Cupo;
-use App\Services\GroupGenerationService;
-use App\Services\ExamService;
+use App\Models\Materia;
+use App\Models\Postulante;
+use App\Models\User;
 use App\Services\AdmissionSelectionService;
-use App\Exceptions\GroupGenerationException;
-use App\Exceptions\ExamValidationException;
-use App\Exceptions\AdmissionSelectionException;
+use App\Services\ExamService;
+use App\Services\GroupGenerationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
+use Tests\TestCase;
 
 class GroupAndExamServicesTest extends TestCase
 {
     use RefreshDatabase;
 
     private GroupGenerationService $groupService;
+
     private ExamService $examService;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->groupService = new GroupGenerationService();
-        $this->examService = new ExamService();
+        $this->groupService = new GroupGenerationService;
+        $this->examService = new ExamService;
     }
 
     /**
@@ -129,10 +125,10 @@ class GroupAndExamServicesTest extends TestCase
         // Verify equative distribution: 130 students in 2 groups -> sizes must be 65, 65
         $groupsSIS = Grupo::where('materia_id', $materia1->id)->get();
         $this->assertCount(2, $groupsSIS);
-        
-        $sizes = $groupsSIS->map(fn($g) => $g->postulantes()->count())->toArray();
+
+        $sizes = $groupsSIS->map(fn ($g) => $g->postulantes()->count())->toArray();
         sort($sizes);
-        $this->assertEquals([65, 65], $sizes, "The student distribution should be equative: 65, 65");
+        $this->assertEquals([65, 65], $sizes, 'The student distribution should be equative: 65, 65');
 
         // Verify that horarios (schedules) are assigned correctly according to rotated slot logic
         // SIS-110 - G1 -> slot_1, SIS-110 - G2 -> slot_2
@@ -176,7 +172,7 @@ class GroupAndExamServicesTest extends TestCase
                 // Find what slot is assigned to this group
                 $hor = $grp->horarios()->first();
                 if ($hor) {
-                    $key = $hor->dia_semana . '-' . $hor->hora_inicio;
+                    $key = $hor->dia_semana.'-'.$hor->hora_inicio;
                     $this->assertNotContains($key, $slotsAssigned, "Docente {$doc->user->name} has overlapping group schedules!");
                     $slotsAssigned[] = $key;
                 }
@@ -233,7 +229,7 @@ class GroupAndExamServicesTest extends TestCase
             'disponibilidad_horaria' => ['slot_1', 'slot_2', 'slot_3', 'slot_4', 'slot_5', 'slot_6', 'slot_7', 'slot_8'],
             'formacion_academica' => 'Lic',
         ]);
-        
+
         // Qualify teacher for all 5 materias
         foreach ($materias as $m) {
             $docente->materias()->attach($m->id);
@@ -255,14 +251,14 @@ class GroupAndExamServicesTest extends TestCase
             $groupName = "{$m->sigla} - G1";
             $grupo = Grupo::where('nombre', $groupName)->first();
             $this->assertNotNull($grupo);
-            
+
             $docCount = $grupo->docentes()->count();
             if ($index < 4) {
                 $this->assertEquals(1, $docCount, "Materia {$m->sigla} should have a teacher assigned");
                 $this->assertEquals($docente->id, $grupo->docentes()->first()->id);
                 $assignedCount++;
             } else {
-                $this->assertEquals(0, $docCount, "The 5th group should NOT have a teacher assigned (reached maximum of 4)");
+                $this->assertEquals(0, $docCount, 'The 5th group should NOT have a teacher assigned (reached maximum of 4)');
             }
         }
 
@@ -270,7 +266,7 @@ class GroupAndExamServicesTest extends TestCase
 
         // Verify a warning is present in the report for the 5th group
         $this->assertCount(1, $result['warnings']);
-        $this->assertStringContainsString("No se encontró docente disponible", $result['warnings'][0]);
+        $this->assertStringContainsString('No se encontró docente disponible', $result['warnings'][0]);
     }
 
     /**
@@ -320,22 +316,22 @@ class GroupAndExamServicesTest extends TestCase
             'tiene_maestria' => false, // UNQUALIFIED
             'tiene_diplomado' => true,
         ]);
-        
+
         $docente->materias()->attach($materia->id);
 
         // Run group generation
         $result = $this->groupService->generate($gestion->id);
 
         $this->assertTrue($result['success']);
-        
+
         // The group should have NO teacher assigned because the only eligible teacher lacks master's
         $grupo = Grupo::where('materia_id', $materia->id)->first();
         $this->assertNotNull($grupo);
-        $this->assertEquals(0, $grupo->docentes()->count(), "Unqualified teacher should not be assigned to the group");
+        $this->assertEquals(0, $grupo->docentes()->count(), 'Unqualified teacher should not be assigned to the group');
 
         // Verify a warning is present in the report
         $this->assertCount(1, $result['warnings']);
-        $this->assertStringContainsString("No se encontró docente disponible", $result['warnings'][0]);
+        $this->assertStringContainsString('No se encontró docente disponible', $result['warnings'][0]);
     }
 
     /**
@@ -551,7 +547,7 @@ class GroupAndExamServicesTest extends TestCase
      */
     public function test_admission_selection_ranking_and_reassignment(): void
     {
-        $selectionService = new AdmissionSelectionService();
+        $selectionService = new AdmissionSelectionService;
 
         // 1. Setup gestion
         $gestion = Gestion::create([
@@ -612,7 +608,7 @@ class GroupAndExamServicesTest extends TestCase
         $postA = Postulante::create([
             'user_id' => $userA->id, 'ci' => '1', 'telefono' => '1', 'fecha_nacimiento' => '2005-01-01',
             'carrera_primera_opcion_id' => $carreraSIS->id, 'carrera_segunda_opcion_id' => $carreraCIV->id,
-            'gestion_id' => $gestion->id, 'estado_admision' => 'pendiente'
+            'gestion_id' => $gestion->id, 'estado_admision' => 'pendiente',
         ]);
 
         // Postulant B: SIS (1st option), CIV (2nd option)
@@ -620,7 +616,7 @@ class GroupAndExamServicesTest extends TestCase
         $postB = Postulante::create([
             'user_id' => $userB->id, 'ci' => '2', 'telefono' => '2', 'fecha_nacimiento' => '2005-01-01',
             'carrera_primera_opcion_id' => $carreraSIS->id, 'carrera_segunda_opcion_id' => $carreraCIV->id,
-            'gestion_id' => $gestion->id, 'estado_admision' => 'pendiente'
+            'gestion_id' => $gestion->id, 'estado_admision' => 'pendiente',
         ]);
 
         // Postulant C: SIS (1st option), CIV (2nd option)
@@ -628,7 +624,7 @@ class GroupAndExamServicesTest extends TestCase
         $postC = Postulante::create([
             'user_id' => $userC->id, 'ci' => '3', 'telefono' => '3', 'fecha_nacimiento' => '2005-01-01',
             'carrera_primera_opcion_id' => $carreraSIS->id, 'carrera_segunda_opcion_id' => $carreraCIV->id,
-            'gestion_id' => $gestion->id, 'estado_admision' => 'pendiente'
+            'gestion_id' => $gestion->id, 'estado_admision' => 'pendiente',
         ]);
 
         // Postulant D: SIS (1st option), CIV (2nd option) - WILL FAIL (under 60 in the subject)
@@ -636,14 +632,14 @@ class GroupAndExamServicesTest extends TestCase
         $postD = Postulante::create([
             'user_id' => $userD->id, 'ci' => '4', 'telefono' => '4', 'fecha_nacimiento' => '2005-01-01',
             'carrera_primera_opcion_id' => $carreraSIS->id, 'carrera_segunda_opcion_id' => $carreraCIV->id,
-            'gestion_id' => $gestion->id, 'estado_admision' => 'pendiente'
+            'gestion_id' => $gestion->id, 'estado_admision' => 'pendiente',
         ]);
 
         // Postulant E: CIV (1st option)
         $userE = User::create(['name' => 'E', 'email' => 'e@example.com', 'password' => 'password']);
         $postE = Postulante::create([
             'user_id' => $userE->id, 'ci' => '5', 'telefono' => '5', 'fecha_nacimiento' => '2005-01-01',
-            'carrera_primera_opcion_id' => $carreraCIV->id, 'gestion_id' => $gestion->id, 'estado_admision' => 'pendiente'
+            'carrera_primera_opcion_id' => $carreraCIV->id, 'gestion_id' => $gestion->id, 'estado_admision' => 'pendiente',
         ]);
 
         // 7. Register grades:
