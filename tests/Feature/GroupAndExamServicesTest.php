@@ -493,7 +493,21 @@ class GroupAndExamServicesTest extends TestCase
 
         $postulante->refresh();
         $this->assertEquals(71.00, $postulante->nota_final);
-        $this->assertEquals('admitido_primera_opcion', $postulante->estado_admision); // All exams graded, score >= 60 -> admitted!
+        $this->assertEquals('pendiente', $postulante->estado_admision); // All exams graded, score >= 60 -> pending until ranking!
+
+        // Create Cupo to allow processAdmissions to run
+        \App\Models\Cupo::create([
+            'carrera_id' => $carrera->id,
+            'gestion_id' => $gestion->id,
+            'cantidad_primera_opcion' => 10,
+            'cantidad_segunda_opcion' => 5,
+        ]);
+
+        $selectionService = new \App\Services\AdmissionSelectionService();
+        $selectionService->processAdmissions($gestion->id);
+
+        $postulante->refresh();
+        $this->assertEquals('admitido_primera_opcion', $postulante->estado_admision);
     }
 
     /**

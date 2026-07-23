@@ -508,20 +508,20 @@ class Examenes extends Component
         }
 
         // Parsear Notas (Nota Ponderada)
-        if (preg_match('/nota\s+(?:ponderada\s+)?(?:mayor|superior|más\s+de|mas\s+de)\s+(?:a\s+|de\s+)?(\d+)/', $transcript, $matches)) {
+        if (preg_match('/(?:notas?|promedios?)\s*(?:ponderadas?\s+)?\s*(?:mayor(?:es)?|superior(?:es)?|más\s+de|mas\s+de|arriba\s+de|por\s+encima\s+de)\s*(?:a\s+|de\s+)?(\d+)/', $transcript, $matches)) {
             $this->filterNotaMin = $matches[1];
             $feedback[] = 'Nota >= '.$matches[1];
             $this->activeTab = 'calificaciones';
-        } elseif (preg_match('/nota\s+(?:ponderada\s+)?(?:menor|inferior|menos\s+de)\s+(?:a\s+|de\s+)?(\d+)/', $transcript, $matches)) {
+        } elseif (preg_match('/(?:notas?|promedios?)\s*(?:ponderadas?\s+)?\s*(?:menor(?:es)?|inferior(?:es)?|menos\s+de|abajo\s+de|por\s+debajo\s+de)\s*(?:a\s+|de\s+)?(\d+)/', $transcript, $matches)) {
             $this->filterNotaMax = $matches[1];
             $feedback[] = 'Nota <= '.$matches[1];
             $this->activeTab = 'calificaciones';
-        } elseif (preg_match('/nota\s+(?:ponderada\s+)?entre\s+(\d+)\s+y\s+(\d+)/', $transcript, $matches)) {
+        } elseif (preg_match('/(?:notas?|promedios?)\s*(?:ponderadas?\s+)?\s*entre\s+(\d+)\s+y\s+(\d+)/', $transcript, $matches)) {
             $this->filterNotaMin = $matches[1];
             $this->filterNotaMax = $matches[2];
             $feedback[] = "Nota entre {$matches[1]} y {$matches[2]}";
             $this->activeTab = 'calificaciones';
-        } elseif (preg_match('/nota\s+(?:ponderada\s+)?(?:de\s+)?(\d+)/', $transcript, $matches)) {
+        } elseif (preg_match('/(?:notas?|promedios?)\s*(?:ponderadas?\s+)?\s*(?:de\s+)?(\d+)/', $transcript, $matches)) {
             $this->filterNotaMin = $matches[1];
             $feedback[] = 'Nota >= '.$matches[1];
             $this->activeTab = 'calificaciones';

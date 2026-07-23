@@ -61,8 +61,8 @@ class ComprehensiveDataSeeder extends Seeder
                     'gestion_id' => $gestion->id,
                 ],
                 [
-                    'cantidad_primera_opcion' => 80,
-                    'cantidad_segunda_opcion' => 45,
+                    'cantidad_primera_opcion' => 150,
+                    'cantidad_segunda_opcion' => 50,
                 ]
             );
         }
@@ -262,15 +262,20 @@ class ComprehensiveDataSeeder extends Seeder
                                 'examen_id' => $exam->id,
                             ],
                             [
-                                'puntaje' => rand(45, 95),
+                                'puntaje' => (rand(1, 100) <= 85) ? rand(65, 98) : rand(30, 58),
                             ]
                         );
                     }
                 }
-                // Recalcular nota final del postulante
+                // Recalcular nota final del postulante (quedará pendiente si aprueba, o reprobado si reprueba)
                 $examService->recalculatePostulanteScore($postulante->id, $gestion->id);
             }
         });
+
+        // Ejecutar proceso oficial de admisión para consolidar ranking
+        $this->command->info('Ejecutando proceso de admisión oficial para consolidar rankings por cupo...');
+        $selectionService = new \App\Services\AdmissionSelectionService();
+        $selectionService->processAdmissions($gestion->id);
 
         $this->command->info('✅ ¡Población de datos completada exitosamente con 1000 postulantes!');
     }

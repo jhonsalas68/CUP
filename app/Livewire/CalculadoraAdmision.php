@@ -263,6 +263,110 @@ class CalculadoraAdmision extends Component
         }
     }
 
+    public function getSimulatedAdmissionStatusProperty()
+    {
+        if (! $this->postulante || ! $this->gestionActiva) {
+            return 'reprobado';
+        }
+
+        $promedioProyectado = $this->promedioProyectado;
+
+        // Si el promedio proyectado es menor a 60, queda reprobado automáticamente
+        if ($promedioProyectado < 60.00) {
+            return 'reprobado';
+        }
+
+        // Obtener todos los demás postulantes aprobados en la base de datos para esta gestión
+        $postulantes = Postulante::where('gestion_id', $this->gestionActiva->id)
+            ->where('id', '!=', $this->postulante->id)
+            ->get();
+
+        $aprobadosList = [];
+
+        // Agregar los postulantes aprobados de la base de datos
+        foreach ($postulantes as $p) {
+            if ($p->nota_final >= 60.00) {
+                $aprobadosList[] = [
+                    'id' => $p->id,
+                    'nota_final' => (float) $p->nota_final,
+                    'carrera_primera_opcion_id' => $p->carrera_primera_opcion_id,
+                    'carrera_segunda_opcion_id' => $p->carrera_segunda_opcion_id,
+                ];
+            }
+        }
+
+        // Agregar al postulante actual con su promedio simulado
+        $aprobadosList[] = [
+            'id' => $this->postulante->id,
+            'nota_final' => (float) $promedioProyectado,
+            'carrera_primera_opcion_id' => $this->postulante->carrera_primera_opcion_id,
+            'carrera_segunda_opcion_id' => $this->postulante->carrera_segunda_opcion_id,
+        ];
+
+        // Ordenar todos por promedio descendente y luego por ID para desempate
+        usort($aprobadosList, function ($a, $b) {
+            if ($b['nota_final'] === $a['nota_final']) {
+                return $a['id'] <=> $b['id'];
+            }
+            return $b['nota_final'] <=> $a['nota_final'];
+        });
+
+        // Cargar capacidades de cupos
+        $carreras = Carrera::all();
+        $capacidades1ra = [];
+        $capacidades2da = [];
+        $capacidadesTotal = [];
+        $admitidos1raCounts = [];
+        $admitidos2daCounts = [];
+        $admitidosTotalCounts = [];
+
+        $cupos = \App\Models\Cupo::where('gestion_id', $this->gestionActiva->id)->get()->keyBy('carrera_id');
+
+        foreach ($carreras as $carrera) {
+            $cupoObj = $cupos->get($carrera->id);
+            $cap1 = $cupoObj ? $cupoObj->cantidad_primera_opcion : 150;
+            $cap2 = $cupoObj ? $cupoObj->cantidad_segunda_opcion : 50;
+
+            $capacidades1ra[$carrera->id] = $cap1;
+            $capacidades2da[$carrera->id] = $cap2;
+            $capacidadesTotal[$carrera->id] = $cap1 + $cap2;
+
+            $admitidos1raCounts[$carrera->id] = 0;
+            $admitidos2daCounts[$carrera->id] = 0;
+            $admitidosTotalCounts[$carrera->id] = 0;
+        }
+
+        // Ejecutar simulación del proceso de admisión
+        $statusActual = 'no_admitido';
+
+        foreach ($aprobadosList as $p) {
+            $c1 = $p['carrera_primera_opcion_id'];
+            $c2 = $p['carrera_segunda_opcion_id'];
+            $estadoAsignado = 'no_admitido';
+
+            // Intentar primera opción
+            if ($c1 && isset($capacidades1ra[$c1]) && $admitidos1raCounts[$c1] < $capacidades1ra[$c1] && $admitidosTotalCounts[$c1] < $capacidadesTotal[$c1]) {
+                $estadoAsignado = 'admitido_primera_opcion';
+                $admitidos1raCounts[$c1]++;
+                $admitidosTotalCounts[$c1]++;
+            }
+            // Intentar segunda opción
+            elseif ($c2 && isset($capacidades2da[$c2]) && $admitidos2daCounts[$c2] < $capacidades2da[$c2] && $admitidosTotalCounts[$c2] < $capacidadesTotal[$c2]) {
+                $estadoAsignado = 'admitido_segunda_opcion';
+                $admitidos2daCounts[$c2]++;
+                $admitidosTotalCounts[$c2]++;
+            }
+
+            // Si es el postulante actual, guardamos su estado simulado
+            if ($p['id'] === $this->postulante->id) {
+                $statusActual = $estadoAsignado;
+                break;
+            }
+        }
+
+        return $statusActual;
+    }
+
     public function render()
     {
         $layout = auth()->user() && auth()->user()->hasRole('Postulante') ? 'layouts.app' : 'layouts.admin';

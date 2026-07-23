@@ -44,8 +44,8 @@ class DatabaseSeeder extends Seeder
                     'gestion_id' => $gestion->id,
                 ],
                 [
-                    'cantidad_primera_opcion' => 80,
-                    'cantidad_segunda_opcion' => 45,
+                    'cantidad_primera_opcion' => 150,
+                    'cantidad_segunda_opcion' => 50,
                 ]
             );
         }

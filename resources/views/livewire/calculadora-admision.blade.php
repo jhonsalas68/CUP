@@ -21,7 +21,7 @@
                 <div class="text-4xl sm:text-5xl font-black text-amber-400 tracking-tight transition-all duration-300">
                     {{ number_format($promedioProyectado, 2) }}
                 </div>
-                <div class="mt-2">
+                <div class="mt-2 flex flex-col items-center gap-2">
                     @if($promedioProyectado >= 60)
                         <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
                             <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -32,6 +32,28 @@
                             <span class="w-2 h-2 rounded-full bg-rose-400 animate-pulse"></span>
                             REQUERIDO SUBIR NOTA
                         </span>
+                    @endif
+
+                    @if($postulante)
+                        <div class="text-xs font-semibold w-full mt-1">
+                            @if($this->simulatedAdmissionStatus === 'admitido_primera_opcion')
+                                <div class="px-3 py-1 rounded bg-teal-500/30 text-teal-200 border border-teal-400/20 text-center font-bold uppercase tracking-wider">
+                                    Admitido: 1ra Opción ({{ $carreraPrimera?->sigla }})
+                                </div>
+                            @elseif($this->simulatedAdmissionStatus === 'admitido_segunda_opcion')
+                                <div class="px-3 py-1 rounded bg-purple-500/30 text-purple-200 border border-purple-400/20 text-center font-bold uppercase tracking-wider">
+                                    Admitido: 2da Opción ({{ $carreraSegunda?->sigla }})
+                                </div>
+                            @elseif($this->simulatedAdmissionStatus === 'no_admitido')
+                                <div class="px-3 py-1 rounded bg-amber-500/30 text-amber-200 border border-amber-400/20 text-center font-bold uppercase tracking-wider">
+                                    Sin Plaza (Cupos Llenos)
+                                </div>
+                            @else
+                                <div class="px-3 py-1 rounded bg-rose-500/30 text-rose-200 border border-rose-400/20 text-center font-bold uppercase tracking-wider">
+                                    Sin Plaza (Reprobado)
+                                </div>
+                            @endif
+                        </div>
                     @endif
                 </div>
             </div>

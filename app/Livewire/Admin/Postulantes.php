@@ -31,6 +31,10 @@ class Postulantes extends Component
 
     public $filterNotaMax = '';
 
+    public $sortField = 'id';
+
+    public $sortDirection = 'desc';
+
     // Static dropdown collections
     public $carreras = [];
 
@@ -357,6 +361,8 @@ class Postulantes extends Component
     public function limpiarFiltros()
     {
         $this->reset(['search', 'filterCarrera', 'filterGestion', 'filterEstado', 'filterMateria', 'filterNotaMin', 'filterNotaMax']);
+        $this->sortField = 'id';
+        $this->sortDirection = 'desc';
         $this->resetPage();
     }
 
@@ -368,6 +374,8 @@ class Postulantes extends Component
         // Limpieza / reinicio de filtros
         if (str_contains($transcript, 'limpiar') || str_contains($transcript, 'restablecer') || str_contains($transcript, 'todos') || str_contains($transcript, 'reiniciar') || str_contains($transcript, 'quitar')) {
             $this->reset(['search', 'filterCarrera', 'filterGestion', 'filterEstado', 'filterMateria', 'filterNotaMin', 'filterNotaMax']);
+            $this->sortField = 'id';
+            $this->sortDirection = 'desc';
             session()->flash('voice_feedback', 'Filtros restablecidos.');
             $this->resetPage();
 
@@ -476,18 +484,18 @@ class Postulantes extends Component
             }
         }
 
-        // Parsear Notas
-        if (preg_match('/nota\s+(?:final\s+)?(?:mayor|superior|más\s+de|mas\s+de)\s+(?:a\s+)?(\d+)/', $transcript, $matches)) {
+        // Parsear Notas/Promedios
+        if (preg_match('/(?:notas?|promedios?)\s*(?:final(?:es)?)?\s*(?:mayor(?:es)?|superior(?:es)?|más\s+de|mas\s+de|arriba\s+de|por\s+encima\s+de)\s*(?:a\s+|de\s+)?(\d+)/', $transcript, $matches)) {
             $this->filterNotaMin = $matches[1];
             $feedback[] = 'Nota >= '.$matches[1];
-        } elseif (preg_match('/nota\s+(?:final\s+)?(?:menor|inferior|menos\s+de)\s+(?:a\s+)?(\d+)/', $transcript, $matches)) {
+        } elseif (preg_match('/(?:notas?|promedios?)\s*(?:final(?:es)?)?\s*(?:menor(?:es)?|inferior(?:es)?|menos\s+de|abajo\s+de|por\s+debajo\s+de)\s*(?:a\s+|de\s+)?(\d+)/', $transcript, $matches)) {
             $this->filterNotaMax = $matches[1];
             $feedback[] = 'Nota <= '.$matches[1];
-        } elseif (preg_match('/nota\s+(?:final\s+)?entre\s+(\d+)\s+y\s+(\d+)/', $transcript, $matches)) {
+        } elseif (preg_match('/(?:notas?|promedios?)\s*(?:final(?:es)?)?\s*entre\s+(\d+)\s+y\s+(\d+)/', $transcript, $matches)) {
             $this->filterNotaMin = $matches[1];
             $this->filterNotaMax = $matches[2];
             $feedback[] = "Nota entre {$matches[1]} y {$matches[2]}";
-        } elseif (preg_match('/nota\s+(?:final\s+)?(?:de\s+)?(\d+)/', $transcript, $matches)) {
+        } elseif (preg_match('/(?:notas?|promedios?)\s*(?:final(?:es)?)?\s*(?:de\s+)?(\d+)/', $transcript, $matches)) {
             $this->filterNotaMin = $matches[1];
             $feedback[] = 'Nota >= '.$matches[1];
         }
@@ -496,6 +504,48 @@ class Postulantes extends Component
         if (preg_match('/(?:buscar|busca|nombre|ci|identidad)\s+([a-záéíóúñ0-9\s\-\.]+)/', $transcript, $matches)) {
             $this->search = trim($matches[1]);
             $feedback[] = 'Buscar: "'.$this->search.'"';
+        }
+
+        // Parsear Ordenamiento
+        if (str_contains($transcript, 'ordenar') || str_contains($transcript, 'orden') || str_contains($transcript, 'ordenador') || str_contains($transcript, 'organizar') || str_contains($transcript, 'clasificar')) {
+            if (str_contains($transcript, 'nota') || str_contains($transcript, 'notas') || str_contains($transcript, 'promedio') || str_contains($transcript, 'promedios') || str_contains($transcript, 'calificación') || str_contains($transcript, 'calificacion') || str_contains($transcript, 'calificaciones') || str_contains($transcript, 'puntaje') || str_contains($transcript, 'puntajes')) {
+                $this->sortField = 'nota_final';
+                if (str_contains($transcript, 'menor a mayor') || str_contains($transcript, 'ascendente') || str_contains($transcript, 'asc') || str_contains($transcript, 'bajo a alto') || str_contains($transcript, 'bajos a altos') || str_contains($transcript, 'menor al mayor') || str_contains($transcript, 'menores a mayores')) {
+                    $this->sortDirection = 'asc';
+                    $feedback[] = 'Orden: promedio ascendente';
+                } else {
+                    $this->sortDirection = 'desc';
+                    $feedback[] = 'Orden: promedio descendente';
+                }
+            } elseif (str_contains($transcript, 'nombre') || str_contains($transcript, 'nombres') || str_contains($transcript, 'apellido') || str_contains($transcript, 'apellidos') || str_contains($transcript, 'alfabético') || str_contains($transcript, 'alfabetico')) {
+                $this->sortField = 'nombres_apellidos';
+                if (str_contains($transcript, 'mayor a menor') || str_contains($transcript, 'descendente') || str_contains($transcript, 'desc') || str_contains($transcript, 'z a la a') || str_contains($transcript, 'z a a')) {
+                    $this->sortDirection = 'desc';
+                    $feedback[] = 'Orden: nombre descendente';
+                } else {
+                    $this->sortDirection = 'asc';
+                    $feedback[] = 'Orden: nombre ascendente';
+                }
+            } elseif (str_contains($transcript, 'ci') || str_contains($transcript, 'identidad') || str_contains($transcript, 'cédula') || str_contains($transcript, 'cedula') || str_contains($transcript, 'documento')) {
+                $this->sortField = 'ci';
+                if (str_contains($transcript, 'mayor a menor') || str_contains($transcript, 'descendente') || str_contains($transcript, 'desc')) {
+                    $this->sortDirection = 'desc';
+                    $feedback[] = 'Orden: CI descendente';
+                } else {
+                    $this->sortDirection = 'asc';
+                    $feedback[] = 'Orden: CI ascendente';
+                }
+            }
+        } elseif (str_contains($transcript, 'mayor a menor') || str_contains($transcript, 'descendente') || str_contains($transcript, 'desc') || str_contains($transcript, 'menor a mayor') || str_contains($transcript, 'ascendente') || str_contains($transcript, 'asc') || str_contains($transcript, 'bajo a alto') || str_contains($transcript, 'bajos a altos') || str_contains($transcript, 'menor al mayor') || str_contains($transcript, 'menores a mayores') || str_contains($transcript, 'mayores a menores')) {
+            // Si el usuario simplemente dice "de mayor a menor" o "de menor a mayor" sin especificar campo, asumimos nota_final por defecto
+            $this->sortField = 'nota_final';
+            if (str_contains($transcript, 'menor a mayor') || str_contains($transcript, 'ascendente') || str_contains($transcript, 'asc') || str_contains($transcript, 'bajo a alto') || str_contains($transcript, 'bajos a altos') || str_contains($transcript, 'menor al mayor') || str_contains($transcript, 'menores a mayores')) {
+                $this->sortDirection = 'asc';
+                $feedback[] = 'Orden: promedio ascendente';
+            } else {
+                $this->sortDirection = 'desc';
+                $feedback[] = 'Orden: promedio descendente';
+            }
         }
 
         if (empty($feedback)) {
@@ -604,7 +654,7 @@ class Postulantes extends Component
             ->when(! $this->filterMateria && $this->filterNotaMax !== '', function ($q) {
                 $q->where('nota_final', '<=', $this->filterNotaMax);
             })
-            ->orderBy('id', 'desc')
+            ->orderBy($this->sortField, $this->sortDirection)
             ->paginate(15);
 
         return view('livewire.admin.postulantes', [

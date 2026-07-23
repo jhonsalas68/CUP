@@ -171,8 +171,17 @@ class ExamService
         $promedioFinal = $sumMaterias / $totalMaterias;
 
         // Determinar estado de admisión
+        $nuevoEstado = $postulante->estado_admision;
         if ($allExamsGraded) {
-            $nuevoEstado = $promedioFinal >= 60.00 ? 'admitido_primera_opcion' : 'reprobado';
+            if ($promedioFinal < 60.00) {
+                $nuevoEstado = 'reprobado';
+            } else {
+                // Si aprobó académicamente, pero estaba reprobado o pendiente, se queda como pendiente.
+                // Si ya fue oficialmente asignado a un cupo o marcado como no admitido, se conserva su estado.
+                if (in_array($postulante->estado_admision, ['reprobado', 'pendiente'])) {
+                    $nuevoEstado = 'pendiente';
+                }
+            }
         } else {
             $nuevoEstado = 'pendiente';
         }

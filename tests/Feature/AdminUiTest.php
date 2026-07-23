@@ -326,8 +326,23 @@ class AdminUiTest extends TestCase
         ]);
 
         // Verify recalculated final score: (80 * 0.3) + (90 * 0.3) + (85 * 0.4) = 24 + 27 + 34 = 85
+        // It should be pending after grading until officially ranked
         $postulante->refresh();
         $this->assertEquals(85.00, $postulante->nota_final);
+        $this->assertEquals('pendiente', $postulante->estado_admision);
+
+        // Configure Cupo to allow processAdmissions to run
+        \App\Models\Cupo::create([
+            'carrera_id' => $carrera->id,
+            'gestion_id' => $gestion->id,
+            'cantidad_primera_opcion' => 10,
+            'cantidad_segunda_opcion' => 5,
+        ]);
+
+        $selectionService = new \App\Services\AdmissionSelectionService();
+        $selectionService->processAdmissions($gestion->id);
+
+        $postulante->refresh();
         $this->assertEquals('admitido_primera_opcion', $postulante->estado_admision);
     }
 

@@ -307,9 +307,22 @@ class AdminCrudTest extends TestCase
             ->assertHasNoErrors();
 
         // Final grade = 30% of 100 + 30% of 100 + 40% of 50 = 30 + 30 + 20 = 80.00
-        // Because all exams exist (sum to 100%), it should be admitido_primera_opcion (80 >= 60)
+        // Because all exams exist (sum to 100%), it should be pendiente (80 >= 60) until ranked
         $postulante->refresh();
         $this->assertEquals(80.00, $postulante->nota_final);
+        $this->assertEquals('pendiente', $postulante->estado_admision);
+
+        // Run selection process to verify it gets admitted
+        \App\Models\Cupo::create([
+            'carrera_id' => $this->carrera->id,
+            'gestion_id' => $this->activeGestion->id,
+            'cantidad_primera_opcion' => 10,
+            'cantidad_segunda_opcion' => 5,
+        ]);
+        $selectionService = new \App\Services\AdmissionSelectionService();
+        $selectionService->processAdmissions($this->activeGestion->id);
+
+        $postulante->refresh();
         $this->assertEquals('admitido_primera_opcion', $postulante->estado_admision);
 
         // 2. Delete the exam final via controller (recalculates automatically back to pending / 60 points)

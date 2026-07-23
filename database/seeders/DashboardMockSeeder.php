@@ -77,7 +77,7 @@ class DashboardMockSeeder extends Seeder
                     'SIS' => [35, 15], 'INF' => [25, 10], 'RED' => [18, 5], 'ROB' => [15, 7],
                 ],
                 'I-2026' => [
-                    'SIS' => [40, 20], 'INF' => [30, 15], 'RED' => [20, 8], 'ROB' => [18, 8],
+                    'SIS' => [150, 50], 'INF' => [150, 50], 'RED' => [150, 50], 'ROB' => [150, 50],
                 ],
             ];
 
@@ -352,7 +352,6 @@ class DashboardMockSeeder extends Seeder
 
         // Calificar a los postulantes y calcular nota_final en memoria
         $notasData = [];
-        $aprobadosMap = []; // Agrupados por carrera_primera_opcion_id para rankings
 
         $materiasByCarrera = Materia::all()->groupBy('carrera_id');
 
@@ -361,7 +360,6 @@ class DashboardMockSeeder extends Seeder
             $mats = $materiasByCarrera->get($cId) ?? collect();
 
             $sumMaterias = 0.00;
-            $aprobadoTodas = true;
 
             foreach ($mats as $m) {
                 $esAprobado = rand(1, 100) <= 75;
@@ -376,9 +374,6 @@ class DashboardMockSeeder extends Seeder
                 }
 
                 $notaMateria = ($n1 * 0.3) + ($n2 * 0.3) + ($n3 * 0.4);
-                if ($notaMateria < 60.00) {
-                    $aprobadoTodas = false;
-                }
                 $sumMaterias += $notaMateria;
 
                 $notasData[] = [
@@ -404,80 +399,74 @@ class DashboardMockSeeder extends Seeder
                 ];
             }
 
-            $p['nota_final'] = round($sumMaterias / $mats->count(), 2);
-
-            if ($aprobadoTodas) {
-                $aprobadosMap[$cId][] = &$p;
-            } else {
-                $p['estado_admision'] = 'reprobado';
-            }
+            $promedio = round($sumMaterias / $mats->count(), 2);
+            $p['nota_final'] = $promedio;
+            $p['estado_admision'] = $promedio >= 60.00 ? 'pendiente' : 'reprobado';
         }
         unset($p); // romper la referencia
 
-        // Ejecutar proceso de admisión / ranking por cupo en memoria
+        // Ordenar todos los aprobados de mayor a menor nota_final en memoria
+        $aprobadosList = [];
+        foreach ($postulanteList as &$p) {
+            if ($p['estado_admision'] === 'pendiente') {
+                $aprobadosList[] = &$p;
+            }
+        }
+        unset($p);
+
+        usort($aprobadosList, function ($a, $b) {
+            if ($b['nota_final'] === $a['nota_final']) {
+                return $a['id'] <=> $b['id'];
+            }
+            return $b['nota_final'] <=> $a['nota_final'];
+        });
+
+        // Inicializar capacidades
+        $capacidades1ra = [];
+        $capacidades2da = [];
+        $capacidadesTotal = [];
+        $admitidos1raCounts = [];
+        $admitidos2daCounts = [];
+        $admitidosTotalCounts = [];
+
         $cupos = Cupo::where('gestion_id', $g->id)->get()->keyBy('carrera_id');
-        $noAdmitidosPrimera = [];
 
-        // Asignación Primera Opción
-        foreach ($carreras as $c) {
-            $cId = $c->id;
-            $candidatos = $aprobadosMap[$cId] ?? [];
+        foreach ($carreras as $carrera) {
+            $cupoObj = $cupos->get($carrera->id);
+            $cap1 = $cupoObj ? $cupoObj->cantidad_primera_opcion : 150;
+            $cap2 = $cupoObj ? $cupoObj->cantidad_segunda_opcion : 50;
 
-            // Ordenar candidatos por nota_final desc
-            usort($candidatos, function ($a, $b) {
-                if ($b['nota_final'] === $a['nota_final']) {
-                    return $a['id'] <=> $b['id'];
-                }
+            $capacidades1ra[$carrera->id] = $cap1;
+            $capacidades2da[$carrera->id] = $cap2;
+            $capacidadesTotal[$carrera->id] = $cap1 + $cap2;
 
-                return $b['nota_final'] <=> $a['nota_final'];
-            });
-
-            $limit1ra = $cupos->get($cId)?->cantidad_primera_opcion ?? 20;
-
-            foreach ($candidatos as $idx => &$cand) {
-                if ($idx < $limit1ra) {
-                    $cand['estado_admision'] = 'admitido_primera_opcion';
-                } else {
-                    $noAdmitidosPrimera[] = &$cand;
-                }
-            }
-            unset($cand);
+            $admitidos1raCounts[$carrera->id] = 0;
+            $admitidos2daCounts[$carrera->id] = 0;
+            $admitidosTotalCounts[$carrera->id] = 0;
         }
 
-        // Asignación Segunda Opción
-        $candidatosSegunda = [];
-        foreach ($noAdmitidosPrimera as &$cand) {
-            if ($cand['carrera_segunda_opcion_id']) {
-                $candidatosSegunda[$cand['carrera_segunda_opcion_id']][] = &$cand;
-            } else {
-                $cand['estado_admision'] = 'no_admitido';
+        foreach ($aprobadosList as &$postulante) {
+            $c1 = $postulante['carrera_primera_opcion_id'];
+            $c2 = $postulante['carrera_segunda_opcion_id'];
+
+            // Intentar primera opción
+            if ($c1 && isset($capacidades1ra[$c1]) && $admitidos1raCounts[$c1] < $capacidades1ra[$c1] && $admitidosTotalCounts[$c1] < $capacidadesTotal[$c1]) {
+                $postulante['estado_admision'] = 'admitido_primera_opcion';
+                $admitidos1raCounts[$c1]++;
+                $admitidosTotalCounts[$c1]++;
+            }
+            // Intentar segunda opción
+            elseif ($c2 && isset($capacidades2da[$c2]) && $admitidos2daCounts[$c2] < $capacidades2da[$c2] && $admitidosTotalCounts[$c2] < $capacidadesTotal[$c2]) {
+                $postulante['estado_admision'] = 'admitido_segunda_opcion';
+                $admitidos2daCounts[$c2]++;
+                $admitidosTotalCounts[$c2]++;
+            }
+            // No admitido
+            else {
+                $postulante['estado_admision'] = 'no_admitido';
             }
         }
-        unset($cand);
-
-        foreach ($carreras as $c) {
-            $cId = $c->id;
-            $candidatos = $candidatosSegunda[$cId] ?? [];
-
-            usort($candidatos, function ($a, $b) {
-                if ($b['nota_final'] === $a['nota_final']) {
-                    return $a['id'] <=> $b['id'];
-                }
-
-                return $b['nota_final'] <=> $a['nota_final'];
-            });
-
-            $limit2da = $cupos->get($cId)?->cantidad_segunda_opcion ?? 10;
-
-            foreach ($candidatos as $idx => &$cand) {
-                if ($idx < $limit2da) {
-                    $cand['estado_admision'] = 'admitido_segunda_opcion';
-                } else {
-                    $cand['estado_admision'] = 'no_admitido';
-                }
-            }
-            unset($cand);
-        }
+        unset($postulante);
 
         // Insertar usuarios, roles y postulantes
         $usersChunks = array_chunk($usersData, 500);

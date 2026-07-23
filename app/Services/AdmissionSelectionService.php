@@ -59,7 +59,7 @@ class AdmissionSelectionService
                 $preloadedNotas[$n->postulante_id][$n->examen_id] = $n;
             }
 
-            $aprobadosMap = []; // Agrupados por carrera primera opción: $aprobadosMap[$carreraId][] = $postulante
+            $aprobadosList = [];
             $reprobadosCount = 0;
             $pendientesCount = 0;
 
@@ -78,7 +78,8 @@ class AdmissionSelectionService
                     $postulante->update(['estado_admision' => 'reprobado']);
                     $reprobadosCount++;
                 } elseif ($eval['aprobado_academico']) {
-                    $aprobadosMap[$postulante->carrera_primera_opcion_id][] = $postulante;
+                    $postulante->update(['estado_admision' => 'pendiente']);
+                    $aprobadosList[] = $postulante;
                 }
             }
 
@@ -87,80 +88,65 @@ class AdmissionSelectionService
                 throw new AdmissionSelectionException("No se puede ejecutar el proceso de admisión. Aún existen {$pendientesCount} postulantes con exámenes o notas pendientes.");
             }
 
-            // 3. Asignación de cupos de primera opción (Ranking de Primera Opción)
-            $noAdmitidosPrimeraOpcion = []; // Postulantes aprobados que no lograron cupo en su primera opción
+            // 3. Asignación de cupos ordenada por nota final global
+            $capacidades1ra = [];
+            $capacidades2da = [];
+            $capacidadesTotal = [];
+            $admitidos1raCounts = [];
+            $admitidos2daCounts = [];
+            $admitidosTotalCounts = [];
 
             foreach ($carreras as $carrera) {
                 $cupo = Cupo::where('carrera_id', $carrera->id)
                     ->where('gestion_id', $gestion->id)
                     ->first();
-                $cupoPrimera = $cupo->cantidad_primera_opcion;
 
-                $candidatos = $aprobadosMap[$carrera->id] ?? [];
+                $cap1 = $cupo ? $cupo->cantidad_primera_opcion : 150;
+                $cap2 = $cupo ? $cupo->cantidad_segunda_opcion : 50;
 
-                // Ordenar por nota_final DESC, y luego por ID para consistencia
-                usort($candidatos, function ($a, $b) {
-                    if ($b->nota_final === $a->nota_final) {
-                        return $a->id <=> $b->id;
-                    }
+                $capacidades1ra[$carrera->id] = $cap1;
+                $capacidades2da[$carrera->id] = $cap2;
+                $capacidadesTotal[$carrera->id] = $cap1 + $cap2;
 
-                    return $b->nota_final <=> $a->nota_final;
-                });
+                $admitidos1raCounts[$carrera->id] = 0;
+                $admitidos2daCounts[$carrera->id] = 0;
+                $admitidosTotalCounts[$carrera->id] = 0;
+            }
 
-                $admitidos = array_slice($candidatos, 0, $cupoPrimera);
-                $noAdmitidos = array_slice($candidatos, $cupoPrimera);
+            $admitidos1raCount = 0;
+            $admitidos2daCount = 0;
+            $noAdmitidosCount = 0;
 
-                // Actualizar admitidos en primera opción
-                foreach ($admitidos as $postulante) {
+            // Ordenar todos los aprobados por nota final descendente, y por ID para desempate
+            usort($aprobadosList, function ($a, $b) {
+                if ($b->nota_final === $a->nota_final) {
+                    return $a->id <=> $b->id;
+                }
+                return $b->nota_final <=> $a->nota_final;
+            });
+
+            foreach ($aprobadosList as $postulante) {
+                $c1 = $postulante->carrera_primera_opcion_id;
+                $c2 = $postulante->carrera_segunda_opcion_id;
+
+                // Intentar primera opción
+                if ($c1 && isset($capacidades1ra[$c1]) && $admitidos1raCounts[$c1] < $capacidades1ra[$c1] && $admitidosTotalCounts[$c1] < $capacidadesTotal[$c1]) {
                     $postulante->update(['estado_admision' => 'admitido_primera_opcion']);
+                    $admitidos1raCounts[$c1]++;
+                    $admitidosTotalCounts[$c1]++;
+                    $admitidos1raCount++;
                 }
-
-                // Guardar los no admitidos temporalmente para evaluar segunda opción
-                foreach ($noAdmitidos as $postulante) {
-                    $noAdmitidosPrimeraOpcion[] = $postulante;
-                }
-            }
-
-            // 4. Asignación de cupos de segunda opción (Ranking de Segunda Opción)
-            // Agrupar candidatos a segunda opción por su carrera de segunda opción
-            $candidatosSegundaOpn = []; // $candidatosSegundaOpn[$carreraId][] = $postulante
-            foreach ($noAdmitidosPrimeraOpcion as $postulante) {
-                if ($postulante->carrera_segunda_opcion_id) {
-                    $candidatosSegundaOpn[$postulante->carrera_segunda_opcion_id][] = $postulante;
-                } else {
-                    // Si no registró segunda opción, queda directamente como no admitido
-                    $postulante->update(['estado_admision' => 'no_admitido']);
-                }
-            }
-
-            foreach ($carreras as $carrera) {
-                $cupo = Cupo::where('carrera_id', $carrera->id)
-                    ->where('gestion_id', $gestion->id)
-                    ->first();
-                $cupoSegunda = $cupo->cantidad_segunda_opcion;
-
-                $candidatos = $candidatosSegundaOpn[$carrera->id] ?? [];
-
-                // Ordenar por nota_final DESC, y luego por ID
-                usort($candidatos, function ($a, $b) {
-                    if ($b->nota_final === $a->nota_final) {
-                        return $a->id <=> $b->id;
-                    }
-
-                    return $b->nota_final <=> $a->nota_final;
-                });
-
-                $admitidos = array_slice($candidatos, 0, $cupoSegunda);
-                $noAdmitidos = array_slice($candidatos, $cupoSegunda);
-
-                // Actualizar admitidos en segunda opción
-                foreach ($admitidos as $postulante) {
+                // Intentar segunda opción
+                elseif ($c2 && isset($capacidades2da[$c2]) && $admitidos2daCounts[$c2] < $capacidades2da[$c2] && $admitidosTotalCounts[$c2] < $capacidadesTotal[$c2]) {
                     $postulante->update(['estado_admision' => 'admitido_segunda_opcion']);
+                    $admitidos2daCounts[$c2]++;
+                    $admitidosTotalCounts[$c2]++;
+                    $admitidos2daCount++;
                 }
-
-                // Los que no alcanzaron cupo en segunda opción quedan como no admitidos
-                foreach ($noAdmitidos as $postulante) {
+                // No admitido
+                else {
                     $postulante->update(['estado_admision' => 'no_admitido']);
+                    $noAdmitidosCount++;
                 }
             }
 
@@ -199,7 +185,6 @@ class AdmissionSelectionService
 
         $sumMaterias = 0.00;
         $totalMaterias = $materias->count();
-        $aprobadoTodasMaterias = true;
         $hasUncheckedExams = false;
 
         foreach ($materias as $materia) {
@@ -236,11 +221,6 @@ class AdmissionSelectionService
                 $hasUncheckedExams = true;
             }
 
-            // Regla de negocio: Nota mínima por materia
-            if ($notaMateria < $minNota) {
-                $aprobadoTodasMaterias = false;
-            }
-
             $sumMaterias += $notaMateria;
         }
 
@@ -248,8 +228,8 @@ class AdmissionSelectionService
 
         return [
             'nota_final' => round($promedioFinal, 2),
-            'aprobado_academico' => $aprobadoTodasMaterias && ! $hasUncheckedExams,
-            'reprobado' => ! $aprobadoTodasMaterias && ! $hasUncheckedExams,
+            'aprobado_academico' => $promedioFinal >= $minNota && ! $hasUncheckedExams,
+            'reprobado' => $promedioFinal < $minNota && ! $hasUncheckedExams,
             'has_pending_exams' => $hasUncheckedExams,
         ];
     }
